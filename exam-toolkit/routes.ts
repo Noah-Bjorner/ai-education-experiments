@@ -1,66 +1,120 @@
 import { Hono } from "@hono/hono";
 
-import { demoExamRequestSchema } from "./schemas.ts";
+import {
+  createApiKeyMiddleware,
+  validationErrorResponse,
+} from "../helper/hono.ts";
+import {
+  examInputSchema,
+  examOutputSchema,
+  generateExamInputSchema,
+  generateExamOutputSchema,
+  replicateExamInputSchema,
+  replicateExamOutputSchema,
+  resultsExamInputSchema,
+  resultsExamOutputSchema,
+  submitExamInputSchema,
+  submitExamOutputSchema,
+} from "./schemas.ts";
 
 export const examToolkitRoutes = new Hono();
+examToolkitRoutes.use("*", createApiKeyMiddleware("EXAM_TOOLKIT_API_KEY"));
 
-examToolkitRoutes.get("/", (c) =>
-  c.json({
-    ok: true,
-    data: {
-      routes: {
-        demo: "POST /exam-toolkit/demo",
-      },
-    },
-  }));
 
-examToolkitRoutes.post("/demo", async (c) => {
-  let body: unknown;
-
+examToolkitRoutes.post("/generate_exam", async (c) => {
   try {
-    body = await c.req.json();
-  } catch {
+    const input = generateExamInputSchema.parse(await c.req.json());
+    const output = generateExamOutputSchema.parse({
+      exam_id: input.course_id,
+    });
+
     return c.json(
       {
-        ok: false,
-        error: {
-          code: "INVALID_JSON",
-          message: "Request body must be valid JSON.",
-        },
+        ok: true,
+        data: output,
       },
-      400,
     );
+  } catch (error) {
+    return validationErrorResponse(c, error);
   }
+});
 
-  const parsed = demoExamRequestSchema.safeParse(body);
+examToolkitRoutes.post("/replicate_exam", async (c) => {
+  try {
+    const input = replicateExamInputSchema.parse(await c.req.json());
+    const output = replicateExamOutputSchema.parse({
+      exam_id: input.exam_id,
+    });
 
-  if (!parsed.success) {
     return c.json(
       {
-        ok: false,
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Request body did not match the demo exam schema.",
-          issues: parsed.error.issues,
-        },
+        ok: true,
+        data: output,
       },
-      400,
     );
+  } catch (error) {
+    return validationErrorResponse(c, error);
   }
+});
 
-  const request = parsed.data;
+examToolkitRoutes.post("/submit_exam", async (c) => {
+  try {
+    submitExamInputSchema.parse(await c.req.json());
+    const output = submitExamOutputSchema.parse({
+      accepted: true,
+    });
 
-  return c.json({
-    ok: true,
-    data: {
-      request,
-      demoExam: {
-        title: request.examTitle,
-        subject: request.subject,
-        prompt:
-          `Create ${request.questionCount} ${request.difficulty} questions for ${request.subject}.`,
-        includeAnswerKey: request.includeAnswerKey,
+    return c.json(
+      {
+        ok: true,
+        data: output,
       },
-    },
-  });
+      202,
+    );
+  } catch (error) {
+    return validationErrorResponse(c, error);
+  }
+});
+
+examToolkitRoutes.get("/exam", (c) => {
+  try {
+    const input = examInputSchema.parse({
+      exam_id: c.req.query("exam_id"),
+    });
+    const output = examOutputSchema.parse({
+      exam_title: `Exam ${input.exam_id}`,
+      exam_topic: undefined,
+      exam_number_of_questions: 1,
+      exam_difficulty_range: undefined,
+      exam_questions: [],
+    });
+
+    return c.json({
+      ok: true,
+      data: output,
+    });
+  } catch (error) {
+    return validationErrorResponse(c, error);
+  }
+});
+
+examToolkitRoutes.get("/results_exam", (c) => {
+  try {
+    const input = resultsExamInputSchema.parse({
+      exam_id: c.req.query("exam_id"),
+    });
+    const output = resultsExamOutputSchema.parse({
+      exam_info: {
+        exam_id: input.exam_id,
+      },
+      exam_questions: [],
+    });
+
+    return c.json({
+      ok: true,
+      data: output,
+    });
+  } catch (error) {
+    return validationErrorResponse(c, error);
+  }
 });
