@@ -1,0 +1,17 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys --allow-ffi",
+    "start": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys --allow-ffi main.ts"
+  },
+  "imports": {
+    "@hono/hono": "jsr:@hono/hono@^4.12.15",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225.5",
+    "@neondatabase/serverless": "npm:@neondatabase/serverless@1.0.2",
+    "@unpdf": "npm:unpdf@^1.6.2",
+    "@zod": "npm:zod@^4.4.3",
+    "@ai": "npm:ai@canary"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.window", "dom"]
+  }
+}
