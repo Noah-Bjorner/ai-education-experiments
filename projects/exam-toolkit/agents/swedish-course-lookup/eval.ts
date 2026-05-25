@@ -1,8 +1,8 @@
 import "@std/dotenv/load";
-import { createGateway, generateText } from "@ai";
+import { createGateway, generateText, Output } from "@ai";
 import { z } from "@zod";
 
-import { parseJsonWithSchemaSafely } from "../../../helper/json.ts";
+import { parseJsonWithSchemaSafely } from "../../../../helper/json.ts";
 import { swedishCourseLookupAgent } from "./index.ts";
 import {
   type SwedishCourseLookupEvalCase,
@@ -266,26 +266,17 @@ async function gradeGuidelinesWithJudge(
   const judgeModel = Deno.env.get("SWEDISH_COURSE_LOOKUP_JUDGE_MODEL") ??
     DEFAULT_JUDGE_MODEL;
 
-  const result = await generateText({
+  const { output } = await generateText({
     model: gateway(judgeModel),
     temperature: 0,
     prompt: buildGuidelinesJudgePrompt(evalCase, actual),
+    output: Output.object({
+      schema: gradingGuidelinesJudgeSchema,
+      name: "grading_guidelines_judge",
+      description: "Grading guidelines judge result.",
+    }),
   });
-
-  const parsed = parseJsonWithSchemaSafely(
-    result.text,
-    gradingGuidelinesJudgeSchema,
-  );
-
-  if (!parsed) {
-    return gradeGuidelinesHeuristically(
-      evalCase.reference.grading_guidelines,
-      actual.grading_guidelines,
-      "LLM judge response could not be parsed, so heuristic grading was used.",
-    );
-  }
-
-  return parsed.grading_guidelines;
+  return output.grading_guidelines;
 }
 
 function buildGuidelinesJudgePrompt(

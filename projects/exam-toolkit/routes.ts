@@ -3,7 +3,7 @@ import { Hono } from "@hono/hono";
 import {
   createApiKeyMiddleware,
   validationErrorResponse,
-} from "../helper/hono.ts";
+} from "../../helper/hono.ts";
 import {
   examInputSchema,
   examOutputSchema,

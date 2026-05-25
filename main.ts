@@ -1,7 +1,8 @@
 import { Hono } from "@hono/hono";
 import { cors } from "@hono/hono/cors";
 
-import { examToolkitRoutes } from "./exam-toolkit/routes.ts";
+import { examToolkitRoutes } from "./projects/exam-toolkit/routes.ts";
+import { tutorGptRoutes } from "./projects/tutor-gpt/route.ts";
 
 const app = new Hono();
 
@@ -79,6 +80,7 @@ app.get("/demo", (c) =>
 
   
 app.route("/exam-toolkit", examToolkitRoutes);
+app.route("/tutor-gpt", tutorGptRoutes);
 
 
 

@@ -1,5 +1,5 @@
 import { swedishCourseLookupAgent } from "./index.ts";
-import { parseJsonWithSchemaSafely } from "../../../helper/json.ts";
+import { parseJsonWithSchemaSafely } from "../../../../helper/json.ts";
 import { swedishCourseLookupResultSchema } from "./schema.ts";
 
 export const lookupSwedishCourseAndStoreInDB = async (prompt: string) => {

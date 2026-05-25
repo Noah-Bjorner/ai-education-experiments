@@ -1,6 +1,6 @@
 import "@std/dotenv/load";
 import { type InferAgentUIMessage, isStepCount, ToolLoopAgent } from "@ai";
-import { webSearchTool } from "../../../tools/web-search.ts";
+import { webSearchTool } from "../../../../tools/web-search.ts";
 import { INSTRUCTIONS } from "./instructions.ts";
 
 export {

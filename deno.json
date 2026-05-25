@@ -9,7 +9,12 @@
     "@neondatabase/serverless": "npm:@neondatabase/serverless@1.0.2",
     "@unpdf": "npm:unpdf@^1.6.2",
     "@zod": "npm:zod@^4.4.3",
-    "@ai": "npm:ai@canary"
+    "@ai": "npm:ai@canary",
+    "@aws-sdk/client-s3": "npm:@aws-sdk/client-s3@3.948.0",
+    "@google/genai": "npm:@google/genai",
+    "@replicate": "npm:replicate@1.4.0",
+    "@openai": "jsr:@openai/openai@6.10.0"
+
   },
   "compilerOptions": {
     "lib": ["deno.ns", "deno.window", "dom"]
