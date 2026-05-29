@@ -1,27 +1,29 @@
 import { Hono } from "@hono/hono";
-import type { UIMessage } from "@ai";
 
 import { streamTutorGptChat } from "./chat.ts";
+import { tutorGptChatRequestSchema } from "./schema.ts";
 
 export const tutorGptRoutes = new Hono();
 
 tutorGptRoutes.post("/chat", async (c) => {
-  const { messages }: { messages?: UIMessage[] } = await c.req.json();
+  const body = await c.req.json();
+  const parsedRequest = tutorGptChatRequestSchema.safeParse(body);
 
-  if (!Array.isArray(messages)) {
+  if (!parsedRequest.success) {
     return c.json(
       {
         ok: false,
         error: {
           code: "INVALID_CHAT_REQUEST",
-          message: "Expected a JSON body with a messages array.",
+          message: "Expected a JSON body with messages and optional tutor_instructions/student_profile.",
+          issues: parsedRequest.error.issues,
         },
       },
       400,
     );
   }
 
-  const result = await streamTutorGptChat({ messages });
+  const result = await streamTutorGptChat(parsedRequest.data);
 
   return result.toUIMessageStreamResponse();
 });
