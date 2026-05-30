@@ -1,13 +1,13 @@
 import { Hono } from "@hono/hono";
 
-import { streamTutorGptChat } from "./chat.ts";
-import { tutorGptChatRequestSchema } from "./schema.ts";
+import { streamTutorChat } from "./chat.ts";
+import { tutorChatRequestSchema } from "./schema.ts";
 
-export const tutorGptRoutes = new Hono();
+export const tutorChatRoutes = new Hono();
 
-tutorGptRoutes.post("/chat", async (c) => {
+tutorChatRoutes.post("/chat", async (c) => {
   const body = await c.req.json();
-  const parsedRequest = tutorGptChatRequestSchema.safeParse(body);
+  const parsedRequest = tutorChatRequestSchema.safeParse(body);
 
   if (!parsedRequest.success) {
     return c.json(
@@ -23,7 +23,7 @@ tutorGptRoutes.post("/chat", async (c) => {
     );
   }
 
-  const result = await streamTutorGptChat(parsedRequest.data);
+  const result = await streamTutorChat(parsedRequest.data);
 
   return result.toUIMessageStreamResponse();
 });

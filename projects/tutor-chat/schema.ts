@@ -20,7 +20,7 @@ function isUIMessage(value: unknown): value is UIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
-export const tutorGptChatRequestSchema = z.object({
+export const tutorChatRequestSchema = z.object({
   messages: z.array(
     z.custom<UIMessage>(
       isUIMessage,
@@ -35,4 +35,4 @@ export const tutorGptChatRequestSchema = z.object({
   }),
 });
 
-export type TutorGptChatRequest = z.infer<typeof tutorGptChatRequestSchema>;
+export type TutorChatRequest = z.infer<typeof tutorChatRequestSchema>;
