@@ -4,6 +4,7 @@
     "jsr:@hono/hono@^4.12.15": "4.12.15",
     "jsr:@openai/openai@6.10.0": "6.10.0",
     "jsr:@std/dotenv@~0.225.5": "0.225.6",
+    "npm:@ai-sdk/provider-utils@*": "4.0.27_zod@4.4.3",
     "npm:@aws-sdk/client-s3@3.948.0": "3.948.0",
     "npm:@google/genai@*": "1.41.0",
     "npm:@neondatabase/serverless@1.0.2": "1.0.2",
@@ -27,20 +28,35 @@
     "@ai-sdk/gateway@4.0.0-canary.73_zod@4.4.3": {
       "integrity": "sha512-Kj5GOHqtP7PYYTdI0lZWeM9Z4rFj6lDr1VPREx3881WI3G5C31zvzrNBx5Fdqm/a7zu+bFxUk52nijtsdFw//A==",
       "dependencies": [
-        "@ai-sdk/provider",
-        "@ai-sdk/provider-utils",
+        "@ai-sdk/provider@4.0.0-canary.16",
+        "@ai-sdk/provider-utils@5.0.0-canary.35_zod@4.4.3",
         "@vercel/oidc",
+        "zod"
+      ]
+    },
+    "@ai-sdk/provider-utils@4.0.27_zod@4.4.3": {
+      "integrity": "sha512-ubkAJ+xODouwtmN1tYlvTPphH1hPOBfZaEQe8U7skGvFAnIRs9PPpsq57bC2+Ky/MB4yzhd6YOsxTAx9sGpazw==",
+      "dependencies": [
+        "@ai-sdk/provider@3.0.10",
+        "@standard-schema/spec",
+        "eventsource-parser",
         "zod"
       ]
     },
     "@ai-sdk/provider-utils@5.0.0-canary.35_zod@4.4.3": {
       "integrity": "sha512-4+g1k/lpUt9KI4+NgOwq7lBYbxGmhDOUXmLxcjt+2BV6QnUvc2glD+ocSRhlOCbmjbwiI9Muw1LyEVECQX3VQQ==",
       "dependencies": [
-        "@ai-sdk/provider",
+        "@ai-sdk/provider@4.0.0-canary.16",
         "@standard-schema/spec",
         "@workflow/serde",
         "eventsource-parser",
         "zod"
+      ]
+    },
+    "@ai-sdk/provider@3.0.10": {
+      "integrity": "sha512-Q3BZ27qfpYqnCYGvE3vt+Qi6LGOF9R5Nmzn+9JoM1lCRsD9mYaIhfJLkSunN48nfGXJ6n+XNV0J/XVpqGQl7Dw==",
+      "dependencies": [
+        "json-schema"
       ]
     },
     "@ai-sdk/provider@4.0.0-canary.16": {
@@ -1135,8 +1151,8 @@
       "integrity": "sha512-gvhNdn5bp+vbpQKTB5p9lsk/HPCvdgS7fUzj2G+30on0M+koOdeoPugkwyLnnP32wnTG45Yj0zotpM+krsdjwA==",
       "dependencies": [
         "@ai-sdk/gateway",
-        "@ai-sdk/provider",
-        "@ai-sdk/provider-utils",
+        "@ai-sdk/provider@4.0.0-canary.16",
+        "@ai-sdk/provider-utils@5.0.0-canary.35_zod@4.4.3",
         "zod"
       ]
     },

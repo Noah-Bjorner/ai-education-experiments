@@ -1,9 +1,13 @@
 import { Hono } from "@hono/hono";
+import { createUIMessageStreamResponse } from "@ai";
 
-import { streamTutorChat } from "./chat.ts";
+import { createTutorChatUIMessageStream } from "./chat.ts";
+import { tutorChatApiKeyMiddleware } from "./middleware.ts";
 import { tutorChatRequestSchema } from "./schema.ts";
 
 export const tutorChatRoutes = new Hono();
+
+tutorChatRoutes.use("*", tutorChatApiKeyMiddleware);
 
 tutorChatRoutes.post("/chat", async (c) => {
   const body = await c.req.json();
@@ -15,15 +19,20 @@ tutorChatRoutes.post("/chat", async (c) => {
         ok: false,
         error: {
           code: "INVALID_CHAT_REQUEST",
-          message: "Expected a JSON body with messages and optional tutor_instructions/student_profile.",
+          message:
+            "Expected a JSON body with messages and optional tutor_instructions/student_profile.",
           issues: parsedRequest.error.issues,
         },
       },
       400,
     );
   }
+  const stream = createTutorChatUIMessageStream(parsedRequest.data, {
+    onError: (error) => {
+      console.error("Tutor chat stream failed", error);
+      return "The tutor hit an error while generating the response. Please try again.";
+    },
+  });
 
-  const result = await streamTutorChat(parsedRequest.data);
-
-  return result.toUIMessageStreamResponse();
+  return createUIMessageStreamResponse({ stream });
 });

@@ -1,5 +1,6 @@
-import type { UIMessage } from "@ai";
 import { z } from "@zod";
+
+import type { TutorChatUIMessage } from "./chat.ts";
 
 const messageRoleSchema = z.enum(["system", "user", "assistant"]);
 
@@ -7,7 +8,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isUIMessage(value: unknown): value is UIMessage {
+function isUIMessage(value: unknown): value is TutorChatUIMessage {
   if (!isRecord(value)) {
     return false;
   }
@@ -22,7 +23,7 @@ function isUIMessage(value: unknown): value is UIMessage {
 
 export const tutorChatRequestSchema = z.object({
   messages: z.array(
-    z.custom<UIMessage>(
+    z.custom<TutorChatUIMessage>(
       isUIMessage,
       "Expected an AI SDK UIMessage with id, role, and parts.",
     ),

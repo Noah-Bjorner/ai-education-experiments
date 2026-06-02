@@ -1,12 +1,14 @@
 import { tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 
-const quizChoiceSchema = z.object({
+type QuestionToolStartCallback = (event: { toolCallId: string }) => void;
+
+const questionChoiceSchema = z.object({
   id: z.string().min(1).describe("Stable choice id, such as a, b, c, or d."),
   label: z.string().min(1).describe("The text shown for this choice."),
 });
 
-const imageChoiceSchema = quizChoiceSchema.extend({
+const imageChoiceSchema = questionChoiceSchema.extend({
   imageUrl: z.string().url().optional().describe(
     "Optional URL for an image choice, when a concrete image is available.",
   ),
@@ -49,30 +51,30 @@ function findDuplicates(values: string[]) {
   return [...duplicates];
 }
 
-const baseQuizSchema = z.object({
-  question: z.string().min(1).describe("The learner-facing quiz question."),
+const baseQuestionSchema = z.object({
+  question: z.string().min(1).describe("The learner-facing question text."),
   explanation: z.string().min(1).optional().describe(
     "A short explanation shown after the learner answers.",
   ),
 });
 
-const quizInputSchema = z.discriminatedUnion("quizType", [
-  baseQuizSchema.extend({
-    quizType: z.literal("multiple_choice_text"),
-    choices: z.array(quizChoiceSchema).min(2).max(8),
+const questionSchema = z.discriminatedUnion("questionType", [
+  baseQuestionSchema.extend({
+    questionType: z.literal("multiple_choice_text"),
+    choices: z.array(questionChoiceSchema).min(2).max(8),
     correctChoiceIds: z.array(z.string().min(1)).min(1).describe(
       "Ids of every correct choice. Use multiple ids when more than one answer is correct.",
     ),
   }),
-  baseQuizSchema.extend({
-    quizType: z.literal("multiple_choice_image"),
+  baseQuestionSchema.extend({
+    questionType: z.literal("multiple_choice_image"),
     choices: z.array(imageChoiceSchema).min(2).max(8),
     correctChoiceIds: z.array(z.string().min(1)).min(1).describe(
       "Ids of every correct image choice.",
     ),
   }),
-  baseQuizSchema.extend({
-    quizType: z.literal("text_response"),
+  baseQuestionSchema.extend({
+    questionType: z.literal("text_response"),
     acceptedAnswers: z.array(z.string().min(1)).min(1).optional().describe(
       "Examples of acceptable text answers.",
     ),
@@ -80,8 +82,8 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
       "A model answer the learner can compare against.",
     ),
   }),
-  baseQuizSchema.extend({
-    quizType: z.literal("math_response"),
+  baseQuestionSchema.extend({
+    questionType: z.literal("math_response"),
     expectedAnswer: z.string().min(1).describe(
       "The expected mathematical answer, expression, or equation.",
     ),
@@ -89,8 +91,8 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
       "Alternative acceptable answer formats, such as decimal, fraction, or units.",
     ),
   }),
-  baseQuizSchema.extend({
-    quizType: z.literal("fill_in_the_blank"),
+  baseQuestionSchema.extend({
+    questionType: z.literal("fill_in_the_blank"),
     textWithBlanks: z.string().min(1).describe(
       "The prompt text with blanks marked as {{blankId}}, such as {{blank1}}.",
     ),
@@ -101,20 +103,20 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
       }),
     ).min(1),
   }),
-  baseQuizSchema.extend({
-    quizType: z.literal("matching"),
+  baseQuestionSchema.extend({
+    questionType: z.literal("matching"),
     prompts: z.array(matchingPromptSchema).min(2).max(10),
     options: z.array(matchingOptionSchema).min(2).max(10),
     correctPairs: z.array(matchingPairSchema).min(2).describe(
       "The correct mapping between prompts and options.",
     ),
   }),
-]).superRefine((quiz, ctx) => {
+]).superRefine((questionInput, ctx) => {
   if (
-    quiz.quizType === "multiple_choice_text" ||
-    quiz.quizType === "multiple_choice_image"
+    questionInput.questionType === "multiple_choice_text" ||
+    questionInput.questionType === "multiple_choice_image"
   ) {
-    const choiceIds = quiz.choices.map((choice) => choice.id);
+    const choiceIds = questionInput.choices.map((choice) => choice.id);
     const choiceIdSet = new Set(choiceIds);
 
     for (const duplicateId of findDuplicates(choiceIds)) {
@@ -125,7 +127,7 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
       });
     }
 
-    for (const duplicateId of findDuplicates(quiz.correctChoiceIds)) {
+    for (const duplicateId of findDuplicates(questionInput.correctChoiceIds)) {
       ctx.addIssue({
         code: "custom",
         message: `Correct choice id "${duplicateId}" must be unique.`,
@@ -133,18 +135,19 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
       });
     }
 
-    for (const correctChoiceId of quiz.correctChoiceIds) {
+    for (const correctChoiceId of questionInput.correctChoiceIds) {
       if (!choiceIdSet.has(correctChoiceId)) {
         ctx.addIssue({
           code: "custom",
-          message: `Correct choice id "${correctChoiceId}" does not match any choice id.`,
+          message:
+            `Correct choice id "${correctChoiceId}" does not match any choice id.`,
           path: ["correctChoiceIds"],
         });
       }
     }
 
-    if (quiz.quizType === "multiple_choice_image") {
-      quiz.choices.forEach((choice, index) => {
+    if (questionInput.questionType === "multiple_choice_image") {
+      questionInput.choices.forEach((choice, index) => {
         if (!choice.imageUrl && !choice.imageDescription) {
           ctx.addIssue({
             code: "custom",
@@ -156,18 +159,19 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
     }
   }
 
-  if (quiz.quizType === "text_response") {
-    if (!quiz.acceptedAnswers && !quiz.sampleAnswer) {
+  if (questionInput.questionType === "text_response") {
+    if (!questionInput.acceptedAnswers && !questionInput.sampleAnswer) {
       ctx.addIssue({
         code: "custom",
-        message: "Text response quizzes need acceptedAnswers or sampleAnswer.",
+        message:
+          "Text response questions need acceptedAnswers or sampleAnswer.",
         path: ["acceptedAnswers"],
       });
     }
   }
 
-  if (quiz.quizType === "fill_in_the_blank") {
-    const blankIds = quiz.blanks.map((blank) => blank.id);
+  if (questionInput.questionType === "fill_in_the_blank") {
+    const blankIds = questionInput.blanks.map((blank) => blank.id);
 
     for (const duplicateId of findDuplicates(blankIds)) {
       ctx.addIssue({
@@ -177,24 +181,29 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
       });
     }
 
-    quiz.blanks.forEach((blank, index) => {
-      if (!quiz.textWithBlanks.includes(`{{${blank.id}}}`)) {
+    questionInput.blanks.forEach((blank, index) => {
+      if (!questionInput.textWithBlanks.includes(`{{${blank.id}}}`)) {
         ctx.addIssue({
           code: "custom",
-          message: `Blank id "${blank.id}" must appear in textWithBlanks as {{${blank.id}}}.`,
+          message:
+            `Blank id "${blank.id}" must appear in textWithBlanks as {{${blank.id}}}.`,
           path: ["blanks", index, "id"],
         });
       }
     });
   }
 
-  if (quiz.quizType === "matching") {
-    const promptIds = quiz.prompts.map((prompt) => prompt.id);
-    const optionIds = quiz.options.map((option) => option.id);
+  if (questionInput.questionType === "matching") {
+    const promptIds = questionInput.prompts.map((prompt) => prompt.id);
+    const optionIds = questionInput.options.map((option) => option.id);
     const promptIdSet = new Set(promptIds);
     const optionIdSet = new Set(optionIds);
-    const pairedPromptIds = quiz.correctPairs.map((pair) => pair.promptId);
-    const pairedOptionIds = quiz.correctPairs.map((pair) => pair.optionId);
+    const pairedPromptIds = questionInput.correctPairs.map((pair) =>
+      pair.promptId
+    );
+    const pairedOptionIds = questionInput.correctPairs.map((pair) =>
+      pair.optionId
+    );
 
     for (const duplicateId of findDuplicates(promptIds)) {
       ctx.addIssue({
@@ -223,12 +232,13 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
     for (const duplicateId of findDuplicates(pairedOptionIds)) {
       ctx.addIssue({
         code: "custom",
-        message: `Option id "${duplicateId}" can only be used once in correctPairs.`,
+        message:
+          `Option id "${duplicateId}" can only be used once in correctPairs.`,
         path: ["correctPairs"],
       });
     }
 
-    quiz.correctPairs.forEach((pair, index) => {
+    questionInput.correctPairs.forEach((pair, index) => {
       if (!promptIdSet.has(pair.promptId)) {
         ctx.addIssue({
           code: "custom",
@@ -258,10 +268,26 @@ const quizInputSchema = z.discriminatedUnion("quizType", [
   }
 });
 
-export const quizTool = tool({
-  description: "Create an interactive quiz to help the student practice, reflect, or check their understanding.",
-  inputSchema: quizInputSchema,
-  execute: (quiz) => quiz,
+// The union is nested under an object because models require a tool's
+// root input schema to be an object; a root-level union is rejected.
+const questionInputSchema = z.object({
+  question: questionSchema,
 });
 
-export type QuizToolInvocation = UIToolInvocation<typeof quizTool>;
+export function createQuestionTool(
+  { onToolStart }: { onToolStart?: QuestionToolStartCallback } = {},
+) {
+  return tool({
+    description:
+      "Create a question for the student to answer, to practice or check their understanding.",
+    inputSchema: questionInputSchema,
+    execute: ({ question }, { toolCallId }) => {
+      onToolStart?.({ toolCallId });
+      return question;
+    },
+  });
+}
+
+export const questionTool = createQuestionTool();
+
+export type QuestionToolInvocation = UIToolInvocation<typeof questionTool>;
