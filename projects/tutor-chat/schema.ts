@@ -1,6 +1,6 @@
 import { z } from "@zod";
 
-import type { TutorChatUIMessage } from "./chat.ts";
+import type { TutorChatUIMessage } from "./types.ts";
 
 const messageRoleSchema = z.enum(["system", "user", "assistant"]);
 

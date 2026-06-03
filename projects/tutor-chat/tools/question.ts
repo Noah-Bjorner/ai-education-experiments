@@ -1,8 +1,6 @@
 import { tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 
-type QuestionToolStartCallback = (event: { toolCallId: string }) => void;
-
 const questionChoiceSchema = z.object({
   id: z.string().min(1).describe("Stable choice id, such as a, b, c, or d."),
   label: z.string().min(1).describe("The text shown for this choice."),
@@ -274,20 +272,11 @@ const questionInputSchema = z.object({
   question: questionSchema,
 });
 
-export function createQuestionTool(
-  { onToolStart }: { onToolStart?: QuestionToolStartCallback } = {},
-) {
-  return tool({
-    description:
-      "Create a question for the student to answer, to practice or check their understanding.",
-    inputSchema: questionInputSchema,
-    execute: ({ question }, { toolCallId }) => {
-      onToolStart?.({ toolCallId });
-      return question;
-    },
-  });
-}
-
-export const questionTool = createQuestionTool();
+export const questionTool = tool({
+  description:
+    "Create a question for the student to answer, to practice or check their understanding.",
+  inputSchema: questionInputSchema,
+  execute: ({ question }) => question,
+});
 
 export type QuestionToolInvocation = UIToolInvocation<typeof questionTool>;
