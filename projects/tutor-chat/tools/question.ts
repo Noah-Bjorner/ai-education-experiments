@@ -6,17 +6,17 @@ const questionChoiceSchema = z.object({
   label: z.string().min(1).describe("The text shown for this choice."),
 });
 
-const imageChoiceSchema = questionChoiceSchema.extend({
-  imageUrl: z.string().url().optional().describe(
-    "Optional URL for an image choice, when a concrete image is available.",
-  ),
-  imageDescription: z.string().min(1).optional().describe(
-    "A concise visual description to render or use as a prompt when no image URL exists.",
-  ),
-  altText: z.string().min(1).optional().describe(
-    "Accessible alt text for the image.",
-  ),
-});
+// const imageChoiceSchema = questionChoiceSchema.extend({
+//   imageUrl: z.string().url().optional().describe(
+//     "Optional URL for an image choice, when a concrete image is available.",
+//   ),
+//   imageDescription: z.string().min(1).optional().describe(
+//     "A concise visual description to render or use as a prompt when no image URL exists.",
+//   ),
+//   altText: z.string().min(1).optional().describe(
+//     "Accessible alt text for the image.",
+//   ),
+// });
 
 const matchingPromptSchema = z.object({
   id: z.string().min(1).describe("Stable id for the item to match."),
@@ -64,13 +64,13 @@ const questionSchema = z.discriminatedUnion("questionType", [
       "Ids of every correct choice. Use multiple ids when more than one answer is correct.",
     ),
   }),
-  baseQuestionSchema.extend({
-    questionType: z.literal("multiple_choice_image"),
-    choices: z.array(imageChoiceSchema).min(2).max(8),
-    correctChoiceIds: z.array(z.string().min(1)).min(1).describe(
-      "Ids of every correct image choice.",
-    ),
-  }),
+  // baseQuestionSchema.extend({
+  //   questionType: z.literal("multiple_choice_image"),
+  //   choices: z.array(imageChoiceSchema).min(2).max(8),
+  //   correctChoiceIds: z.array(z.string().min(1)).min(1).describe(
+  //     "Ids of every correct image choice.",
+  //   ),
+  // }),
   baseQuestionSchema.extend({
     questionType: z.literal("text_response"),
     acceptedAnswers: z.array(z.string().min(1)).min(1).optional().describe(
@@ -110,10 +110,7 @@ const questionSchema = z.discriminatedUnion("questionType", [
     ),
   }),
 ]).superRefine((questionInput, ctx) => {
-  if (
-    questionInput.questionType === "multiple_choice_text" ||
-    questionInput.questionType === "multiple_choice_image"
-  ) {
+  if (questionInput.questionType === "multiple_choice_text") {
     const choiceIds = questionInput.choices.map((choice) => choice.id);
     const choiceIdSet = new Set(choiceIds);
 
@@ -144,17 +141,17 @@ const questionSchema = z.discriminatedUnion("questionType", [
       }
     }
 
-    if (questionInput.questionType === "multiple_choice_image") {
-      questionInput.choices.forEach((choice, index) => {
-        if (!choice.imageUrl && !choice.imageDescription) {
-          ctx.addIssue({
-            code: "custom",
-            message: "Image choices need either imageUrl or imageDescription.",
-            path: ["choices", index],
-          });
-        }
-      });
-    }
+    // if (questionInput.questionType === "multiple_choice_image") {
+    //   questionInput.choices.forEach((choice, index) => {
+    //     if (!choice.imageUrl && !choice.imageDescription) {
+    //       ctx.addIssue({
+    //         code: "custom",
+    //         message: "Image choices need either imageUrl or imageDescription.",
+    //         path: ["choices", index],
+    //       });
+    //     }
+    //   });
+    // }
   }
 
   if (questionInput.questionType === "text_response") {
@@ -274,7 +271,7 @@ const questionInputSchema = z.object({
 
 export const questionTool = tool({
   description:
-    "Create a question for the student to answer, to practice or check their understanding.",
+    "Create a question for the student to answer, to practice or check their understanding. Make sure to use the exact schema field names.",
   inputSchema: questionInputSchema,
   execute: ({ question }) => question,
 });

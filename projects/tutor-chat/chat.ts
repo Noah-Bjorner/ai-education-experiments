@@ -32,7 +32,7 @@ export type {
   TutorChatUITools,
 } from "./types.ts";
 
-const DEFAULT_MODEL = "openai/gpt-5.5";
+const DEFAULT_MODEL = "xai/grok-4.3";
 const MAX_TOOL_STEPS = 8;
 
 export async function streamTutorChat(
@@ -51,14 +51,18 @@ export async function streamTutorChat(
     student_profile,
     currentObjective,
   );
-  //console.log("systemPrompt", systemPrompt);
 
   return streamText({
     model: gateway(Deno.env.get("TUTOR_CHAT_MODEL") ?? DEFAULT_MODEL),
     system: systemPrompt,
+    reasoning: 'medium',
     messages: await convertToModelMessages(messages),
     tools: tutorChatTools,
-    stopWhen: [hasToolCall("question"), isStepCount(MAX_TOOL_STEPS)],
+    stopWhen: [
+      hasToolCall("prompt-suggestions"),
+      hasToolCall("question"),
+      isStepCount(MAX_TOOL_STEPS),
+    ],
   });
 }
 
