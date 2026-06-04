@@ -1,9 +1,14 @@
 import { tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 
+const multipleChoiceOptionIds = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
+const multipleChoiceOptionIdSchema = z.enum(multipleChoiceOptionIds);
+
 const questionChoiceSchema = z.object({
-  id: z.string().min(1).describe("Stable choice id, such as a, b, c, or d."),
-  label: z.string().min(1).describe("The text shown for this choice."),
+  id: multipleChoiceOptionIdSchema.describe(
+    "Stable option id. Use a, b, c, d, etc. in order.",
+  ),
+  text: z.string().min(1).describe("The text shown for this option."),
 });
 
 // const imageChoiceSchema = questionChoiceSchema.extend({
@@ -20,12 +25,12 @@ const questionChoiceSchema = z.object({
 
 const matchingPromptSchema = z.object({
   id: z.string().min(1).describe("Stable id for the item to match."),
-  label: z.string().min(1).describe("The item shown on the left side."),
+  text: z.string().min(1).describe("The item shown on the left side."),
 });
 
 const matchingOptionSchema = z.object({
   id: z.string().min(1).describe("Stable id for the matching option."),
-  label: z.string().min(1).describe("The option shown on the right side."),
+  text: z.string().min(1).describe("The option shown on the right side."),
 });
 
 const matchingPairSchema = z.object({
@@ -50,7 +55,7 @@ function findDuplicates(values: string[]) {
 }
 
 const baseQuestionSchema = z.object({
-  question: z.string().min(1).describe("The learner-facing question text."),
+  questionText: z.string().min(1).describe("The learner-facing question text."),
   explanation: z.string().min(1).optional().describe(
     "A short explanation shown after the learner answers.",
   ),
@@ -59,16 +64,16 @@ const baseQuestionSchema = z.object({
 const questionSchema = z.discriminatedUnion("questionType", [
   baseQuestionSchema.extend({
     questionType: z.literal("multiple_choice_text"),
-    choices: z.array(questionChoiceSchema).min(2).max(8),
-    correctChoiceIds: z.array(z.string().min(1)).min(1).describe(
-      "Ids of every correct choice. Use multiple ids when more than one answer is correct.",
+    options: z.array(questionChoiceSchema).min(2).max(8),
+    correctOptionIds: z.array(multipleChoiceOptionIdSchema).min(1).describe(
+      "Ids of every correct option. Use multiple ids when more than one answer is correct.",
     ),
   }),
   // baseQuestionSchema.extend({
   //   questionType: z.literal("multiple_choice_image"),
-  //   choices: z.array(imageChoiceSchema).min(2).max(8),
-  //   correctChoiceIds: z.array(z.string().min(1)).min(1).describe(
-  //     "Ids of every correct image choice.",
+  //   options: z.array(imageChoiceSchema).min(2).max(8),
+  //   correctOptionIds: z.array(z.string().min(1)).min(1).describe(
+  //     "Ids of every correct image option.",
   //   ),
   // }),
   baseQuestionSchema.extend({
@@ -111,43 +116,55 @@ const questionSchema = z.discriminatedUnion("questionType", [
   }),
 ]).superRefine((questionInput, ctx) => {
   if (questionInput.questionType === "multiple_choice_text") {
-    const choiceIds = questionInput.choices.map((choice) => choice.id);
-    const choiceIdSet = new Set(choiceIds);
+    const optionIds = questionInput.options.map((option) => option.id);
+    const optionIdSet = new Set(optionIds);
 
-    for (const duplicateId of findDuplicates(choiceIds)) {
-      ctx.addIssue({
-        code: "custom",
-        message: `Choice id "${duplicateId}" must be unique.`,
-        path: ["choices"],
-      });
-    }
-
-    for (const duplicateId of findDuplicates(questionInput.correctChoiceIds)) {
-      ctx.addIssue({
-        code: "custom",
-        message: `Correct choice id "${duplicateId}" must be unique.`,
-        path: ["correctChoiceIds"],
-      });
-    }
-
-    for (const correctChoiceId of questionInput.correctChoiceIds) {
-      if (!choiceIdSet.has(correctChoiceId)) {
+    questionInput.options.forEach((option, index) => {
+      const expectedOptionId = multipleChoiceOptionIds[index];
+      if (option.id !== expectedOptionId) {
         ctx.addIssue({
           code: "custom",
           message:
-            `Correct choice id "${correctChoiceId}" does not match any choice id.`,
-          path: ["correctChoiceIds"],
+            `Multiple choice option ids must be sequential: expected "${expectedOptionId}" at option ${index + 1}.`,
+          path: ["options", index, "id"],
+        });
+      }
+    });
+
+    for (const duplicateId of findDuplicates(optionIds)) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Option id "${duplicateId}" must be unique.`,
+        path: ["options"],
+      });
+    }
+
+    for (const duplicateId of findDuplicates(questionInput.correctOptionIds)) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Correct option id "${duplicateId}" must be unique.`,
+        path: ["correctOptionIds"],
+      });
+    }
+
+    for (const correctOptionId of questionInput.correctOptionIds) {
+      if (!optionIdSet.has(correctOptionId)) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            `Correct option id "${correctOptionId}" does not match any option id.`,
+          path: ["correctOptionIds"],
         });
       }
     }
 
     // if (questionInput.questionType === "multiple_choice_image") {
-    //   questionInput.choices.forEach((choice, index) => {
-    //     if (!choice.imageUrl && !choice.imageDescription) {
+    //   questionInput.options.forEach((option, index) => {
+    //     if (!option.imageUrl && !option.imageDescription) {
     //       ctx.addIssue({
     //         code: "custom",
-    //         message: "Image choices need either imageUrl or imageDescription.",
-    //         path: ["choices", index],
+    //         message: "Image options need either imageUrl or imageDescription.",
+    //         path: ["options", index],
     //       });
     //     }
     //   });

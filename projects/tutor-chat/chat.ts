@@ -3,10 +3,13 @@ import {
   convertToModelMessages,
   createGateway,
   createUIMessageStream,
+  generateText,
   hasToolCall,
   isStepCount,
+  Output,
   streamText,
 } from "@ai";
+import { z } from "@zod";
 
 import { getLatestActiveObjective } from "./helper.ts";
 import { createTutorChatSystemPrompt } from "./prompt.ts";
@@ -32,8 +35,14 @@ export type {
   TutorChatUITools,
 } from "./types.ts";
 
-const DEFAULT_MODEL = "xai/grok-4.3";
+const DEFAULT_MODEL = "google/gemini-3.5-flash";
 const MAX_TOOL_STEPS = 8;
+
+const repairedToolCallInputSchema = z.object({
+  input: z.string().min(1).describe(
+    "A stringified JSON object containing the corrected tool input.",
+  ),
+});
 
 export async function streamTutorChat(
   { messages, tutor_instructions, student_profile }: TutorChatRequest,
@@ -44,6 +53,7 @@ export async function streamTutorChat(
   }
 
   const gateway = createGateway({ apiKey });
+  const model = gateway(Deno.env.get("TUTOR_CHAT_MODEL") ?? DEFAULT_MODEL);
   const currentObjective = getLatestActiveObjective(messages);
 
   const systemPrompt = createTutorChatSystemPrompt(
@@ -53,11 +63,38 @@ export async function streamTutorChat(
   );
 
   return streamText({
-    model: gateway(Deno.env.get("TUTOR_CHAT_MODEL") ?? DEFAULT_MODEL),
+    model,
     system: systemPrompt,
-    reasoning: 'medium',
+    reasoning: "medium",
     messages: await convertToModelMessages(messages),
     tools: tutorChatTools,
+    experimental_repairToolCall: async ({ toolCall, inputSchema, error }) => {
+      if (!(toolCall.toolName in tutorChatTools)) {
+        return null;
+      }
+
+      const schema = await inputSchema({ toolName: toolCall.toolName });
+      const repair = await generateText({
+        model,
+        output: Output.object({ schema: repairedToolCallInputSchema }),
+        prompt: [
+          `The model produced invalid input for the "${toolCall.toolName}" tool.`,
+          "Rewrite only the tool input so it matches the provided JSON schema exactly.",
+          "Return the corrected input as a stringified JSON object.",
+          "",
+          `Validation error: ${String(error)}`,
+          "",
+          `JSON schema: ${JSON.stringify(schema)}`,
+          "",
+          `Invalid input: ${toolCall.input}`,
+        ].join("\n"),
+      });
+
+      return {
+        ...toolCall,
+        input: repair.output.input,
+      };
+    },
     stopWhen: [
       hasToolCall("prompt-suggestions"),
       hasToolCall("question"),
