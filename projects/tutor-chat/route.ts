@@ -20,7 +20,7 @@ tutorChatRoutes.post("/chat", async (c) => {
         error: {
           code: "INVALID_CHAT_REQUEST",
           message:
-            "Expected a JSON body with messages and optional tutor_instructions/student_profile.",
+            "Expected a JSON body with messages, optional tutor_instructions/student_profile, and optional model.",
           issues: parsedRequest.error.issues,
         },
       },

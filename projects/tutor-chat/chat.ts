@@ -24,7 +24,11 @@ export {
   TUTOR_CHAT_TOOL_PART_TYPES,
   TUTOR_CHAT_TOOL_STATES,
 } from "./types.ts";
-export type { TutorChatRequest } from "./schema.ts";
+export {
+  TUTOR_CHAT_DEFAULT_MODEL,
+  TUTOR_CHAT_MODEL_OPTIONS,
+} from "./schema.ts";
+export type { TutorChatModelPickerOption, TutorChatRequest } from "./schema.ts";
 export type {
   TutorChatDataTypes,
   TutorChatToolInvocation,
@@ -35,7 +39,6 @@ export type {
   TutorChatUITools,
 } from "./types.ts";
 
-const DEFAULT_MODEL = "google/gemini-3.5-flash";
 const MAX_TOOL_STEPS = 8;
 
 const repairedToolCallInputSchema = z.object({
@@ -45,7 +48,7 @@ const repairedToolCallInputSchema = z.object({
 });
 
 export async function streamTutorChat(
-  { messages, tutor_instructions, student_profile }: TutorChatRequest,
+  { messages, tutor_instructions, student_profile, model: modelId }: TutorChatRequest,
 ) {
   const apiKey = Deno.env.get("AI_GATEWAY_API_KEY");
   if (!apiKey) {
@@ -53,7 +56,7 @@ export async function streamTutorChat(
   }
 
   const gateway = createGateway({ apiKey });
-  const model = gateway(Deno.env.get("TUTOR_CHAT_MODEL") ?? DEFAULT_MODEL);
+  const model = gateway(modelId);
   const currentObjective = getLatestActiveObjective(messages);
 
   const systemPrompt = createTutorChatSystemPrompt(
