@@ -13,8 +13,8 @@
     "@aws-sdk/client-s3": "npm:@aws-sdk/client-s3@3.948.0",
     "@google/genai": "npm:@google/genai",
     "@replicate": "npm:replicate@1.4.0",
-    "@openai": "jsr:@openai/openai@6.10.0"
-
+    "@openai": "jsr:@openai/openai@6.10.0",
+    "esbuild": "npm:esbuild@^0.28.1"
   },
   "compilerOptions": {
     "lib": ["deno.ns", "deno.window", "dom"]

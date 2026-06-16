@@ -6,12 +6,12 @@ const client = new S3Client({
   region: "auto",
   endpoint: `https://${Deno.env.get("CLOUDFLARE_ACCOUNT_ID")}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: Deno.env.get("R2_AAIC_ACCESS_KEY_ID") || "",
-    secretAccessKey: Deno.env.get("R2_AAIC_SECRET_ACCESS_KEY") || "",
+    accessKeyId: Deno.env.get("R2_ACCESS_KEY_ID") || "",
+    secretAccessKey: Deno.env.get("R2_SECRET_ACCESS_KEY") || "",
   },
 });
 
-const STATIC_DOMAIN = "https://static.tokenkit.co";
+const STATIC_DOMAIN = "https://static.noahbjorner.com";
 
 function getImageContentType(fileExtension: string): string {
   const ext = fileExtension.toLowerCase();
@@ -135,7 +135,7 @@ export const uploadImage = async (
     const fileName = `${basePrefix}/${date}/${name}.${fileExtension}`;
 
     const params = {
-      Bucket: Deno.env.get("R2_PEEL_BUCKET_NAME"),
+      Bucket: Deno.env.get("R2_NOAHBJORNER_BUCKET_NAME"),
       Key: fileName,
       Body: fileContent,
       ContentType: contentType,
@@ -211,7 +211,7 @@ export const uploadAudio = async (
     const fileName = `${basePrefix}/${date}/${name}.${fileExtension}`;
 
     const params = {
-      Bucket: Deno.env.get("R2_PEEL_BUCKET_NAME"),
+      Bucket: Deno.env.get("R2_NOAHBJORNER_BUCKET_NAME"),
       Key: fileName,
       Body: fileContent,
       ContentType: contentType,
@@ -254,7 +254,7 @@ export const uploadDocument = async (
       : input.type || getDocumentContentType(fileExtension);
 
     const params = {
-      Bucket: Deno.env.get("R2_PEEL_BUCKET_NAME"),
+      Bucket: Deno.env.get("R2_NOAHBJORNER_BUCKET_NAME"),
       Key: fileName,
       Body: fileContent,
       ContentType: contentType,

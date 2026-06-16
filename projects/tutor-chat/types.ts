@@ -1,6 +1,7 @@
 import { type InferUITools, type UIMessage } from "@ai";
 
 import type { WebSearchToolInvocation } from "../../tools/web-search.ts";
+import type { DemonstrationToolInvocation } from "./tools/demontrate/index.ts";
 import type { ObjectiveToolInvocation } from "./tools/objective.ts";
 import type { PromptSuggestionsToolInvocation } from "./tools/prompt-suggestions.ts";
 import type { QuestionToolInvocation } from "./tools/question.ts";
@@ -10,6 +11,7 @@ export type { TutorChatToolName } from "./tools/index.ts";
 
 export type TutorChatUITools = InferUITools<typeof tutorChatTools>;
 export type TutorChatToolInvocation =
+  | DemonstrationToolInvocation
   | ObjectiveToolInvocation
   | PromptSuggestionsToolInvocation
   | QuestionToolInvocation
@@ -23,6 +25,7 @@ export type TutorChatUIMessage = UIMessage<
 >;
 
 export const TUTOR_CHAT_TOOL_PART_TYPES = [
+  "tool-demonstration",
   "tool-objective",
   "tool-prompt-suggestions",
   "tool-question",
@@ -30,6 +33,7 @@ export const TUTOR_CHAT_TOOL_PART_TYPES = [
 ] as const satisfies readonly TutorChatToolPartType[];
 
 export const TUTOR_CHAT_TOOL_LABELS = {
+  "tool-demonstration": "Creating a demonstration...",
   "tool-objective": "Updating the learning objective...",
   "tool-prompt-suggestions": "Creating prompt suggestions...",
   "tool-question": "Creating a question...",

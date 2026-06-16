@@ -26,11 +26,14 @@ export const TUTOR_CHAT_DEFAULT_MODEL = "google/gemini-3.5-flash" as const;
 export const TUTOR_CHAT_MODEL_OPTIONS = [
   "auto",
   "google/gemini-3.5-flash",
+  "openai/gpt-5.5",
+  "anthropic/claude-opus-4.8",
   "xai/grok-4.3",
-  "cerebras/gpt-oss-120b",
   "minimax/minimax-m3",
   "alibaba/qwen3.7-max",
-  "nvidia/nemotron-3-ultra-550b-a55b"
+  "nvidia/nemotron-3-ultra-550b-a55b",
+  "moonshotai/kimi-k2.6",
+  "cerebras/gpt-oss-120b",
 ] as const;
 
 export type TutorChatModelPickerOption =
