@@ -40,6 +40,7 @@ export type {
 } from "./types.ts";
 
 const MAX_TOOL_STEPS = 8;
+const REPAIR_TOOL_CALL_MODEL = "google/gemini-3.5-flash";
 
 const repairedToolCallInputSchema = z.object({
   input: z.string().min(1).describe(
@@ -75,10 +76,10 @@ export async function streamTutorChat(
       if (!(toolCall.toolName in tutorChatTools)) {
         return null;
       }
-
       const schema = await inputSchema({ toolName: toolCall.toolName });
+      const repairModel = gateway(REPAIR_TOOL_CALL_MODEL);
       const repair = await generateText({
-        model,
+        model: repairModel,
         output: Output.object({ schema: repairedToolCallInputSchema }),
         prompt: [
           `The model produced invalid input for the "${toolCall.toolName}" tool.`,

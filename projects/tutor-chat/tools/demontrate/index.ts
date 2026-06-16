@@ -400,6 +400,8 @@ export async function createDemonstration(
   const uniqueId = crypto.randomUUID();
   const outDir = `./output/${uniqueId}`;
   try {
+    // grounding references pre-processing
+
     const { text: rawTsx } = await generateText({
       model: REMOTION_FILE_GENERATOR_MODEL,
       reasoning: REMOTION_FILE_GENERATOR_MODEL_REASONING,
@@ -444,8 +446,7 @@ export async function createDemonstration(
 }
 
 export const demonstrationTool = tool({
-  description:
-    "Create a short visual Remotion demonstration for the learner. Use the instruction field as the planned brief for what should be shown and animated.",
+  description: "Show the learner an idea visually, like sketching on a whiteboard, by generating a short animated clip. Plays alongside your written response and carries the visual part of the explanation. Pass instruction as a self-contained brief: the concept, what appears on screen, and how it moves over time.",
   inputSchema: createDemonstrationInputSchema,
   execute: createDemonstration,
 });
@@ -456,18 +457,19 @@ export type DemonstrationToolInvocation = UIToolInvocation<
 
 
 
+/*
 const start = performance.now();
 const result = await createDemonstration({
   instruction:
-    "Explain the offside rule in soccer by showing a simple field view with an attacker, defenders, the ball, and the goal. Pause at the moment the pass is made, draw a line through the second-to-last defender, and show that an attacker is offside if they are beyond that line and actively involved in the play. Contrast it with an onside example where the attacker stays level with or behind the defender when the pass is played.",
+    "Show the teritory held by Nazi Germany in the beginning of World War II and at the end.",
 });
 const end = performance.now();
 console.log(
-  `Result (${REMOTION_FILE_GENERATOR_MODEL}):`,
+  `Result(v4) (${REMOTION_FILE_GENERATOR_MODEL}):`,
   JSON.stringify(result, null, 2),
 );
 console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);
-
+*/
 /*
   Examples
   - Show how recursion works by visualizing the call stack for a factorial(3) calculation. First, show three stack frames piling up as the function calls itself down to the base case of factorial(1) = 1. Then, show the stack unwinding as values are returned back down the stack to compute the final result of 6.
@@ -476,4 +478,7 @@ console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);
   - Explain the three branches of government in the USA by showing three labeled pillars: Legislative, Executive, and Judicial. Show Congress making laws, the President enforcing laws, and the Supreme Court interpreting laws. Then animate arrows between the branches to show checks and balances, such as vetoes, judicial review, and congressional oversight.
   - Explain bell curve distributions by showing a normal distribution curve centered around the mean. Highlight that most values cluster near the center, fewer values appear toward the tails, and the curve is symmetric. Add bands for one, two, and three standard deviations to show how data becomes less common farther from the average.
   - Explain the multiple generations, long term effect on having an TFR(Total Fertility Rate) of 1.5 on total population by doing a graph showing how many children each generation will have.
-*/
+
+  - Show the teritory held by Nazi Germany in the beginning of World War II and at the end.
+  - Show the EUs expansion from inception to present day use blue to indicate the countries that joined.
+  */
