@@ -1,12 +1,16 @@
 import "@std/dotenv/load";
-import * as esbuild from "esbuild";
 import { generateText, tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 import { uploadDocument } from "../../../../lib/cloudflare.ts";
+import {
+  triggerRemotionRender,
+  type TriggerMachinePreset,
+} from "../../../../lib/trigger-render.ts";
 import { REMOTION_FILE_GENERATOR_INSTRUCTIONS } from "./PROMPT.ts";
 
-const REMOTION_FILE_GENERATOR_MODEL = "anthropic/claude-opus-4.8";
+const REMOTION_FILE_GENERATOR_MODEL = "moonshotai/kimi-k2.7-code-highspeed"; //"anthropic/claude-opus-4.8";
 const REMOTION_FILE_GENERATOR_MODEL_REASONING = "medium";
+const DEMONSTRATION_RENDER_MACHINE: TriggerMachinePreset = "medium-2x";
 
 const demonstrationVideoConfigSchema = z.object({
   width: z.number().int().positive().describe("Video width in pixels."),
@@ -15,50 +19,17 @@ const demonstrationVideoConfigSchema = z.object({
   durationInFrames: z.number().int().positive().describe("Total video duration in frames."),
 });
 
-export const demonstrationOutputSchema = demonstrationVideoConfigSchema.extend({
-  srcUrl: z.string().url().describe(
-    "Public URL for the generated remotion .mjs file.",
+export type DemonstrationOutput = string;
+
+const createDemonstrationInputSchema = z.object({
+  instruction: z.string().min(1).describe(
+    "A self-contained plan for the demonstration: what concept to show, what appears on screen, and how the motion unfolds over time.",
   ),
 });
 
-export type DemonstrationOutput = z.infer<typeof demonstrationOutputSchema>;
-
-const REMOTION_RUNTIME_BINDINGS = [
-  "AbsoluteFill",
-  "Audio",
-  "Easing",
-  "Freeze",
-  "Img",
-  "Loop",
-  "OffthreadVideo",
-  "Sequence",
-  "Series",
-  "Video",
-  "cancelRender",
-  "continueRender",
-  "delayRender",
-  "getInputProps",
-  "interpolate",
-  "interpolateColors",
-  "random",
-  "spring",
-  "staticFile",
-  "useCurrentFrame",
-  "useCurrentScale",
-  "useVideoConfig",
-] as const;
-
-type RuntimeAlias = {
-  imported: string;
-  local: string;
-};
-
-interface RuntimeImports {
-  reactAliases: Set<string>;
-  reactBindings: Map<string, RuntimeAlias>;
-  remotionAliases: Set<string>;
-  remotionBindings: Map<string, RuntimeAlias>;
-}
+type CreateDemonstrationOptions = z.infer<
+  typeof createDemonstrationInputSchema
+>;
 
 function stripMarkdownCodeFence(source: string): string {
   const trimmed = source.trim();
@@ -99,299 +70,15 @@ function extractDemonstrationVideoConfig(
   });
 }
 
-function parseNamedImports(importClause: string): RuntimeAlias[] {
-  const namedMatch = importClause.match(/\{([\s\S]*?)\}/);
-
-  if (!namedMatch) {
-    return [];
-  }
-
-  return namedMatch[1]
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .flatMap((entry): RuntimeAlias[] => {
-      const withoutType = entry.replace(/^type\s+/, "").trim();
-
-      if (!withoutType) {
-        return [];
-      }
-
-      const [imported, local = imported] = withoutType
-        .split(/\s+as\s+/)
-        .map((part) => part.trim());
-
-      return [{ imported, local }];
-    });
+function formatDemonstrationOutput(
+  videoUrl: string,
+  durationInSeconds: number,
+  width: number,
+  height: number,
+  instruction: string,
+): DemonstrationOutput {
+  return `url:${videoUrl}, duration: ${durationInSeconds}, width: ${width}, height: ${height}, instruction: ${instruction}`;
 }
-
-function parseObjectDestructureBindings(
-  destructureClause: string,
-): RuntimeAlias[] {
-  return destructureClause
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .flatMap((entry): RuntimeAlias[] => {
-      const withoutDefault = entry.split("=")[0]?.trim();
-
-      if (!withoutDefault || withoutDefault.startsWith("...")) {
-        return [];
-      }
-
-      const [imported, local = imported] = withoutDefault
-        .split(":")
-        .map((part) => part.trim());
-
-      if (!imported || !local) {
-        return [];
-      }
-
-      return [{ imported, local }];
-    });
-}
-
-function parseDefaultOrNamespaceAlias(importClause: string): string | null {
-  const withoutNamedImports = importClause.replace(/\{[\s\S]*?\}/, "").trim();
-  const namespaceMatch = withoutNamedImports.match(
-    /\*\s+as\s+([A-Za-z_$][\w$]*)/,
-  );
-
-  if (namespaceMatch) {
-    return namespaceMatch[1];
-  }
-
-  const defaultImport = withoutNamedImports
-    .replace(/^type\s+/, "")
-    .replace(/,$/, "")
-    .trim();
-
-  return defaultImport || null;
-}
-
-function addRuntimeImport(
-  runtimeImports: RuntimeImports,
-  moduleName: string,
-  importClause: string,
-): void {
-  const target = moduleName === "react" ? "React" : "Remotion";
-  const aliases = moduleName === "react"
-    ? runtimeImports.reactAliases
-    : runtimeImports.remotionAliases;
-  const bindings = moduleName === "react"
-    ? runtimeImports.reactBindings
-    : runtimeImports.remotionBindings;
-  const defaultOrNamespaceAlias = parseDefaultOrNamespaceAlias(importClause);
-
-  if (defaultOrNamespaceAlias && defaultOrNamespaceAlias !== target) {
-    aliases.add(defaultOrNamespaceAlias);
-  }
-
-  for (const binding of parseNamedImports(importClause)) {
-    bindings.set(binding.local, binding);
-  }
-}
-
-function removeRuntimeImports(
-  source: string,
-): { source: string; runtimeImports: RuntimeImports } {
-  const runtimeImports: RuntimeImports = {
-    reactAliases: new Set(),
-    reactBindings: new Map(),
-    remotionAliases: new Set(),
-    remotionBindings: new Map(),
-  };
-  const importFromRegex =
-    /(^|\n)\s*import\s+([\s\S]*?)\s+from\s+["']([^"']+)["'];?/g;
-  const withoutRuntimeImports = source.replace(
-    importFromRegex,
-    (
-      match,
-      leadingNewline: string,
-      importClause: string,
-      moduleName: string,
-    ) => {
-      if (
-        moduleName === "react" || moduleName === "remotion" ||
-        moduleName === "@remotion/media"
-      ) {
-        addRuntimeImport(runtimeImports, moduleName, importClause);
-        return leadingNewline;
-      }
-
-      return match;
-    },
-  );
-  const sideEffectImportRegex =
-    /(^|\n)\s*import\s+["'](react|remotion|@remotion\/media)["'];?/g;
-  const withoutSideEffectImports = withoutRuntimeImports.replace(
-    sideEffectImportRegex,
-    "$1",
-  );
-  const runtimeDestructureRegex =
-    /(^|\n)\s*(?:const|let|var)\s+\{([\s\S]*?)\}\s*=\s*(React|Remotion)\s*;?/g;
-  const withoutRuntimeDestructures = withoutSideEffectImports.replace(
-    runtimeDestructureRegex,
-    (
-      _match,
-      leadingNewline: string,
-      destructureClause: string,
-      runtimeName: string,
-    ) => {
-      const bindings = runtimeName === "React"
-        ? runtimeImports.reactBindings
-        : runtimeImports.remotionBindings;
-
-      for (
-        const binding of parseObjectDestructureBindings(
-          destructureClause,
-        )
-      ) {
-        bindings.set(binding.local, binding);
-      }
-
-      return leadingNewline;
-    },
-  );
-
-  return {
-    source: withoutRuntimeDestructures,
-    runtimeImports,
-  };
-}
-
-function formatObjectDestructure(bindings: Iterable<RuntimeAlias>): string {
-  return [...bindings]
-    .map(({ imported, local }) =>
-      imported === local ? imported : `${imported}: ${local}`
-    )
-    .join(",\n    ");
-}
-
-function buildRuntimePreamble(runtimeImports: RuntimeImports): string {
-  const remotionBindings = new Map<string, RuntimeAlias>();
-
-  for (const binding of REMOTION_RUNTIME_BINDINGS) {
-    remotionBindings.set(binding, { imported: binding, local: binding });
-  }
-
-  for (const binding of runtimeImports.remotionBindings.values()) {
-    remotionBindings.set(binding.local, binding);
-  }
-
-  const lines = [
-    "const runtime = globalThis.__REMOTION_REMOTE_RUNTIME__;",
-    "",
-    "if (!runtime) {",
-    '    throw new Error("Remotion remote runtime is not available.");',
-    "}",
-    "",
-    "const { React, Remotion } = runtime;",
-  ];
-  const reactBindings = formatObjectDestructure(
-    runtimeImports.reactBindings.values(),
-  );
-
-  if (reactBindings) {
-    lines.push(`const {\n    ${reactBindings}\n} = React;`);
-  }
-
-  for (const alias of runtimeImports.reactAliases) {
-    lines.push(`const ${alias} = React;`);
-  }
-
-  for (const alias of runtimeImports.remotionAliases) {
-    lines.push(`const ${alias} = Remotion;`);
-  }
-
-  lines.push(
-    `const {\n    ${
-      formatObjectDestructure(remotionBindings.values())
-    }\n} = Remotion;`,
-  );
-
-  return `${lines.join("\n")}\n\n`;
-}
-
-function assertNoAdditionalFunctionExports(source: string): void {
-  const hasDefaultFunctionExport =
-    /^\s*export\s+default\s+(?:async\s+)?function\b/m.test(source) ||
-    /^\s*export\s+default\s+(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/m
-      .test(source) ||
-    /^\s*export\s+default\s+[A-Za-z_$][\w$]*\s*;?/m.test(source);
-  const exportedFunctionNames = [
-    ...source.matchAll(
-      /^\s*export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm,
-    ),
-    ...source.matchAll(
-      /^\s*export\s+(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/gm,
-    ),
-  ].map((match) => match[1]);
-
-  if (
-    exportedFunctionNames.length > 1 ||
-    (hasDefaultFunctionExport && exportedFunctionNames.length > 0)
-  ) {
-    throw new Error(
-      `Remote Remotion modules may only export one component function. Remove exported helper function(s): ${
-        exportedFunctionNames.join(", ")
-      }.`,
-    );
-  }
-}
-
-function assertRemoteModuleContract(mjs: string): void {
-  if (/^\s*import\s/m.test(mjs)) {
-    throw new Error(
-      "Compiled Remotion module still contains import declarations.",
-    );
-  }
-
-  if (/\bfrom\s+["'](?:react|remotion|@remotion\/media)["']/.test(mjs)) {
-    throw new Error(
-      "Compiled Remotion module still contains bare React or Remotion imports.",
-    );
-  }
-}
-
-async function convertTsxToMjs(tsx: string): Promise<string> {
-  const source = stripMarkdownCodeFence(tsx);
-  const { source: sourceWithoutImports, runtimeImports } = removeRuntimeImports(
-    source,
-  );
-  const hasRuntimePreamble = sourceWithoutImports.includes(
-    "__REMOTION_REMOTE_RUNTIME__",
-  );
-  const moduleSource = hasRuntimePreamble
-    ? sourceWithoutImports
-    : `${buildRuntimePreamble(runtimeImports)}${sourceWithoutImports}`;
-
-  assertNoAdditionalFunctionExports(moduleSource);
-
-  const result = await esbuild.transform(moduleSource, {
-    loader: "tsx",
-    format: "esm",
-    jsxFactory: "React.createElement",
-    jsxFragment: "React.Fragment",
-    target: "es2020",
-    charset: "utf8",
-  });
-  const mjs = result.code.trimEnd();
-
-  assertRemoteModuleContract(mjs);
-
-  return `${mjs}\n`;
-}
-
-const createDemonstrationInputSchema = z.object({
-  instruction: z.string().min(1).describe(
-    "A self-contained plan for the demonstration: what concept to show, what appears on screen, and how the motion unfolds over time.",
-  ),
-});
-
-type CreateDemonstrationOptions = z.infer<
-  typeof createDemonstrationInputSchema
->;
 
 export async function createDemonstration(
   options: CreateDemonstrationOptions,
@@ -399,35 +86,48 @@ export async function createDemonstration(
   const { instruction } = options;
   const uniqueId = crypto.randomUUID();
   const outDir = `./output/${uniqueId}`;
-  try {
-    // grounding references pre-processing
 
+  try {
     const { text: rawTsx } = await generateText({
       model: REMOTION_FILE_GENERATOR_MODEL,
       reasoning: REMOTION_FILE_GENERATOR_MODEL_REASONING,
       system: REMOTION_FILE_GENERATOR_INSTRUCTIONS,
       prompt: instruction,
     });
+
+    const tsx = stripMarkdownCodeFence(rawTsx);
+    const videoConfig = extractDemonstrationVideoConfig(tsx);
+
     await Deno.mkdir(outDir, { recursive: true });
-    const videoConfig = extractDemonstrationVideoConfig(rawTsx);
     const tsxPath = `${outDir}/remotion-${uniqueId}.tsx`;
-    await Deno.writeTextFile(tsxPath, rawTsx);
+    await Deno.writeTextFile(tsxPath, tsx);
 
-    const mjs = await convertTsxToMjs(rawTsx);
-    const mjsFilename = `remotion-${uniqueId}.mjs`;
-    const mjsPath = `${outDir}/${mjsFilename}`;
-    await Deno.writeTextFile(mjsPath, mjs);
-
-    const srcUrl = await uploadDocument(
-      new Blob([mjs], { type: "text/javascript; charset=utf-8" }),
-      mjsFilename,
+    const tsxFilename = `remotion-${uniqueId}.tsx`;
+    const tsxUrl = await uploadDocument(
+      new Blob([tsx], { type: "text/plain; charset=utf-8" }),
+      tsxFilename,
       { temporary: true },
     );
 
-    return demonstrationOutputSchema.parse({
-      srcUrl,
-      ...videoConfig,
-    });
+    const { videoUrl } = await triggerRemotionRender(
+      {
+        tsxUrl,
+        ...videoConfig,
+      },
+      {
+        machine: DEMONSTRATION_RENDER_MACHINE,
+      },
+    );
+
+    const durationInSeconds = videoConfig.durationInFrames / videoConfig.fps;
+
+    return formatDemonstrationOutput(
+      videoUrl,
+      durationInSeconds,
+      videoConfig.width,
+      videoConfig.height,
+      instruction,
+    );
   } catch (error) {
     console.error(error);
     throw error;
@@ -451,9 +151,7 @@ export const demonstrationTool = tool({
   execute: createDemonstration,
 });
 
-export type DemonstrationToolInvocation = UIToolInvocation<
-  typeof demonstrationTool
->;
+export type DemonstrationToolInvocation = UIToolInvocation<typeof demonstrationTool>;
 
 
 
@@ -461,15 +159,16 @@ export type DemonstrationToolInvocation = UIToolInvocation<
 const start = performance.now();
 const result = await createDemonstration({
   instruction:
-    "Show the teritory held by Nazi Germany in the beginning of World War II and at the end.",
+    "Explain supply and demand curves by showing a graph with price on the vertical axis and quantity on the horizontal axis. Start with a downward-sloping demand curve and an upward-sloping supply curve, then highlight the equilibrium point where they intersect. Show what happens when demand increases by shifting the demand curve right, raising both equilibrium price and quantity.",
 });
 const end = performance.now();
 console.log(
-  `Result(v4) (${REMOTION_FILE_GENERATOR_MODEL}):`,
+  `Result(v5) (${REMOTION_FILE_GENERATOR_MODEL}):`,
   JSON.stringify(result, null, 2),
 );
 console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);
 */
+
 /*
   Examples
   - Show how recursion works by visualizing the call stack for a factorial(3) calculation. First, show three stack frames piling up as the function calls itself down to the base case of factorial(1) = 1. Then, show the stack unwinding as values are returned back down the stack to compute the final result of 6.
@@ -482,3 +181,4 @@ console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);
   - Show the teritory held by Nazi Germany in the beginning of World War II and at the end.
   - Show the EUs expansion from inception to present day use blue to indicate the countries that joined.
   */
+

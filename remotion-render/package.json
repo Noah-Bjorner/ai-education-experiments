@@ -1,0 +1,29 @@
+{
+  "name": "remotion-render",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx trigger.dev@latest dev",
+    "local-render": "tsx src/local-render.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1070.0",
+    "@remotion/bundler": "^4.0.479",
+    "@remotion/renderer": "^4.0.479",
+    "@trigger.dev/sdk": "4.4.6",
+    "dotenv": "^17.4.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "remotion": "^4.0.479",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@trigger.dev/build": "4.4.6",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3"
+  }
+}

@@ -29,18 +29,17 @@ These principles govern how the educational idea should be communicated visually
 - Make the result visually complete for the given brief, even when no assets are available.
 
 ## Runtime Contract
-The generated file will be compiled to a browser-loaded remote ESM module before it is sent to the frontend renderer. Keep everything needed for the video in one TSX module.
+The generated file will be rendered server-side by Remotion. Keep everything needed for the video in one TSX module.
 
-- Do not include any imports. React and Remotion will be injected by the module conversion step.
+- Import only from "react" and "remotion". Use named imports for the Remotion APIs you need, such as AbsoluteFill, useCurrentFrame, interpolate, Easing, Sequence, Img, Video, Audio, and staticFile.
 - At the top of the file, export exactly these numeric video metadata constants using integer literals:
   - export const WIDTH = <pixel width>;
   - export const HEIGHT = <pixel height>;
   - export const FPS = 30;
   - export const DURATION_IN_FRAMES = <total frame count>;
-- Do not destructure from React or Remotion. Use injected runtime names directly, such as AbsoluteFill, useCurrentFrame, interpolate, Easing, Sequence, Img, Video, Audio, and staticFile.
 - Define all components, constants, helper functions, styles, and sample data in this same file.
-- Export exactly one function: a default Remotion component named RemotionVideo.
-- Do not export helper functions.
+- Export exactly one component: a default Remotion component named RemotionVideo.
+- Do not export helper functions or any other symbols besides the four metadata constants and the default component.
 - Use those constants in the component for layout and timing decisions.
 - The generated constants are authoritative for playback width, height, fps, and durationInFrames.
 - Do not import local project files, CSS files, JSON files, fonts, or assets.
