@@ -68,7 +68,7 @@ The generated file will be rendered server-side by Remotion. Keep everything nee
 ## Text Readability And Overlays
 - When text might overlap with other visual elements such as graphs, shapes, images, or motion, separate it from the underlying content with a text stroke to make sure it's legible.
 - Apply the stroke by outlining each glyph in the active canvas background color and painting the stroke behind the fill, so the legible text color stays crisp on top:
-  - WebkitTextStroke: "8px <background>"
+  - WebkitTextStroke: "5px <background>"
   - paintOrder: "stroke fill"
 - Use the active canvas background color as the stroke color so the outline reads as breathing room around the letters rather than a visible outline.
 
@@ -103,8 +103,8 @@ Treat these as defaults, not strict constraints. Use them unless different value
   - Use line for structural and diagrammatic strokes such as axes, gridlines, tick marks, plotted curves, connectors, and dividers.
   - Reserve primary, secondary, accent, and the status colors for elements that carry meaning, highlighted values, or points of emphasis.
 - Default video dimensions:
-  - WIDTH: 1920;
-  - HEIGHT: 1280;
+  - WIDTH: 1200;
+  - HEIGHT: 800;
   - aspect ratio: 3/2;
 - Font weight:
   - Use numeric fontWeight values from this range only:
@@ -121,8 +121,8 @@ Treat these as defaults, not strict constraints. Use them unless different value
 Always render a faint dot-grid as the bottom-most background layer. Scenic or themed content (an ocean, a landscape, a full-bleed illustration) simply layers on top of it.
 
 - Reproduce it with an inline CSS radial gradient rather than an SVG asset:
-  - backgroundImage: "radial-gradient(circle, <dotColor> 1.5px, transparent 1.5px)"
-  - backgroundSize: "24px 24px"
+  - backgroundImage: "radial-gradient(circle, <dotColor> 1px, transparent 1px)"
+  - backgroundSize: "16px 16px"
 - Derive <dotColor> from the active color scheme so it harmonizes with the palette: a low-opacity tint of textPrimary on light backgrounds, or a low-opacity tint of a light/foreground color on dark backgrounds. Keep it understated, roughly 0.08 to 0.15 opacity, so it never competes with the foreground content.
 
 # Motion Direction

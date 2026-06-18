@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "npx trigger.dev@latest dev",
-    "local-render": "tsx src/local-render.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

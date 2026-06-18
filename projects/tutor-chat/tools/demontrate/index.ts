@@ -5,11 +5,13 @@ import { uploadDocument } from "../../../../lib/cloudflare.ts";
 import {
   triggerRemotionRender,
   type TriggerMachinePreset,
-} from "../../../../lib/trigger-render.ts";
+} from "../../../../trigger/client/render.ts";
 import { REMOTION_FILE_GENERATOR_INSTRUCTIONS } from "./PROMPT.ts";
 
 const REMOTION_FILE_GENERATOR_MODEL = "moonshotai/kimi-k2.7-code-highspeed"; //"anthropic/claude-opus-4.8";
 const REMOTION_FILE_GENERATOR_MODEL_REASONING = "medium";
+// Benchmark machine presets against renderMs in Trigger logs:
+// medium-2x (default), large-1x, large-2x. Set via options.machine in triggerRemotionRender().
 const DEMONSTRATION_RENDER_MACHINE: TriggerMachinePreset = "medium-2x";
 
 const demonstrationVideoConfigSchema = z.object({
@@ -111,11 +113,13 @@ export async function createDemonstration(
 
     const { videoUrl } = await triggerRemotionRender(
       {
-        tsxUrl,
-        ...videoConfig,
-      },
-      {
-        machine: DEMONSTRATION_RENDER_MACHINE,
+        input: {
+          tsxUrl,
+          ...videoConfig,
+        },
+        options: {
+          machine: DEMONSTRATION_RENDER_MACHINE,
+        },
       },
     );
 

@@ -29,6 +29,7 @@ export const TUTOR_CHAT_MODEL_OPTIONS = [
   "openai/gpt-5.5",
   "anthropic/claude-opus-4.8",
   "xai/grok-4.3",
+  "zai/glm-5.2",
   "minimax/minimax-m3",
   "alibaba/qwen3.7-max",
   "nvidia/nemotron-3-ultra-550b-a55b",

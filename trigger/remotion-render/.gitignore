@@ -1,3 +1,4 @@
 node_modules
 .trigger
+.remotion
 package-lock.json

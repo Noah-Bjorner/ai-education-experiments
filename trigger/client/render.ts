@@ -1,15 +1,25 @@
-export type TriggerRemotionRenderInput = {
-  tsxUrl: string;
-  width: number;
-  height: number;
-  fps: number;
-  durationInFrames: number;
-};
+import {
+  type TriggerRemotionRenderInput,
+  type TriggerRemotionRenderResult,
+  validateTriggerRemotionRenderInput,
+} from "./contract.ts";
+import {
+  type TriggerRemotionSpecRenderInput,
+  type TriggerRemotionSpecRenderResult,
+  validateTriggerRemotionSpecRenderInput,
+} from "./spec-contract.ts";
 
-export type TriggerRemotionRenderResult = {
-  videoUrl: string;
-  runId: string;
-};
+export type {
+  TriggerRemotionRenderInput,
+  TriggerRemotionRenderResult,
+} from "./contract.ts";
+
+export type {
+  RemotionSceneSpec,
+  SpecSceneElement,
+  TriggerRemotionSpecRenderInput,
+  TriggerRemotionSpecRenderResult,
+} from "./spec-contract.ts";
 
 export type TriggerMachinePreset =
   | "micro"
@@ -65,12 +75,40 @@ const TERMINAL_FAILURE_STATUSES = new Set<TriggerRunStatus>([
   "EXPIRED",
 ]);
 
-const DEFAULT_TASK_IDENTIFIER = "render-remotion-video";
-const POLL_INTERVAL_MS = 3_000;
+const DEFAULT_TSX_TASK_IDENTIFIER = "render-remotion-video";
+const DEFAULT_SPEC_TASK_IDENTIFIER = "render-remotion-spec";
+const POLL_INTERVAL_QUEUED_MS = 3_000;
+const POLL_INTERVAL_EXECUTING_MS = 1_000;
 const MAX_POLL_DURATION_MS = 30 * 60 * 1_000;
+const FETCH_TIMEOUT_MS = 30_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getPollIntervalMs(status: TriggerRunStatus): number {
+  if (status === "EXECUTING" || status === "REATTEMPTING") {
+    return POLL_INTERVAL_EXECUTING_MS;
+  }
+
+  return POLL_INTERVAL_QUEUED_MS;
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function buildTriggerTaskUrl(taskIdentifier: string): string {
@@ -79,18 +117,18 @@ function buildTriggerTaskUrl(taskIdentifier: string): string {
   }/trigger`;
 }
 
-async function triggerRun(
+async function triggerRun<TPayload>(
   secretKey: string,
-  input: TriggerRemotionRenderInput,
+  taskIdentifier: string,
+  payload: TPayload,
   options: TriggerRemotionRenderOptions = {},
 ): Promise<string> {
-  const taskIdentifier = options.taskIdentifier ?? DEFAULT_TASK_IDENTIFIER;
   const body = {
-    payload: input,
+    payload,
     ...(options.machine ? { options: { machine: options.machine } } : {}),
   };
 
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     buildTriggerTaskUrl(taskIdentifier),
     {
       method: "POST",
@@ -122,7 +160,7 @@ async function retrieveRun(
   secretKey: string,
   runId: string,
 ): Promise<TriggerRunResponse> {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://api.trigger.dev/api/v3/runs/${runId}`,
     {
       headers: {
@@ -149,7 +187,7 @@ async function resolveRunOutput(
   }
 
   if (run.outputPresignedUrl) {
-    const response = await fetch(run.outputPresignedUrl);
+    const response = await fetchWithTimeout(run.outputPresignedUrl);
 
     if (!response.ok) {
       throw new Error(
@@ -184,6 +222,7 @@ async function waitForRunOutput(
   runId: string,
 ): Promise<{ videoUrl: string }> {
   const deadline = Date.now() + MAX_POLL_DURATION_MS;
+  let lastStatus: TriggerRunStatus | undefined;
 
   while (Date.now() < deadline) {
     const run = await retrieveRun(secretKey, runId);
@@ -196,25 +235,58 @@ async function waitForRunOutput(
       throw new Error(getRunFailureMessage(run));
     }
 
-    await sleep(POLL_INTERVAL_MS);
+    lastStatus = run.status;
+    await sleep(getPollIntervalMs(run.status));
   }
 
   throw new Error(
-    `Timed out waiting for Trigger.dev run ${runId} to complete.`,
+    `Timed out waiting for Trigger.dev run ${runId} to complete${
+      lastStatus ? ` (last status: ${lastStatus})` : ""
+    }.`,
   );
 }
 
-export async function triggerRemotionRender(
-  input: TriggerRemotionRenderInput,
-  options: TriggerRemotionRenderOptions = {},
-): Promise<TriggerRemotionRenderResult> {
+export type TriggerRemotionRenderCall = {
+  input: TriggerRemotionRenderInput;
+  options?: TriggerRemotionRenderOptions;
+};
+
+export type TriggerRemotionSpecRenderCall = {
+  input: TriggerRemotionSpecRenderInput;
+  options?: TriggerRemotionRenderOptions;
+};
+
+export async function triggerRemotionRender({
+  input,
+  options,
+}: TriggerRemotionRenderCall): Promise<TriggerRemotionRenderResult> {
   const secretKey = Deno.env.get("TRIGGER_SECRET_KEY");
 
   if (!secretKey) {
     throw new Error("Missing TRIGGER_SECRET_KEY.");
   }
 
-  const runId = await triggerRun(secretKey, input, options);
+  const validatedInput = validateTriggerRemotionRenderInput(input);
+  const taskIdentifier = options?.taskIdentifier ?? DEFAULT_TSX_TASK_IDENTIFIER;
+  const runId = await triggerRun(secretKey, taskIdentifier, validatedInput, options);
+  const { videoUrl } = await waitForRunOutput(secretKey, runId);
+
+  return { videoUrl, runId };
+}
+
+export async function triggerRemotionSpecRender({
+  input,
+  options,
+}: TriggerRemotionSpecRenderCall): Promise<TriggerRemotionSpecRenderResult> {
+  const secretKey = Deno.env.get("TRIGGER_SECRET_KEY");
+
+  if (!secretKey) {
+    throw new Error("Missing TRIGGER_SECRET_KEY.");
+  }
+
+  const validatedInput = validateTriggerRemotionSpecRenderInput(input);
+  const taskIdentifier = options?.taskIdentifier ?? DEFAULT_SPEC_TASK_IDENTIFIER;
+  const runId = await triggerRun(secretKey, taskIdentifier, validatedInput, options);
   const { videoUrl } = await waitForRunOutput(secretKey, runId);
 
   return { videoUrl, runId };

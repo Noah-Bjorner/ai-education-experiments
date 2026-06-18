@@ -1,14 +1,32 @@
-export type TriggerRemotionRenderInput = {
-  tsxUrl: string;
-  width: number;
-  height: number;
-  fps: number;
-  durationInFrames: number;
-};
+import {
+  type TriggerRemotionRenderInput,
+  validateTriggerRemotionRenderInput,
+} from "../../client/contract.ts";
+
+export type { TriggerRemotionRenderInput } from "../../client/contract.ts";
 
 export type TriggerRemotionRenderResult = {
   runId: string;
 };
+
+const FETCH_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 export async function triggerRemotionRender(
   input: TriggerRemotionRenderInput,
@@ -19,7 +37,9 @@ export async function triggerRemotionRender(
     throw new Error("Missing TRIGGER_SECRET_KEY.");
   }
 
-  const response = await fetch(
+  const validatedInput = validateTriggerRemotionRenderInput(input);
+
+  const response = await fetchWithTimeout(
     "https://api.trigger.dev/api/v1/tasks/render-remotion-video/trigger",
     {
       method: "POST",
@@ -28,7 +48,7 @@ export async function triggerRemotionRender(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        payload: input,
+        payload: validatedInput,
       }),
     },
   );
