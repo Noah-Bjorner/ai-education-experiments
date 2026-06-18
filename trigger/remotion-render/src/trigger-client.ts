@@ -1,3 +1,4 @@
+import { configure, tasks } from "@trigger.dev/sdk";
 import {
   type TriggerRemotionRenderInput,
   validateTriggerRemotionRenderInput,
@@ -9,24 +10,7 @@ export type TriggerRemotionRenderResult = {
   runId: string;
 };
 
-const FETCH_TIMEOUT_MS = 30_000;
-
-async function fetchWithTimeout(
-  url: string,
-  init: RequestInit = {},
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-  try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
+const DEFAULT_TSX_TASK_IDENTIFIER = "render-remotion-video";
 
 export async function triggerRemotionRender(
   input: TriggerRemotionRenderInput,
@@ -37,34 +21,17 @@ export async function triggerRemotionRender(
     throw new Error("Missing TRIGGER_SECRET_KEY.");
   }
 
-  const validatedInput = validateTriggerRemotionRenderInput(input);
+  configure({ secretKey });
 
-  const response = await fetchWithTimeout(
-    "https://api.trigger.dev/api/v1/tasks/render-remotion-video/trigger",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        payload: validatedInput,
-      }),
-    },
+  const validatedInput = validateTriggerRemotionRenderInput(input);
+  const handle = await tasks.trigger(
+    DEFAULT_TSX_TASK_IDENTIFIER,
+    validatedInput,
   );
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(
-      `Failed to trigger Remotion render (${response.status}): ${body}`,
-    );
-  }
-
-  const data = await response.json() as { id?: string };
-
-  if (!data.id) {
+  if (!handle.id) {
     throw new Error("Trigger.dev response did not include a run id.");
   }
 
-  return { runId: data.id };
+  return { runId: handle.id };
 }

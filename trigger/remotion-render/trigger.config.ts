@@ -1,5 +1,9 @@
-import { aptGet, ffmpeg } from "@trigger.dev/build/extensions/core";
-import { defineConfig } from "@trigger.dev/sdk/v3";
+import {
+  additionalFiles,
+  aptGet,
+  ffmpeg,
+} from "@trigger.dev/build/extensions/core";
+import { defineConfig } from "@trigger.dev/sdk";
 
 const chromeHeadlessShellPackages = [
   "libnss3",
@@ -25,7 +29,6 @@ const remotionBrowserExtension = {
     target: string;
     addLayer: (layer: {
       id: string;
-      files?: Record<string, string>;
       commands?: string[];
     }) => void;
   }) => {
@@ -35,9 +38,6 @@ const remotionBrowserExtension = {
 
     context.addLayer({
       id: "remotion-browser",
-      files: {
-        "./scripts/ensure-browser.mjs": "/app/scripts/ensure-browser.mjs",
-      },
       commands: ["node scripts/ensure-browser.mjs"],
     });
   },
@@ -49,7 +49,6 @@ const remotionStablePrebundleExtension = {
     target: string;
     addLayer: (layer: {
       id: string;
-      files?: Record<string, string>;
       commands?: string[];
     }) => void;
   }) => {
@@ -59,10 +58,6 @@ const remotionStablePrebundleExtension = {
 
     context.addLayer({
       id: "remotion-stable-prebundle",
-      files: {
-        "./scripts/prebundle-stable-app.mjs":
-          "/app/scripts/prebundle-stable-app.mjs",
-      },
       commands: ["node scripts/prebundle-stable-app.mjs"],
     });
   },
@@ -76,6 +71,7 @@ export default defineConfig({
     extensions: [
       ffmpeg(),
       aptGet({ packages: [...chromeHeadlessShellPackages] }),
+      additionalFiles({ files: ["./scripts/*.mjs", "./src/remotion/**"] }),
       remotionBrowserExtension,
       remotionStablePrebundleExtension,
     ],

@@ -14,7 +14,8 @@
     "@google/genai": "npm:@google/genai",
     "@replicate": "npm:replicate@1.4.0",
     "@openai": "jsr:@openai/openai@6.10.0",
-    "esbuild": "npm:esbuild@^0.28.1"
+    "esbuild": "npm:esbuild@^0.28.1",
+    "@trigger.dev/sdk": "npm:@trigger.dev/sdk@4.4.6"
   },
   "compilerOptions": {
     "lib": ["deno.ns", "deno.window", "dom"]

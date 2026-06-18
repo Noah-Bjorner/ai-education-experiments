@@ -10,9 +10,7 @@ import { REMOTION_FILE_GENERATOR_INSTRUCTIONS } from "./PROMPT.ts";
 
 const REMOTION_FILE_GENERATOR_MODEL = "moonshotai/kimi-k2.7-code-highspeed"; //"anthropic/claude-opus-4.8";
 const REMOTION_FILE_GENERATOR_MODEL_REASONING = "medium";
-// Benchmark machine presets against renderMs in Trigger logs:
-// medium-2x (default), large-1x, large-2x. Set via options.machine in triggerRemotionRender().
-const DEMONSTRATION_RENDER_MACHINE: TriggerMachinePreset = "medium-2x";
+const DEMONSTRATION_RENDER_MACHINE: TriggerMachinePreset = "large-2x";
 
 const demonstrationVideoConfigSchema = z.object({
   width: z.number().int().positive().describe("Video width in pixels."),
@@ -163,11 +161,11 @@ export type DemonstrationToolInvocation = UIToolInvocation<typeof demonstrationT
 const start = performance.now();
 const result = await createDemonstration({
   instruction:
-    "Explain supply and demand curves by showing a graph with price on the vertical axis and quantity on the horizontal axis. Start with a downward-sloping demand curve and an upward-sloping supply curve, then highlight the equilibrium point where they intersect. Show what happens when demand increases by shifting the demand curve right, raising both equilibrium price and quantity.",
+    "Explain bell curve distributions by showing a normal distribution curve centered around the mean. Highlight that most values cluster near the center, fewer values appear toward the tails, and the curve is symmetric. Add bands for one, two, and three standard deviations to show how data becomes less common farther from the average.",
 });
 const end = performance.now();
 console.log(
-  `Result(v5) (${REMOTION_FILE_GENERATOR_MODEL}):`,
+  `Result(v6) (${REMOTION_FILE_GENERATOR_MODEL}):`,
   JSON.stringify(result, null, 2),
 );
 console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);

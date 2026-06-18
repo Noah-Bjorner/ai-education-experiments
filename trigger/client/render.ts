@@ -1,3 +1,4 @@
+import { configure, runs, tasks } from "@trigger.dev/sdk";
 import {
   type TriggerRemotionRenderInput,
   type TriggerRemotionRenderResult,
@@ -51,19 +52,23 @@ type TriggerRunStatus =
   | "SYSTEM_FAILURE"
   | "EXPIRED";
 
-type TriggerRunResponse = {
+type TriggerRunOutput = {
+  videoUrl?: string;
+};
+
+type TriggerRunAttempt = {
+  status: string;
+  error?: {
+    message?: string;
+  };
+};
+
+type TriggerRun = {
   id: string;
   status: TriggerRunStatus;
-  output?: {
-    videoUrl?: string;
-  };
+  output?: TriggerRunOutput;
   outputPresignedUrl?: string;
-  attempts?: Array<{
-    status: string;
-    error?: {
-      message?: string;
-    };
-  }>;
+  attempts?: TriggerRunAttempt[];
 };
 
 const TERMINAL_FAILURE_STATUSES = new Set<TriggerRunStatus>([
@@ -111,76 +116,44 @@ async function fetchWithTimeout(
   }
 }
 
-function buildTriggerTaskUrl(taskIdentifier: string): string {
-  return `https://api.trigger.dev/api/v1/tasks/${
-    encodeURIComponent(taskIdentifier)
-  }/trigger`;
+function configureTriggerSdk(secretKey: string): void {
+  configure({ secretKey });
 }
 
 async function triggerRun<TPayload>(
-  secretKey: string,
   taskIdentifier: string,
   payload: TPayload,
   options: TriggerRemotionRenderOptions = {},
 ): Promise<string> {
-  const body = {
-    payload,
-    ...(options.machine ? { options: { machine: options.machine } } : {}),
-  };
+  const handle = await tasks.trigger(taskIdentifier, payload, {
+    ...(options.machine ? { machine: options.machine } : {}),
+  });
 
-  const response = await fetchWithTimeout(
-    buildTriggerTaskUrl(taskIdentifier),
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    },
-  );
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(
-      `Failed to trigger ${taskIdentifier} (${response.status}): ${body}`,
-    );
-  }
-
-  const data = await response.json() as { id?: string };
-
-  if (!data.id) {
+  if (!handle.id) {
     throw new Error("Trigger.dev response did not include a run id.");
   }
 
-  return data.id;
+  return handle.id;
 }
 
-async function retrieveRun(
-  secretKey: string,
-  runId: string,
-): Promise<TriggerRunResponse> {
-  const response = await fetchWithTimeout(
-    `https://api.trigger.dev/api/v3/runs/${runId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-      },
-    },
-  );
+async function retrieveRun(runId: string): Promise<TriggerRun> {
+  const run = await runs.retrieve(runId);
+  const runWithAttempts = run as typeof run & {
+    outputPresignedUrl?: string;
+    attempts?: TriggerRunAttempt[];
+  };
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(
-      `Failed to retrieve Trigger.dev run (${response.status}): ${body}`,
-    );
-  }
-
-  return await response.json() as TriggerRunResponse;
+  return {
+    id: run.id,
+    status: run.status as TriggerRunStatus,
+    output: run.output as TriggerRunOutput | undefined,
+    outputPresignedUrl: runWithAttempts.outputPresignedUrl,
+    attempts: runWithAttempts.attempts,
+  };
 }
 
 async function resolveRunOutput(
-  run: TriggerRunResponse,
+  run: TriggerRun,
 ): Promise<{ videoUrl: string }> {
   if (run.output?.videoUrl) {
     return { videoUrl: run.output.videoUrl };
@@ -207,7 +180,7 @@ async function resolveRunOutput(
   throw new Error("Trigger.dev run completed without a videoUrl.");
 }
 
-function getRunFailureMessage(run: TriggerRunResponse): string {
+function getRunFailureMessage(run: TriggerRun): string {
   const attemptError = run.attempts
     ?.filter((attempt) => attempt.status === "FAILED")
     .map((attempt) => attempt.error?.message)
@@ -218,14 +191,13 @@ function getRunFailureMessage(run: TriggerRunResponse): string {
 }
 
 async function waitForRunOutput(
-  secretKey: string,
   runId: string,
 ): Promise<{ videoUrl: string }> {
   const deadline = Date.now() + MAX_POLL_DURATION_MS;
   let lastStatus: TriggerRunStatus | undefined;
 
   while (Date.now() < deadline) {
-    const run = await retrieveRun(secretKey, runId);
+    const run = await retrieveRun(runId);
 
     if (run.status === "COMPLETED") {
       return await resolveRunOutput(run);
@@ -260,16 +232,18 @@ export async function triggerRemotionRender({
   input,
   options,
 }: TriggerRemotionRenderCall): Promise<TriggerRemotionRenderResult> {
-  const secretKey = Deno.env.get("TRIGGER_SECRET_KEY");
+  const secretKey = Deno.env.get("TRIGGER_SECRET_KEY_PROD");
 
   if (!secretKey) {
     throw new Error("Missing TRIGGER_SECRET_KEY.");
   }
 
+  configureTriggerSdk(secretKey);
+
   const validatedInput = validateTriggerRemotionRenderInput(input);
   const taskIdentifier = options?.taskIdentifier ?? DEFAULT_TSX_TASK_IDENTIFIER;
-  const runId = await triggerRun(secretKey, taskIdentifier, validatedInput, options);
-  const { videoUrl } = await waitForRunOutput(secretKey, runId);
+  const runId = await triggerRun(taskIdentifier, validatedInput, options);
+  const { videoUrl } = await waitForRunOutput(runId);
 
   return { videoUrl, runId };
 }
@@ -284,10 +258,12 @@ export async function triggerRemotionSpecRender({
     throw new Error("Missing TRIGGER_SECRET_KEY.");
   }
 
+  configureTriggerSdk(secretKey);
+
   const validatedInput = validateTriggerRemotionSpecRenderInput(input);
   const taskIdentifier = options?.taskIdentifier ?? DEFAULT_SPEC_TASK_IDENTIFIER;
-  const runId = await triggerRun(secretKey, taskIdentifier, validatedInput, options);
-  const { videoUrl } = await waitForRunOutput(secretKey, runId);
+  const runId = await triggerRun(taskIdentifier, validatedInput, options);
+  const { videoUrl } = await waitForRunOutput(runId);
 
   return { videoUrl, runId };
 }
