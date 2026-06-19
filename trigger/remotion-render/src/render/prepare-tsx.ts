@@ -1,20 +1,11 @@
+import {
+  extractTsxSource,
+  fixKnownEasingMistakes,
+  validateGeneratedTsx,
+} from "../../../../helper/remotion/prepare-tsx-shared.ts";
+
 const ALLOWED_MODULES = new Set(["react", "remotion"]);
 const ALLOWED_MODULE_PREFIXES = ["@remotion/"];
-
-const IMPORT_FROM_REGEX =
-  /(^|\n)\s*import\s+([\s\S]*?)\s+from\s+["']([^"']+)["'];?/g;
-
-const SIDE_EFFECT_IMPORT_REGEX =
-  /(^|\n)\s*import\s+["']([^"']+)["'];?/g;
-
-function stripMarkdownCodeFence(source: string): string {
-  const trimmed = source.trim();
-  const match = trimmed.match(
-    /^```(?:tsx|typescript|ts|jsx|javascript|js)?\s*\n([\s\S]*?)\n```$/,
-  );
-
-  return match ? match[1].trim() : trimmed;
-}
 
 function removeRuntimePreamble(source: string): string {
   const preambleRegex =
@@ -33,8 +24,12 @@ function isAllowedModule(moduleName: string): boolean {
 
 function collectDisallowedImports(source: string): string[] {
   const disallowed = new Set<string>();
+  const importFromRegex =
+    /(^|\n)\s*import\s+([\s\S]*?)\s+from\s+["']([^"']+)["'];?/g;
+  const sideEffectImportRegex =
+    /(^|\n)\s*import\s+["']([^"']+)["'];?/g;
 
-  for (const match of source.matchAll(IMPORT_FROM_REGEX)) {
+  for (const match of source.matchAll(importFromRegex)) {
     const moduleName = match[3];
 
     if (!isAllowedModule(moduleName)) {
@@ -42,7 +37,7 @@ function collectDisallowedImports(source: string): string[] {
     }
   }
 
-  for (const match of source.matchAll(SIDE_EFFECT_IMPORT_REGEX)) {
+  for (const match of source.matchAll(sideEffectImportRegex)) {
     const moduleName = match[2];
 
     if (!isAllowedModule(moduleName)) {
@@ -58,12 +53,19 @@ function hasDefaultExport(source: string): boolean {
 }
 
 export function prepareTsxForRender(rawTsx: string): string {
-  let source = stripMarkdownCodeFence(rawTsx);
-  source = removeRuntimePreamble(source).trim();
+  const { tsx: extracted } = extractTsxSource(rawTsx);
+  let source = fixKnownEasingMistakes(removeRuntimePreamble(extracted)).trim();
 
   if (!source) {
     throw new Error("Remotion TSX source is empty after preprocessing.");
   }
+
+  const validation = validateGeneratedTsx(source);
+  if (!validation.ok) {
+    throw new Error(validation.errors.join(" "));
+  }
+
+  source = validation.tsx;
 
   const disallowedImports = collectDisallowedImports(source);
 
@@ -83,3 +85,9 @@ export function prepareTsxForRender(rawTsx: string): string {
 
   return `${source}\n`;
 }
+
+export {
+  extractTsxSource,
+  fixKnownEasingMistakes,
+  validateGeneratedTsx,
+};

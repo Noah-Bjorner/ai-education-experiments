@@ -1,16 +1,22 @@
 import "@std/dotenv/load";
-import { generateText, tool, type UIToolInvocation } from "@ai";
+import { generateText, Output, tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 import { uploadDocument } from "../../../../lib/cloudflare.ts";
 import {
   triggerRemotionRender,
   type TriggerMachinePreset,
 } from "../../../../trigger/client/render.ts";
-import { REMOTION_FILE_GENERATOR_INSTRUCTIONS } from "./PROMPT.ts";
+import { HOW_TO_USE_SVG_HELPER, svg } from "../../../../helper/svg/index.ts";
+import {
+  REMOTION_FILE_GENERATOR_INSTRUCTIONS,
+  SVG_GROUNDING_INSTRUCTIONS,
+} from "./PROMPT.ts";
+import { validateGeneratedTsxForRender } from "./validate-tsx.ts";
 
-const REMOTION_FILE_GENERATOR_MODEL = "moonshotai/kimi-k2.7-code-highspeed"; //"anthropic/claude-opus-4.8";
+const REMOTION_FILE_GENERATOR_MODEL = "moonshotai/kimi-k2.7-code-highspeed";
 const REMOTION_FILE_GENERATOR_MODEL_REASONING = "medium";
 const DEMONSTRATION_RENDER_MACHINE: TriggerMachinePreset = "large-2x";
+const MAX_GENERATION_ATTEMPTS = 3;
 
 const demonstrationVideoConfigSchema = z.object({
   width: z.number().int().positive().describe("Video width in pixels."),
@@ -30,15 +36,6 @@ const createDemonstrationInputSchema = z.object({
 type CreateDemonstrationOptions = z.infer<
   typeof createDemonstrationInputSchema
 >;
-
-function stripMarkdownCodeFence(source: string): string {
-  const trimmed = source.trim();
-  const match = trimmed.match(
-    /^```(?:tsx|typescript|ts|jsx|javascript|js)?\s*\n([\s\S]*?)\n```$/,
-  );
-
-  return match ? match[1].trim() : trimmed;
-}
 
 function extractIntegerConstant(source: string, name: string): number {
   const match = source.match(
@@ -60,13 +57,11 @@ function extractIntegerConstant(source: string, name: string): number {
 function extractDemonstrationVideoConfig(
   tsx: string,
 ): z.infer<typeof demonstrationVideoConfigSchema> {
-  const source = stripMarkdownCodeFence(tsx);
-
   return demonstrationVideoConfigSchema.parse({
-    width: extractIntegerConstant(source, "WIDTH"),
-    height: extractIntegerConstant(source, "HEIGHT"),
-    fps: extractIntegerConstant(source, "FPS"),
-    durationInFrames: extractIntegerConstant(source, "DURATION_IN_FRAMES"),
+    width: extractIntegerConstant(tsx, "WIDTH"),
+    height: extractIntegerConstant(tsx, "HEIGHT"),
+    fps: extractIntegerConstant(tsx, "FPS"),
+    durationInFrames: extractIntegerConstant(tsx, "DURATION_IN_FRAMES"),
   });
 }
 
@@ -80,6 +75,98 @@ function formatDemonstrationOutput(
   return `url:${videoUrl}, duration: ${durationInSeconds}, width: ${width}, height: ${height}, instruction: ${instruction}`;
 }
 
+function buildGenerationPrompt(
+  instruction: string,
+  validationErrors: string[],
+): string {
+  if (validationErrors.length === 0) {
+    return instruction;
+  }
+
+  return [
+    instruction,
+    "",
+    "Previous generation failed validation. Fix every issue below and return only valid TSX source code with no markdown fences or commentary.",
+    ...validationErrors.map((error) => `- ${error}`),
+  ].join("\n");
+}
+
+async function generateValidatedTsx(
+  instruction: string,
+  groundingSVGs: string[],
+): Promise<string> {
+  let lastErrors: string[] = [];
+
+  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
+    const prompt = buildGenerationPrompt(instruction, lastErrors);
+    const { text: rawTsx } = await generateText({
+      model: REMOTION_FILE_GENERATOR_MODEL,
+      reasoning: REMOTION_FILE_GENERATOR_MODEL_REASONING,
+      system: REMOTION_FILE_GENERATOR_INSTRUCTIONS({ svgReferences: groundingSVGs }),
+      prompt,
+    });
+
+    const validation = validateGeneratedTsxForRender(rawTsx);
+    if (validation.ok) {
+      return validation.tsx;
+    }
+
+    lastErrors = validation.errors;
+    console.warn(
+      `Demonstration TSX validation failed on attempt ${attempt}/${MAX_GENERATION_ATTEMPTS}.`,
+      lastErrors,
+    );
+  }
+
+  throw new Error(
+    `Failed to generate valid Remotion TSX after ${MAX_GENERATION_ATTEMPTS} attempts: ${
+      lastErrors.join("; ")
+    }`,
+  );
+}
+
+const svgGroundingSchema = z.object({
+  queries: z.array(z.string()).describe(
+    "SVG helper query strings (e.g. \"map?countries=es,pr&fidelity=low\"). Empty when no reference SVG would help.",
+  ),
+  explanation: z.string().describe(
+    "Short reasoning for which references were chosen, or why none were needed.",
+  ),
+});
+
+async function getGroundingSVGs(instruction: string): Promise<string[]> {
+  try {
+    const { output } = await generateText({
+      model: "google/gemini-3.5-flash",
+      reasoning: "low",
+      output: Output.object({
+        schema: svgGroundingSchema,
+        name: "svg_grounding_selection",
+        description: "Reference SVG queries that help ground the demonstration in accurate shapes.",
+      }),
+      system: SVG_GROUNDING_INSTRUCTIONS(HOW_TO_USE_SVG_HELPER),
+      prompt: instruction,
+    });
+
+    const svgs = await Promise.all(
+      output.queries.map(async (query) => {
+        try {
+          return await svg(query);
+        } catch (error) {
+          console.error(`Failed to resolve grounding SVG for "${query}".`, error);
+          return null;
+        }
+      }),
+    );
+
+    const validSvgs = svgs.filter((markup): markup is string => Boolean(markup));
+    return validSvgs;
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}
+
 export async function createDemonstration(
   options: CreateDemonstrationOptions,
 ): Promise<DemonstrationOutput> {
@@ -88,14 +175,8 @@ export async function createDemonstration(
   const outDir = `./output/${uniqueId}`;
 
   try {
-    const { text: rawTsx } = await generateText({
-      model: REMOTION_FILE_GENERATOR_MODEL,
-      reasoning: REMOTION_FILE_GENERATOR_MODEL_REASONING,
-      system: REMOTION_FILE_GENERATOR_INSTRUCTIONS,
-      prompt: instruction,
-    });
-
-    const tsx = stripMarkdownCodeFence(rawTsx);
+    const groundingSVGs = await getGroundingSVGs(instruction);
+    const tsx = await generateValidatedTsx(instruction, groundingSVGs);
     const videoConfig = extractDemonstrationVideoConfig(tsx);
 
     await Deno.mkdir(outDir, { recursive: true });
@@ -148,7 +229,7 @@ export async function createDemonstration(
 }
 
 export const demonstrationTool = tool({
-  description: "Show the learner an idea visually, like sketching on a whiteboard, by generating a short animated clip. Plays alongside your written response and carries the visual part of the explanation. Pass instruction as a self-contained brief: the concept, what appears on screen, and how it moves over time.",
+  description: "Create a short motion-graphic visualization of one idea to teach the student visually. Shown alongside a written response, it carries the visual part of the explanation.",
   inputSchema: createDemonstrationInputSchema,
   execute: createDemonstration,
 });
@@ -161,7 +242,7 @@ export type DemonstrationToolInvocation = UIToolInvocation<typeof demonstrationT
 const start = performance.now();
 const result = await createDemonstration({
   instruction:
-    "Explain bell curve distributions by showing a normal distribution curve centered around the mean. Highlight that most values cluster near the center, fewer values appear toward the tails, and the curve is symmetric. Add bands for one, two, and three standard deviations to show how data becomes less common farther from the average.",
+    "Show the EUs expansion from inception to present day use blue to indicate the countries that joined.",
 });
 const end = performance.now();
 console.log(
@@ -182,5 +263,7 @@ console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);
 
   - Show the teritory held by Nazi Germany in the beginning of World War II and at the end.
   - Show the EUs expansion from inception to present day use blue to indicate the countries that joined.
+  - Show the scandinavian countries on a map in the main color of their flag
   */
+
 

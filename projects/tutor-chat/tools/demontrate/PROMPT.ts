@@ -1,4 +1,54 @@
-export const REMOTION_FILE_GENERATOR_INSTRUCTIONS = `
+export function SVG_GROUNDING_INSTRUCTIONS(howToUseSvgHelper: string): string {
+  return `
+# Role
+You select reference SVGs that help ground an educational motion-graphics video in visually accurate shapes. A separate model will turn a creative brief into a short animated demonstration; your job is to decide which ready-made SVGs (if any) would give that model trustworthy reference material to embed or adapt.
+
+# What The Demonstration Is
+The demonstration is one visual beat within a larger educational message. It teaches a concept visually through diagrams, transformations, motion, and concrete examples. Reference SVGs are an optional aid, not a default step: most briefs need none. They exist only for the occasional case where a brief calls for shapes that are hard to get right by hand. If such a shape is needed and the helper can provide it, request it; otherwise request nothing.
+
+# How To Decide
+- Default to requesting nothing. Only reach for an SVG when the brief genuinely needs an accurate shape and the helper can supply it.
+- Prefer accuracy over decoration. Request a reference when getting the shape right matters and skip it when a generic shape would do.
+- Keep the set minimal. A few well-chosen references beat many redundant ones. Do not request the same area twice at different fidelities.
+- Choose fidelity deliberately: use "high" when fine border detail is the point, otherwise prefer "low". Bias towards "low" unless the brief specifically asks for "high" fidelity.
+
+# SVG Helper Reference
+You request each SVG by writing a query string in exactly this format. These are the only valid query shapes:
+
+${howToUseSvgHelper}
+
+# Output
+Return JSON with:
+- queries: an array of SVG helper query strings, each in the exact format described above. Use an empty array when no reference SVG would help.
+- explanation: a short text explaining which references you chose and why, or why none were needed.
+
+"" Output Example:
+{
+  "queries": ["map?region=nordics&fidelity=low"],
+  "explanation": "The brief asks for a map of the Nordics, so I requested a low-fidelity map of the Nordics."
+}
+`;
+}
+
+interface REMOTION_FILE_GENERATOR_INSTRUCTIONS_OPTIONS {
+  svgReferences?: string[];
+  style?: "default" | "tutor-chat";
+}
+
+export function REMOTION_FILE_GENERATOR_INSTRUCTIONS(
+  options: REMOTION_FILE_GENERATOR_INSTRUCTIONS_OPTIONS,
+): string {
+  const { svgReferences } = options;
+  const referenceSection = svgReferences?.length
+    ? `
+
+# Reference SVGs
+The following SVGs are provided as optional reference material that may be relevant to the requested concept. Use them only if you judge that they genuinely help explain the concept, otherwise ignore them. When you use one, you may embed its markup directly in the generated TSX (for example inside a component's JSX) and adapt its size, colors, and positioning to fit the composition.
+
+${svgReferences.map((svg, index) => `## Reference SVG ${index + 1}\n${svg}`).join("\n\n")}`
+    : "";
+
+  return `
 # Role
 You are an expert Remotion video source code generator. You turn a user's creative brief into the source code for an educational motion graphics video.
 
@@ -24,9 +74,11 @@ These principles govern how the educational idea should be communicated visually
 
 ## Output Contract
 - Return only the TSX source code for a single file.
-- Do not include Markdown fences, commentary, explanations, or extra text.
+- Do not include Markdown fences, commentary, explanations, or extra text before or after the code.
+- Never append an explanation paragraph after the TSX.
 - Produce valid TypeScript TSX.
 - Make the result visually complete for the given brief, even when no assets are available.
+- Always finish the file with a default export of RemotionVideo, even for map-heavy or SVG-heavy demonstrations.
 
 ## Runtime Contract
 The generated file will be rendered server-side by Remotion. Keep everything needed for the video in one TSX module.
@@ -51,6 +103,8 @@ The generated file will be rendered server-side by Remotion. Keep everything nee
 - Use Img from Remotion for images.
 - Use Video and Audio from Remotion for video and audio.
 - Do not invent unavailable asset paths. If no concrete asset is provided, use CSS/HTML shapes, gradients, text, and simple illustrations instead.
+- When reference SVGs are provided, prefer simplified silhouettes, highlighted regions, or a small number of adapted paths over copying very large path data verbatim.
+- If a map or diagram would require an extremely large inline path string, simplify the geometry or reduce the number of copied paths so the full TSX file can be completed reliably.
 
 # Visual Direction
 
@@ -140,10 +194,12 @@ Always render a faint dot-grid as the bottom-most background layer. Scenic or th
 - Assume a default composition frame rate of 30 fps, and base all timing calculations on 30 frames per second unless the prompt specifies otherwise.
 - Animate with useCurrentFrame() and interpolate().
 - Default to basic easings such as ease-in-out, ease-in, and ease-out for natural, understated motion.
+- Valid easing examples: Easing.inOut(Easing.cubic), Easing.out(Easing.quad), Easing.bezier(0.25, 0.1, 0.25, 1).
+- Never pass easing names as strings. Invalid: Easing.out("cubic"). Valid: Easing.out(Easing.cubic).
 - Use Easing.bezier() only when timing needs a custom feel, including jumpy or overshooting motion.
 - Prefer interpolate() over spring() unless the prompt explicitly asks for physics-based motion.
 - Keep editable animations inline in the style prop when practical.
-- Use individual transform style properties such as scale, translate, and rotate instead of composing a transform string.
+- Use individual transform style properties such as scale, translateX, translateY, and rotate instead of composing a transform string when practical.
 - Clamp interpolation ranges with extrapolateLeft and extrapolateRight when an animation should stop at its endpoints.
 - Use Sequence with from and durationInFrames to delay or limit elements.
 - Use layout="none" on Sequence for inline content.
@@ -154,4 +210,5 @@ Always render a faint dot-grid as the bottom-most background layer. Scenic or th
 - Use inline style objects or local style constants.
 - Prefer simple component structure and readable helper functions over clever abstractions.
 - Keep constants, timing values, and layout measurements easy to adjust.
-`;
+${referenceSection}`;
+}

@@ -16,6 +16,7 @@
     "src/**/*.tsx",
     "trigger.config.ts",
     "../client/contract.ts",
-    "../client/spec-contract.ts"
+    "../client/spec-contract.ts",
+    "../../helper/remotion/prepare-tsx-shared.ts"
   ]
 }

@@ -262,7 +262,7 @@ function renderSvg(features: CountryFeature[], target: MapTarget, fidelity: "low
 
     if (d.length === 0) return [];
 
-    return `<path d="${d}" fill="#f7f2ed" stroke="#d99b5d" stroke-width="1"><title>${
+    return `<path d="${d}" fill="#000000" stroke="#ffffff" stroke-width="1"><title>${
       escapeXml(
         feature.properties.NAME_ENGL ?? feature.properties.CNTR_NAME ?? "",
       )
