@@ -1,7 +1,19 @@
 # AI Education Experiments
 
+This is an open-source repository where I store my personal experiments related to education and AI.
+
 ## Projects
 
-- **[TutorChat](./projects/tutor-chat)**: An interactive tutor platform leveraging an unofficial Substack API and RSS feeds for educational content delivery.
-- **[History360](./projects/history-360)**: A generative workflow to create immersive, 360-degree historical environments and learning materials.
-- **[Exam Toolkit](./projects/exam-toolkit)**: Tools, databases, and agents for building and evaluating exam prep course finders (e.g., Swedish course lookup).
+- **[TutorChat](./projects/tutor-chat)**: Exploring how to build a tutor agent that delivers the best possible educational experience.
+- **[History360](./projects/history-360)**: Exploring how to leverage AI to teach history through immersive experiences.
+- **[Exam Toolkit](./projects/exam-toolkit)**: Exploring ways to find relevant educational data to ground LLMs in.
+
+## Author
+
+Created and maintained by Noah Bjorner
+- 📧 Email: bjornernoah@gmail.com
+- 🛠 GitHub: @Noah-Bjorner
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
