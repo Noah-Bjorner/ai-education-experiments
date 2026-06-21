@@ -1,22 +1,7 @@
-# Edu Experiments API
+# AI Education Experiments
 
-Deno + TypeScript + Hono API for small education experiments.
+## Projects
 
-## Commands
-
-```sh
-deno task dev
-deno task start
-deno task check
-deno task lint
-deno task fmt
-```
-
-The server listens on `PORT` when set, otherwise `8000`.
-
-## Demo Endpoints
-
-- `GET /`
-- `GET /health`
-- `GET /demo`
-# ai-education-experiments
+- **[TutorChat](./projects/tutor-chat)**: An interactive tutor platform leveraging an unofficial Substack API and RSS feeds for educational content delivery.
+- **[History360](./projects/history-360)**: A generative workflow to create immersive, 360-degree historical environments and learning materials.
+- **[Exam Toolkit](./projects/exam-toolkit)**: Tools, databases, and agents for building and evaluating exam prep course finders (e.g., Swedish course lookup).
