@@ -113,13 +113,13 @@ async function generateValidatedTsx(
 
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
     const prompt = buildGenerationPrompt(instruction, lastErrors);
-    const { text: rawTsx, providerMetadata } = await generateText({
+    const { text: rawTsx } = await generateText({
       model: REMOTION_FILE_GENERATOR_MODEL,
       reasoning: REMOTION_FILE_GENERATOR_MODEL_REASONING,
       system: REMOTION_FILE_GENERATOR_INSTRUCTIONS({ svgReferences: groundingSVGs }),
       prompt,
     });
-    
+
     const validation = validateGeneratedTsxForRender(rawTsx);
     if (validation.ok) {
       return validation.tsx;

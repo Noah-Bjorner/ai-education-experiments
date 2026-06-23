@@ -235,7 +235,7 @@ export async function triggerRemotionRender({
   const secretKey = Deno.env.get("TRIGGER_SECRET_KEY_PROD");
 
   if (!secretKey) {
-    throw new Error("Missing TRIGGER_SECRET_KEY.");
+    throw new Error("Missing TRIGGER_SECRET_KEY_PROD.");
   }
 
   configureTriggerSdk(secretKey);
@@ -252,10 +252,10 @@ export async function triggerRemotionSpecRender({
   input,
   options,
 }: TriggerRemotionSpecRenderCall): Promise<TriggerRemotionSpecRenderResult> {
-  const secretKey = Deno.env.get("TRIGGER_SECRET_KEY");
+  const secretKey = Deno.env.get("TRIGGER_SECRET_KEY_PROD");
 
   if (!secretKey) {
-    throw new Error("Missing TRIGGER_SECRET_KEY.");
+    throw new Error("Missing TRIGGER_SECRET_KEY_PROD.");
   }
 
   configureTriggerSdk(secretKey);

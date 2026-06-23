@@ -15,10 +15,10 @@ const DEFAULT_TSX_TASK_IDENTIFIER = "render-remotion-video";
 export async function triggerRemotionRender(
   input: TriggerRemotionRenderInput,
 ): Promise<TriggerRemotionRenderResult> {
-  const secretKey = process.env.TRIGGER_SECRET_KEY;
+  const secretKey = process.env.TRIGGER_SECRET_KEY_PROD;
 
   if (!secretKey) {
-    throw new Error("Missing TRIGGER_SECRET_KEY.");
+    throw new Error("Missing TRIGGER_SECRET_KEY_PROD.");
   }
 
   configure({ secretKey });
