@@ -13,7 +13,7 @@ import {
 } from "./PROMPT.ts";
 import { validateGeneratedTsxForRender } from "./validate-tsx.ts";
 
-const REMOTION_FILE_GENERATOR_MODEL = "moonshotai/kimi-k2.7-code-highspeed";
+const REMOTION_FILE_GENERATOR_MODEL = "anthropic/claude-opus-4.8";
 const REMOTION_FILE_GENERATOR_MODEL_REASONING = "medium";
 const DEMONSTRATION_RENDER_MACHINE: TriggerMachinePreset = "large-2x";
 const MAX_GENERATION_ATTEMPTS = 3;
@@ -25,7 +25,15 @@ const demonstrationVideoConfigSchema = z.object({
   durationInFrames: z.number().int().positive().describe("Total video duration in frames."),
 });
 
-export type DemonstrationOutput = string;
+export const demonstrationOutputSchema = z.object({
+  url: z.string().url().describe("URL of the rendered demonstration video."),
+  duration: z.number().positive().describe("Video duration in seconds."),
+  width: z.number().int().positive().describe("Video width in pixels."),
+  height: z.number().int().positive().describe("Video height in pixels."),
+  instruction: z.string().min(1).describe("The instruction used to create the demonstration."),
+});
+
+export type DemonstrationOutput = z.infer<typeof demonstrationOutputSchema>;
 
 const createDemonstrationInputSchema = z.object({
   instruction: z.string().min(1).describe(
@@ -65,14 +73,20 @@ function extractDemonstrationVideoConfig(
   });
 }
 
-function formatDemonstrationOutput(
+function createDemonstrationOutput(
   videoUrl: string,
   durationInSeconds: number,
   width: number,
   height: number,
   instruction: string,
 ): DemonstrationOutput {
-  return `url:${videoUrl}, duration: ${durationInSeconds}, width: ${width}, height: ${height}, instruction: ${instruction}`;
+  return demonstrationOutputSchema.parse({
+    url: videoUrl,
+    duration: durationInSeconds,
+    width,
+    height,
+    instruction,
+  });
 }
 
 function buildGenerationPrompt(
@@ -99,13 +113,13 @@ async function generateValidatedTsx(
 
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
     const prompt = buildGenerationPrompt(instruction, lastErrors);
-    const { text: rawTsx } = await generateText({
+    const { text: rawTsx, providerMetadata } = await generateText({
       model: REMOTION_FILE_GENERATOR_MODEL,
       reasoning: REMOTION_FILE_GENERATOR_MODEL_REASONING,
       system: REMOTION_FILE_GENERATOR_INSTRUCTIONS({ svgReferences: groundingSVGs }),
       prompt,
     });
-
+    
     const validation = validateGeneratedTsxForRender(rawTsx);
     if (validation.ok) {
       return validation.tsx;
@@ -204,7 +218,7 @@ export async function createDemonstration(
 
     const durationInSeconds = videoConfig.durationInFrames / videoConfig.fps;
 
-    return formatDemonstrationOutput(
+    return createDemonstrationOutput(
       videoUrl,
       durationInSeconds,
       videoConfig.width,
@@ -231,6 +245,7 @@ export async function createDemonstration(
 export const demonstrationTool = tool({
   description: "Create a short motion-graphic visualization of one idea to teach the student visually. Shown alongside a written response, it carries the visual part of the explanation.",
   inputSchema: createDemonstrationInputSchema,
+  outputSchema: demonstrationOutputSchema,
   execute: createDemonstration,
 });
 
@@ -239,10 +254,11 @@ export type DemonstrationToolInvocation = UIToolInvocation<typeof demonstrationT
 
 
 /*
+
 const start = performance.now();
 const result = await createDemonstration({
   instruction:
-    "Show the EUs expansion from inception to present day use blue to indicate the countries that joined.",
+    "Show the EUs expansion from inception to present day use blue to indicate the countries that joined. Use a map of european countries to show the expansion.",
 });
 const end = performance.now();
 console.log(
@@ -250,9 +266,8 @@ console.log(
   JSON.stringify(result, null, 2),
 );
 console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);
-*/
 
-/*
+
   Examples
   - Show how recursion works by visualizing the call stack for a factorial(3) calculation. First, show three stack frames piling up as the function calls itself down to the base case of factorial(1) = 1. Then, show the stack unwinding as values are returned back down the stack to compute the final result of 6.
   - Explain supply and demand curves by showing a graph with price on the vertical axis and quantity on the horizontal axis. Start with a downward-sloping demand curve and an upward-sloping supply curve, then highlight the equilibrium point where they intersect. Show what happens when demand increases by shifting the demand curve right, raising both equilibrium price and quantity.
