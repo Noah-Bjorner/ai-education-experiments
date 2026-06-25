@@ -21,7 +21,7 @@ function isUIMessage(value: unknown): value is TutorChatUIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
-export const TUTOR_CHAT_DEFAULT_MODEL = "zai/glm-5.2" as const;
+export const TUTOR_CHAT_DEFAULT_MODEL = "zai/glm-5.2-fast" as const;
 
 export const TUTOR_CHAT_MODEL_OPTIONS = [
   "auto",
