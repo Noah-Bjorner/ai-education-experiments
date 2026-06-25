@@ -69,7 +69,6 @@ export async function streamTutorChat(
   return streamText({
     model,
     system: systemPrompt,
-    reasoning: "medium",
     messages: await convertToModelMessages(messages),
     tools: tutorChatTools,
     experimental_repairToolCall: async ({ toolCall, inputSchema, error }) => {

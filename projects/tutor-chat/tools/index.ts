@@ -7,11 +7,11 @@ import { promptSuggestionsTool } from "./prompt-suggestions.ts";
 import { questionTool } from "./question.ts";
 
 export const tutorChatTools = {
-  demonstration: demonstrationTool,
   objective: objectiveTool,
-  "prompt-suggestions": promptSuggestionsTool,
   question: questionTool,
+  "prompt-suggestions": promptSuggestionsTool,
   webSearch: webSearchTool,
+  demonstration: demonstrationTool,
 } satisfies ToolSet;
 
 export type TutorChatToolName = keyof typeof tutorChatTools;
