@@ -1,6 +1,6 @@
-import { ToolLoopAgent, Output, isStepCount } from '@ai';
+import { ToolLoopAgent, Output, isStepCount, type ToolSet } from '@ai';
 import { z } from '@zod';
-import { webSearchTool } from "../../../tools/web-search.ts";
+import { openai } from '@ai-sdk/openai';
 
 
 const OUTLINE_SCENES_PROMPT = `
@@ -132,7 +132,7 @@ export const outlineAgent = new ToolLoopAgent({
   model: "openai/gpt-5.5",
   reasoning: "high",
   instructions: OUTLINE_SCENES_PROMPT,
-  tools: { webSearch: webSearchTool },
+  tools: { web_search: openai.tools.webSearch({}) } as ToolSet,
   stopWhen: isStepCount(20),
   output: Output.object({
     schema: OUTLINE_SCENES_SCHEMA,

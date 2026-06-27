@@ -1,6 +1,5 @@
 import "@std/dotenv/load";
 import { type InferAgentUIMessage, isStepCount, ToolLoopAgent } from "@ai";
-import { webSearchTool } from "../../../../tools/web-search.ts";
 import { INSTRUCTIONS } from "./instructions.ts";
 
 export {
@@ -15,7 +14,7 @@ export const swedishCourseLookupAgent = new ToolLoopAgent({
   reasoning: "high",
   instructions: INSTRUCTIONS,
   tools: {
-    webSearch: webSearchTool,
+    //webSearch: webSearchTool,
   },
   stopWhen: isStepCount(20),
 });

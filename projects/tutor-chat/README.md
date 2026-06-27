@@ -19,6 +19,46 @@ This project is still in an early experimental stage and is not production-ready
 
 The next step is to define a more complete initial toolset, structure the agent around it, and clean up the implementation into a usable first version. Once that foundation is in place, I plan to organize the project more clearly and document the main engineering decisions behind it.
 
+## Tool Architecture
+
+```mermaid
+graph TD
+  Agent[Tutor Agent]
+
+  Agent --> Objective
+  Agent --> LearningMaterial
+  Agent --> Question
+  Agent --> Assessment
+  Agent --> GatherContext
+  Agent --> PromptSuggestions
+
+  Objective
+
+  LearningMaterial --> StudyGuide
+  LearningMaterial --> Flashcards
+  LearningMaterial --> DeepDive
+  LearningMaterial --> Visualization
+  LearningMaterial --> InteractiveExercise
+
+  DeepDive --> DDVideo[Video]
+  DeepDive --> DDPodcast[Podcast]
+  DeepDive --> DDText[Text]
+
+  Visualization --> VizImage[Image]
+  Visualization --> VizMotion[Motion]
+
+  InteractiveExercise
+
+  Question
+  Question
+
+  Assessment --> Written
+  Assessment --> Oral
+
+  GatherContext --> WebSearch[WebSearch]
+  GatherContext --> URLReading[URLReading]
+```
+
 ## Author
 
 Created by Noah Bjorner

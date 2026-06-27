@@ -1,7 +1,7 @@
 import {
   objectiveSchema,
   type ObjectiveToolOutput,
-} from "./tools/objective.ts";
+} from "./tools/objective/index.ts";
 import type { TutorChatUIMessage } from "./types.ts";
 
 export function getLatestActiveObjective(

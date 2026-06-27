@@ -1,6 +1,6 @@
-import { ToolLoopAgent, Output, isStepCount } from "@ai";
+import { ToolLoopAgent, Output, isStepCount, type ToolSet } from "@ai";
 import { z } from "@zod";
-import { webSearchTool } from "../../../tools/web-search.ts";
+import { openai } from '@ai-sdk/openai';
 import { getXaiSpeech } from "../../../lib/xai.ts";
 import { uploadAudio } from "../../../lib/cloudflare.ts";
 import { transcribeFile, AssemblyAIWord } from "../../../lib/assemblyai.ts";
@@ -164,7 +164,7 @@ export const guideAgent = new ToolLoopAgent({
   model: "openai/gpt-5.5",
   reasoning: "high",
   instructions: GUIDE_SCRIPT_PROMPT,
-  tools: { webSearch: webSearchTool },
+  tools: { web_search: openai.tools.webSearch({}) } as ToolSet,
   stopWhen: isStepCount(20),
   output: Output.object({
     schema: GUIDE_SCRIPT_SCHEMA,

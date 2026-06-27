@@ -1,16 +1,15 @@
 import { type ToolSet } from "@ai";
 
-import { webSearchTool } from "../../../tools/web-search.ts";
+
 import { demonstrationTool } from "./demontrate/index.ts";
-import { objectiveTool } from "./objective.ts";
-import { promptSuggestionsTool } from "./prompt-suggestions.ts";
-import { questionTool } from "./question.ts";
+import { objectiveTool } from "./objective/index.ts";
+import { promptSuggestionsTool } from "./prompt-suggestions/index.ts";
+import { questionTool } from "./question/index.ts";
 
 export const tutorChatTools = {
   objective: objectiveTool,
   question: questionTool,
-  "prompt-suggestions": promptSuggestionsTool,
-  webSearch: webSearchTool,
+  promptSuggestions: promptSuggestionsTool,
   demonstration: demonstrationTool,
 } satisfies ToolSet;
 

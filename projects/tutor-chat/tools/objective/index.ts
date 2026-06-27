@@ -35,8 +35,7 @@ const objectiveInputSchema = z.object({
 });
 
 export const objectiveTool = tool({
-  description:
-    "Create or update the current learning objective and checkpoint statuses.",
+  description: "Create or update the current learning objective and checkpoint statuses.",
   inputSchema: objectiveInputSchema,
   execute: ({ objective }) => objective,
 });

@@ -4,12 +4,14 @@
     "start": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys --allow-ffi main.ts"
   },
   "imports": {
+    "@ai-sdk/google": "npm:@ai-sdk/google",
+    "@ai-sdk/openai": "npm:@ai-sdk/openai",
     "@hono/hono": "jsr:@hono/hono@^4.12.15",
     "@std/dotenv": "jsr:@std/dotenv@^0.225.5",
     "@neondatabase/serverless": "npm:@neondatabase/serverless@1.0.2",
     "@unpdf": "npm:unpdf@^1.6.2",
     "@zod": "npm:zod@^4.4.3",
-    "@ai": "npm:ai@canary",
+    "@ai": "npm:ai@^7.0.0",
     "@aws-sdk/client-s3": "npm:@aws-sdk/client-s3@3.948.0",
     "@google/genai": "npm:@google/genai",
     "@replicate": "npm:replicate@1.4.0",

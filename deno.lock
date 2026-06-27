@@ -6,12 +6,13 @@
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/dotenv@~0.225.5": "0.225.6",
     "jsr:@std/internal@^1.0.12": "1.0.12",
-    "npm:@ai-sdk/provider-utils@*": "4.0.27_zod@4.4.3",
+    "npm:@ai-sdk/provider-utils@*": "5.0.0_zod@4.4.3",
     "npm:@aws-sdk/client-s3@3.948.0": "3.948.0",
     "npm:@google/genai@*": "1.41.0",
     "npm:@neondatabase/serverless@1.0.2": "1.0.2",
+    "npm:@parallel-web/ai-sdk-tools@1": "1.0.0_ai@7.0.0-canary.126__zod@4.4.3",
     "npm:@trigger.dev/sdk@4.4.6": "4.4.6_ai@7.0.0-canary.126__zod@4.4.3_zod@4.4.3",
-    "npm:ai@canary": "7.0.0-canary.126_zod@4.4.3",
+    "npm:ai@7": "7.0.3_zod@4.4.3",
     "npm:esbuild@~0.28.1": "0.28.1",
     "npm:replicate@1.4.0": "1.4.0",
     "npm:unpdf@^1.6.2": "1.6.2",
@@ -51,12 +52,12 @@
         "zod@4.4.3"
       ]
     },
-    "@ai-sdk/provider-utils@4.0.27_zod@4.4.3": {
-      "integrity": "sha512-ubkAJ+xODouwtmN1tYlvTPphH1hPOBfZaEQe8U7skGvFAnIRs9PPpsq57bC2+Ky/MB4yzhd6YOsxTAx9sGpazw==",
+    "@ai-sdk/gateway@4.0.3_zod@4.4.3": {
+      "integrity": "sha512-V8p0skqA9I5ZvZ4JDrvdh+TrZ0OVvkoP4CPEMxy777yBcVO5febhtLUJ+t0V0ROvSIkWIm5R9nvyOsyZRtO9sQ==",
       "dependencies": [
-        "@ai-sdk/provider@3.0.10",
-        "@standard-schema/spec",
-        "eventsource-parser",
+        "@ai-sdk/provider@4.0.0",
+        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
+        "@vercel/oidc",
         "zod@4.4.3"
       ]
     },
@@ -70,8 +71,18 @@
         "zod@4.4.3"
       ]
     },
-    "@ai-sdk/provider@3.0.10": {
-      "integrity": "sha512-Q3BZ27qfpYqnCYGvE3vt+Qi6LGOF9R5Nmzn+9JoM1lCRsD9mYaIhfJLkSunN48nfGXJ6n+XNV0J/XVpqGQl7Dw==",
+    "@ai-sdk/provider-utils@5.0.0_zod@4.4.3": {
+      "integrity": "sha512-zj66M02jc6ASYwIgWZowsooDUwaVngeNZQ3H10GwcPMZ+KR6gHMhcUuKl6tkai+JPXTKDyHY1pnszuxRtw2D4A==",
+      "dependencies": [
+        "@ai-sdk/provider@4.0.0",
+        "@standard-schema/spec",
+        "@workflow/serde",
+        "eventsource-parser",
+        "zod@4.4.3"
+      ]
+    },
+    "@ai-sdk/provider@4.0.0": {
+      "integrity": "sha512-fr9Gs89prDWiuox/T+kCA+i2cJkHpxU5S+tr4megjTzRC27ZsvFhwjU/+XrqqMbvBUlfmXxTOYWy8ng45dsjIg==",
       "dependencies": [
         "json-schema"
       ]
@@ -938,6 +949,14 @@
     "@opentelemetry/semantic-conventions@1.36.0": {
       "integrity": "sha512-TtxJSRD8Ohxp6bKkhrm27JRHAxPczQA7idtcTOMYI+wQRRrfgqxHv1cFbCApcSnNjtXkmzFozn6jQtFrOmbjPQ=="
     },
+    "@parallel-web/ai-sdk-tools@1.0.0_ai@7.0.0-canary.126__zod@4.4.3": {
+      "integrity": "sha512-OmPMRXlYDsnXXe5wjqJDv1YYoUReYwR6f4Ut5CTDh6TmtAHW2jvFSJ0jZJaM/eNJA2w1Q2Ic3axBTqnwY9QVwg==",
+      "dependencies": [
+        "ai@7.0.0-canary.126_zod@4.4.3",
+        "parallel-web",
+        "zod@4.4.3"
+      ]
+    },
     "@pkgjs/parseargs@0.11.0": {
       "integrity": "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="
     },
@@ -1488,7 +1507,7 @@
         "@opentelemetry/api",
         "@opentelemetry/semantic-conventions",
         "@trigger.dev/core",
-        "ai",
+        "ai@7.0.0-canary.126_zod@4.4.3",
         "chalk",
         "cronstrue",
         "debug@4.4.3",
@@ -1500,7 +1519,7 @@
         "zod@4.4.3"
       ],
       "optionalPeers": [
-        "ai"
+        "ai@7.0.0-canary.126_zod@4.4.3"
       ]
     },
     "@types/cookie@0.4.1": {
@@ -1561,9 +1580,18 @@
     "ai@7.0.0-canary.126_zod@4.4.3": {
       "integrity": "sha512-gvhNdn5bp+vbpQKTB5p9lsk/HPCvdgS7fUzj2G+30on0M+koOdeoPugkwyLnnP32wnTG45Yj0zotpM+krsdjwA==",
       "dependencies": [
-        "@ai-sdk/gateway",
+        "@ai-sdk/gateway@4.0.0-canary.73_zod@4.4.3",
         "@ai-sdk/provider@4.0.0-canary.16",
         "@ai-sdk/provider-utils@5.0.0-canary.35_zod@4.4.3",
+        "zod@4.4.3"
+      ]
+    },
+    "ai@7.0.3_zod@4.4.3": {
+      "integrity": "sha512-ze2nTtoNW1hYhkjAVUVoLQGC/vDmNv+nIo3n8aCv2QQS8WCuC8o3CF6ywnUlui/i7lfGU4V8aPClVRH62WUHeA==",
+      "dependencies": [
+        "@ai-sdk/gateway@4.0.3_zod@4.4.3",
+        "@ai-sdk/provider@4.0.0",
+        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
         "zod@4.4.3"
       ]
     },
@@ -1851,6 +1879,7 @@
         "package-json-from-dist",
         "path-scurry"
       ],
+      "deprecated": true,
       "bin": true
     },
     "google-auth-library@10.5.0": {
@@ -2041,6 +2070,9 @@
     },
     "package-json-from-dist@1.0.1": {
       "integrity": "sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw=="
+    },
+    "parallel-web@0.5.0": {
+      "integrity": "sha512-p3JR9ENwbXtQJFTn4rWrraYKzHISkG2lwoRmVQceEqepgMtpuE6v/BEMi4yAmGum6ejK2F4DDKLkcqeFxnqztg=="
     },
     "path-key@3.1.1": {
       "integrity": "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q=="
@@ -2361,11 +2393,14 @@
       "jsr:@hono/hono@^4.12.15",
       "jsr:@openai/openai@6.10.0",
       "jsr:@std/dotenv@~0.225.5",
+      "npm:@ai-sdk/google@4",
+      "npm:@ai-sdk/openai@4",
       "npm:@aws-sdk/client-s3@3.948.0",
       "npm:@google/genai@*",
       "npm:@neondatabase/serverless@1.0.2",
+      "npm:@parallel-web/ai-sdk-tools@1",
       "npm:@trigger.dev/sdk@4.4.6",
-      "npm:ai@canary",
+      "npm:ai@7",
       "npm:esbuild@~0.28.1",
       "npm:replicate@1.4.0",
       "npm:unpdf@^1.6.2",
