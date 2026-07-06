@@ -6,13 +6,15 @@
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/dotenv@~0.225.5": "0.225.6",
     "jsr:@std/internal@^1.0.12": "1.0.12",
+    "npm:@ai-sdk/google@*": "4.0.1_zod@4.4.3",
+    "npm:@ai-sdk/openai@*": "4.0.1_zod@4.4.3",
     "npm:@ai-sdk/provider-utils@*": "5.0.0_zod@4.4.3",
     "npm:@aws-sdk/client-s3@3.948.0": "3.948.0",
     "npm:@google/genai@*": "1.41.0",
     "npm:@neondatabase/serverless@1.0.2": "1.0.2",
-    "npm:@parallel-web/ai-sdk-tools@1": "1.0.0_ai@7.0.0-canary.126__zod@4.4.3",
     "npm:@trigger.dev/sdk@4.4.6": "4.4.6_ai@7.0.0-canary.126__zod@4.4.3_zod@4.4.3",
     "npm:ai@7": "7.0.3_zod@4.4.3",
+    "npm:ai@7.0.3": "7.0.3_zod@4.4.3",
     "npm:esbuild@~0.28.1": "0.28.1",
     "npm:replicate@1.4.0": "1.4.0",
     "npm:unpdf@^1.6.2": "1.6.2",
@@ -58,6 +60,22 @@
         "@ai-sdk/provider@4.0.0",
         "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
         "@vercel/oidc",
+        "zod@4.4.3"
+      ]
+    },
+    "@ai-sdk/google@4.0.1_zod@4.4.3": {
+      "integrity": "sha512-FZAliYDNgpe96H8fh8ccW2PrPYMf7fRoT/oySfRVdkqQUAO+DI5jIouYbF1D9xl1+qGb6s0zaRZKD8Ig+zDO4g==",
+      "dependencies": [
+        "@ai-sdk/provider@4.0.0",
+        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
+        "zod@4.4.3"
+      ]
+    },
+    "@ai-sdk/openai@4.0.1_zod@4.4.3": {
+      "integrity": "sha512-SZ036CbBdQcf8Q8EoGKU7kYBJpX+KPChGXUO8IPXDKMYvo/CDjBpPLWOm4DMa++s9skxuxTZtmNLqTeaY2GjTg==",
+      "dependencies": [
+        "@ai-sdk/provider@4.0.0",
+        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
         "zod@4.4.3"
       ]
     },
@@ -948,14 +966,6 @@
     },
     "@opentelemetry/semantic-conventions@1.36.0": {
       "integrity": "sha512-TtxJSRD8Ohxp6bKkhrm27JRHAxPczQA7idtcTOMYI+wQRRrfgqxHv1cFbCApcSnNjtXkmzFozn6jQtFrOmbjPQ=="
-    },
-    "@parallel-web/ai-sdk-tools@1.0.0_ai@7.0.0-canary.126__zod@4.4.3": {
-      "integrity": "sha512-OmPMRXlYDsnXXe5wjqJDv1YYoUReYwR6f4Ut5CTDh6TmtAHW2jvFSJ0jZJaM/eNJA2w1Q2Ic3axBTqnwY9QVwg==",
-      "dependencies": [
-        "ai@7.0.0-canary.126_zod@4.4.3",
-        "parallel-web",
-        "zod@4.4.3"
-      ]
     },
     "@pkgjs/parseargs@0.11.0": {
       "integrity": "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="
@@ -2071,9 +2081,6 @@
     "package-json-from-dist@1.0.1": {
       "integrity": "sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw=="
     },
-    "parallel-web@0.5.0": {
-      "integrity": "sha512-p3JR9ENwbXtQJFTn4rWrraYKzHISkG2lwoRmVQceEqepgMtpuE6v/BEMi4yAmGum6ejK2F4DDKLkcqeFxnqztg=="
-    },
     "path-key@3.1.1": {
       "integrity": "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q=="
     },
@@ -2393,12 +2400,11 @@
       "jsr:@hono/hono@^4.12.15",
       "jsr:@openai/openai@6.10.0",
       "jsr:@std/dotenv@~0.225.5",
-      "npm:@ai-sdk/google@4",
-      "npm:@ai-sdk/openai@4",
+      "npm:@ai-sdk/google@*",
+      "npm:@ai-sdk/openai@*",
       "npm:@aws-sdk/client-s3@3.948.0",
       "npm:@google/genai@*",
       "npm:@neondatabase/serverless@1.0.2",
-      "npm:@parallel-web/ai-sdk-tools@1",
       "npm:@trigger.dev/sdk@4.4.6",
       "npm:ai@7",
       "npm:esbuild@~0.28.1",
