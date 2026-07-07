@@ -1,4 +1,4 @@
-# TutorChat 
+# Mammoth 
 
 This is a personal research project exploring ways to build AI tutor agents that incorporate pedagogical best practices and help students develop durable knowledge they can apply independently.
 
@@ -23,7 +23,7 @@ The next step is to define a more complete initial toolset, structure the agent 
 
 ```mermaid
 graph TD
-  Agent[Tutor Agent]
+  Agent[Mammoth Agent]
 
   Agent --> Objective
   Agent --> LearningMaterial

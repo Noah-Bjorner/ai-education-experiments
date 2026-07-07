@@ -32,7 +32,7 @@ Return JSON with:
 
 interface REMOTION_FILE_GENERATOR_INSTRUCTIONS_OPTIONS {
   svgReferences?: string[];
-  style?: "default" | "tutor-chat";
+  style?: "default" | "mammoth";
 }
 
 export function REMOTION_FILE_GENERATOR_INSTRUCTIONS(

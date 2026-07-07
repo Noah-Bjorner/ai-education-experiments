@@ -2,10 +2,10 @@ import {
   objectiveSchema,
   type ObjectiveToolOutput,
 } from "./tools/objective/index.ts";
-import type { TutorChatUIMessage } from "./types.ts";
+import type { MammothUIMessage } from "./types.ts";
 
 export function getLatestActiveObjective(
-  messages: TutorChatUIMessage[],
+  messages: MammothUIMessage[],
 ): ObjectiveToolOutput | undefined {
   for (
     let messageIndex = messages.length - 1;
@@ -30,7 +30,8 @@ export function getLatestActiveObjective(
         return undefined;
       }
 
-      return parsedObjective.data.status === "completed"
+      const { status } = parsedObjective.data;
+      return status === "completed" || status === "abandoned"
         ? undefined
         : parsedObjective.data;
     }

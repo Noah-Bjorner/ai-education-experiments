@@ -12,31 +12,31 @@ import {
 import { z } from "@zod";
 
 import { getLatestActiveObjective } from "./helper.ts";
-import { createTutorChatSystemPrompt } from "./prompt.ts";
-import type { TutorChatRequest } from "./schema.ts";
-import { tutorChatTools } from "./tools/index.ts";
-import type { TutorChatUIMessage } from "./types.ts";
+import { createMammothSystemPrompt } from "./prompt.ts";
+import type { MammothRequest } from "./schema.ts";
+import { mammothTools } from "./tools/index.ts";
+import type { MammothUIMessage } from "./types.ts";
 
-export { tutorChatTools } from "./tools/index.ts";
+export { mammothTools } from "./tools/index.ts";
 export {
-  TUTOR_CHAT_ACTIVE_TOOL_STATES,
-  TUTOR_CHAT_TOOL_LABELS,
-  TUTOR_CHAT_TOOL_PART_TYPES,
-  TUTOR_CHAT_TOOL_STATES,
+  MAMMOTH_ACTIVE_TOOL_STATES,
+  MAMMOTH_TOOL_LABELS,
+  MAMMOTH_TOOL_PART_TYPES,
+  MAMMOTH_TOOL_STATES,
 } from "./types.ts";
 export {
-  TUTOR_CHAT_DEFAULT_MODEL,
-  TUTOR_CHAT_MODEL_OPTIONS,
+  MAMMOTH_DEFAULT_MODEL,
+  MAMMOTH_MODEL_OPTIONS,
 } from "./schema.ts";
-export type { TutorChatModelPickerOption, TutorChatRequest } from "./schema.ts";
+export type { MammothModelPickerOption, MammothRequest } from "./schema.ts";
 export type {
-  TutorChatDataTypes,
-  TutorChatToolInvocation,
-  TutorChatToolName,
-  TutorChatToolPartType,
-  TutorChatToolState,
-  TutorChatUIMessage,
-  TutorChatUITools,
+  MammothDataTypes,
+  MammothToolInvocation,
+  MammothToolName,
+  MammothToolPartType,
+  MammothToolState,
+  MammothUIMessage,
+  MammothUITools,
 } from "./types.ts";
 
 const MAX_TOOL_STEPS = 8;
@@ -48,19 +48,19 @@ const repairedToolCallInputSchema = z.object({
   ),
 });
 
-export async function streamTutorChat(
-  { messages, tutor_instructions, student_profile, model: modelId }: TutorChatRequest,
+export async function streamMammoth(
+  { messages, tutor_instructions, student_profile, model: modelId }: MammothRequest,
 ) {
   const apiKey = Deno.env.get("AI_GATEWAY_API_KEY");
   if (!apiKey) {
-    throw new Error("AI_GATEWAY_API_KEY is required to run Tutor chat.");
+    throw new Error("AI_GATEWAY_API_KEY is required to run Mammoth.");
   }
 
   const gateway = createGateway({ apiKey });
   const model = gateway(modelId);
   const currentObjective = getLatestActiveObjective(messages);
 
-  const systemPrompt = createTutorChatSystemPrompt(
+  const systemPrompt = createMammothSystemPrompt(
     tutor_instructions,
     student_profile,
     currentObjective,
@@ -70,9 +70,9 @@ export async function streamTutorChat(
     model,
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
-    tools: tutorChatTools,
+    tools: mammothTools,
     experimental_repairToolCall: async ({ toolCall, inputSchema, error }) => {
-      if (!(toolCall.toolName in tutorChatTools)) {
+      if (!(toolCall.toolName in mammothTools)) {
         return null;
       }
       const schema = await inputSchema({ toolName: toolCall.toolName });
@@ -106,17 +106,17 @@ export async function streamTutorChat(
   });
 }
 
-export function createTutorChatUIMessageStream(
-  request: TutorChatRequest,
+export function createMammothUIMessageStream(
+  request: MammothRequest,
   {
     onError,
   }: {
     onError?: (error: unknown) => string;
   } = {},
 ) {
-  return createUIMessageStream<TutorChatUIMessage>({
+  return createUIMessageStream<MammothUIMessage>({
     execute: async ({ writer }) => {
-      const result = await streamTutorChat(request);
+      const result = await streamMammoth(request);
       writer.merge(result.toUIMessageStream());
     },
     onError,

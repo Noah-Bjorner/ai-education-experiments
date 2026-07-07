@@ -1,16 +1,26 @@
 import { tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 
-const objectiveStatusSchema = z.enum([
+export const OBJECTIVE_TOOL_DESCRIPTION = "Create or update the current learning objective and checkpoint statuses.";
+export const OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION = "Use when setting or updating the current learning objective. Follow the objective + checkpoints framework, and keep checkpoint statuses current. If the learner drops an objective or switches topics, mark it abandoned before starting a new one.";
+
+const checkpointStatusSchema = z.enum([
   "not_started",
   "in_progress",
   "completed",
 ]);
 
+const objectiveStatusSchema = z.enum([
+  "not_started",
+  "in_progress",
+  "completed",
+  "abandoned",
+]);
+
 const checkpointSchema = z.object({
   id: z.string().min(1).describe("Stable checkpoint id."),
   title: z.string().min(1).describe("Short learner-facing checkpoint title."),
-  status: objectiveStatusSchema.describe(
+  status: checkpointStatusSchema.describe(
     "Current progress toward this checkpoint.",
   ),
   demonstrates: z.string().min(1).describe(
@@ -23,7 +33,7 @@ export const objectiveSchema = z.object({
     "What the learner should understand or be able to do.",
   ),
   status: objectiveStatusSchema.describe(
-    "Current status of the overall objective.",
+    "Current status of the overall objective. Use completed only when the learner has demonstrated all checkpoints; use abandoned when the learner drops the objective or switches topics before finishing.",
   ),
   checkpoints: z.array(checkpointSchema).min(1).describe(
     "Learning checkpoints that define what the learner must demonstrate before the objective is complete.",
@@ -35,7 +45,7 @@ const objectiveInputSchema = z.object({
 });
 
 export const objectiveTool = tool({
-  description: "Create or update the current learning objective and checkpoint statuses.",
+  description: OBJECTIVE_TOOL_DESCRIPTION,
   inputSchema: objectiveInputSchema,
   execute: ({ objective }) => objective,
 });
