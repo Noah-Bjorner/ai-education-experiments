@@ -1,6 +1,9 @@
 import type { ObjectiveToolOutput } from "./tools/objective/index.ts";
+
+import { GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION } from "./tools/gather-context/index.ts";
 import { OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION } from "./tools/objective/index.ts";
 import { PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION } from "./tools/prompt-suggestions/index.ts";
+import { QUESTION_SYSTEM_PROMPT_DESCRIPTION } from "./tools/question/index.ts";
 
 function formatCurrentObjective(objective: ObjectiveToolOutput): string {
   return [
@@ -21,6 +24,7 @@ function formatCurrentObjective(objective: ObjectiveToolOutput): string {
 export function createMammothSystemPrompt(
   tutor_instructions: string,
   student_profile: string,
+  memory?: string,
   current_objective?: ObjectiveToolOutput,
 ) {
   return `
@@ -33,18 +37,20 @@ ${tutor_instructions}
 ## Student Profile
 ${student_profile}
 
+${
+    memory
+      ? `## Memory
+${memory}
+
+` : ""}
 ## Tool Calling
 Use tools when they improve the student's learning experience, especially when the response is creating, updating, or rendering something represented by one of the tools. Do not call tools for unrelated actions just because they are available. Use plain text for explanation, narration, or cases where no available tool matches the intended learning interaction.
 This is an ongoing conversation, not a one-shot answer: you do not need to teach, check, and wrap up everything in a single message. Often the better move is a small step now — a bit of explanation, or one question — and letting the next turn carry the rest.
 When calling tools, use the exact input field names from the tool schema. Do not rename, infer, or substitute similar field names.
 
 - objective: ${OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION}
-- question: Use when you want the student to actively think, practice, or check understanding. Always use this tool for questions you want the learner to answer, not Markdown/plain text. Prefer the simplest questionType that matches the learning task:
-  - multiple_choice_text: default for quick conceptual checks or choosing among text options.
-  - text_response: when the student should explain, define, or reflect in their own words.
-  - math_response: when the answer is numeric, an equation, an expression, or unit-based.
-  - fill_in_the_blank: when recalling vocabulary, formulas, steps, or sentence completions. Use {{blankId}} markers.
-  - matching: when pairing related items, such as terms and definitions or examples and categories.
+- question: ${QUESTION_SYSTEM_PROMPT_DESCRIPTION}
+- gatherContext: ${GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION}
 - promptSuggestions: ${PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION}
 
 ${

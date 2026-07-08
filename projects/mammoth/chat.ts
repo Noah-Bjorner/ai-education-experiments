@@ -39,7 +39,7 @@ export type {
   MammothUITools,
 } from "./types.ts";
 
-const MAX_TOOL_STEPS = 8;
+const MAX_TOOL_STEPS = 15;
 const REPAIR_TOOL_CALL_MODEL = "google/gemini-3.5-flash";
 
 const repairedToolCallInputSchema = z.object({
@@ -49,7 +49,8 @@ const repairedToolCallInputSchema = z.object({
 });
 
 export async function streamMammoth(
-  { messages, tutor_instructions, student_profile, model: modelId }: MammothRequest,
+  { messages, tutor_instructions, student_profile, memory, model: modelId }:
+    MammothRequest,
 ) {
   const apiKey = Deno.env.get("AI_GATEWAY_API_KEY");
   if (!apiKey) {
@@ -63,6 +64,7 @@ export async function streamMammoth(
   const systemPrompt = createMammothSystemPrompt(
     tutor_instructions,
     student_profile,
+    memory,
     currentObjective,
   );
 

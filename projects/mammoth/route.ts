@@ -9,6 +9,11 @@ export const mammothRoutes = new Hono();
 
 mammothRoutes.use("*", mammothApiKeyMiddleware);
 
+
+mammothRoutes.post("/test", (c) => {
+  return c.json({ message: "Hello, world!" });
+});
+
 mammothRoutes.post("/chat", async (c) => {
   const body = await c.req.json();
   const parsedRequest = mammothRequestSchema.safeParse(body);
@@ -20,7 +25,7 @@ mammothRoutes.post("/chat", async (c) => {
         error: {
           code: "INVALID_CHAT_REQUEST",
           message:
-            "Expected a JSON body with messages, optional tutor_instructions/student_profile, and optional model.",
+            "Expected a JSON body with messages, optional tutor_instructions/student_profile/memory, and optional model.",
           issues: parsedRequest.error.issues,
         },
       },

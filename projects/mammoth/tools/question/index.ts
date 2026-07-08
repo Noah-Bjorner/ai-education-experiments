@@ -1,6 +1,16 @@
 import { tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 
+export const QUESTION_TOOL_DESCRIPTION = "Create a question for the student to answer, to practice or check their understanding. Make sure to use the exact schema field names.";
+export const QUESTION_SYSTEM_PROMPT_DESCRIPTION = [
+  "Use when you want the student to actively think, practice, or check understanding. Always use this tool for questions you want the learner to answer, not Markdown/plain text. Prefer the simplest questionType that matches the learning task:",
+  "  - multiple_choice_text: default for quick conceptual checks or choosing among text options.",
+  "  - text_response: when the student should explain, define, or reflect in their own words.",
+  "  - math_response: when the answer is numeric, an equation, an expression, or unit-based.",
+  "  - write_in_the_blank: when recalling vocabulary, formulas, steps, or sentence completions. Use {{blankId}} markers.",
+  "  - matching: when pairing related items, such as terms and definitions or examples and categories.",
+].join("\n");
+
 const multipleChoiceOptionIds = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const multipleChoiceOptionIdSchema = z.enum(multipleChoiceOptionIds);
 
@@ -95,7 +105,7 @@ const questionSchema = z.discriminatedUnion("questionType", [
     ),
   }),
   baseQuestionSchema.extend({
-    questionType: z.literal("fill_in_the_blank"),
+    questionType: z.literal("write_in_the_blank"),
     textWithBlanks: z.string().min(1).describe(
       "The prompt text with blanks marked as {{blankId}}, such as {{blank1}}.",
     ),
@@ -182,7 +192,7 @@ const questionSchema = z.discriminatedUnion("questionType", [
     }
   }
 
-  if (questionInput.questionType === "fill_in_the_blank") {
+  if (questionInput.questionType === "write_in_the_blank") {
     const blankIds = questionInput.blanks.map((blank) => blank.id);
 
     for (const duplicateId of findDuplicates(blankIds)) {
@@ -287,8 +297,7 @@ const questionInputSchema = z.object({
 });
 
 export const questionTool = tool({
-  description:
-    "Create a question for the student to answer, to practice or check their understanding. Make sure to use the exact schema field names.",
+  description: QUESTION_TOOL_DESCRIPTION,
   inputSchema: questionInputSchema,
   execute: ({ question }) => question,
 });

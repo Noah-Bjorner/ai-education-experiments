@@ -65,6 +65,9 @@ export const mammothRequestSchema = z.object({
   student_profile: z.string().trim().max(10000, {
     error: "student_profile must be at most 10,000 characters.",
   }),
+  memory: z.string().trim().max(10000, {
+    error: "memory must be at most 10,000 characters.",
+  }).optional(),
   model: mammothModelSchema,
 });
 
