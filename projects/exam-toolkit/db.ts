@@ -1,4 +1,6 @@
-import { sql } from "../lib/neon.ts";
+import { sql } from "../../lib/neon.ts";
+
+// IMPORTANT: All code in this file is no longer being used. The database connection has changed. This is not a valid implementation, but just old reference code.
 
 
 export interface CourseRecord {

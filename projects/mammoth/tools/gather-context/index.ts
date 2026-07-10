@@ -7,7 +7,7 @@ export const GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION = "Use when you need curre
 
 const gatherContextInputSchema = z.object({
   prompt: z.string().min(1).describe(
-    "A specific research question or instruction describing what information to gather, including any URLs to read.",
+    "A specific research question or instruction describing what information to gather, including any URLs to read if relevant.",
   ),
 });
 
