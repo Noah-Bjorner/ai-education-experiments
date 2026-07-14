@@ -21,7 +21,8 @@ function isUIMessage(value: unknown): value is MammothUIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
-export const MAMMOTH_DEFAULT_MODEL = "xai/grok-4.5" as const;
+export const MAMMOTH_DEFAULT_MODEL = "openai/gpt-5.6-terra" as const;
+//change to grok-4.5 when available world wide
 
 export const MAMMOTH_MODEL_OPTIONS = [
   "auto",
