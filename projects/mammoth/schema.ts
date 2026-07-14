@@ -21,20 +21,19 @@ function isUIMessage(value: unknown): value is MammothUIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
-export const MAMMOTH_DEFAULT_MODEL = "zai/glm-5.2-fast" as const;
+export const MAMMOTH_DEFAULT_MODEL = "xai/grok-4.5" as const;
 
 export const MAMMOTH_MODEL_OPTIONS = [
   "auto",
-  "google/gemini-3.5-flash",
-  "openai/gpt-5.5",
+  "openai/gpt-5.6-terra",
   "anthropic/claude-sonnet-5",
-  "xai/grok-4.3",
+  "xai/grok-4.5",
+  "google/gemini-3.5-flash",
+  "meta/muse-spark-1.1",
   "zai/glm-5.2",
+  "zai/glm-5.2-fast",
   "minimax/minimax-m3",
   "alibaba/qwen3.7-max",
-  "nvidia/nemotron-3-ultra-550b-a55b",
-  "moonshotai/kimi-k2.6",
-  "cerebras/gpt-oss-120b",
 ] as const;
 
 export type MammothModelPickerOption =
