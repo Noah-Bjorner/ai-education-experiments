@@ -1,5 +1,9 @@
 import { z } from "@zod";
 
+import {
+  STUDENT_PROFILE_DEFAULT,
+  TUTOR_INSTRUCTIONS_DEFAULT,
+} from "./prompt.ts";
 import type { MammothUIMessage } from "./types.ts";
 
 const messageRoleSchema = z.enum(["system", "user", "assistant"]);
@@ -59,11 +63,15 @@ export const mammothRequestSchema = z.object({
     ),
   ),
   tutor_instructions: z.string().trim().max(10000, {
-    error: "tutor_instructions must be at most 10,000 characters.",
-  }),
+      error: "tutor_instructions must be at most 10,000 characters.",
+    })
+    .optional()
+    .transform((value) => value || TUTOR_INSTRUCTIONS_DEFAULT),
   student_profile: z.string().trim().max(10000, {
-    error: "student_profile must be at most 10,000 characters.",
-  }),
+      error: "student_profile must be at most 10,000 characters.",
+    })
+    .optional()
+    .transform((value) => value || STUDENT_PROFILE_DEFAULT),
   memory: z.string().trim().max(10000, {
     error: "memory must be at most 10,000 characters.",
   }).optional(),
