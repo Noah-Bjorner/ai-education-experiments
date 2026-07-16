@@ -4,6 +4,7 @@ import { GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION } from "./tools/gather-context
 import { OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION } from "./tools/objective/index.ts";
 import { PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION } from "./tools/prompt-suggestions/index.ts";
 import { QUESTION_SYSTEM_PROMPT_DESCRIPTION } from "./tools/question/index.ts";
+import { USER_ACTION_SYSTEM_PROMPT_DESCRIPTION } from "./tools/user-action/index.ts";
 
 function formatCurrentObjective(objective: ObjectiveToolOutput): string {
   return [
@@ -51,6 +52,7 @@ When calling tools, use the exact input field names from the tool schema. Do not
 - objective: ${OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION}
 - question: ${QUESTION_SYSTEM_PROMPT_DESCRIPTION}
 - gatherContext: ${GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION}
+- userAction: ${USER_ACTION_SYSTEM_PROMPT_DESCRIPTION}
 - promptSuggestions: ${PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION}
 
 ${

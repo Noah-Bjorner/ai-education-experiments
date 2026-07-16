@@ -4,6 +4,7 @@ import type { GatherContextToolInvocation } from "./tools/gather-context/index.t
 import type { ObjectiveToolInvocation } from "./tools/objective/index.ts";
 import type { PromptSuggestionsToolInvocation } from "./tools/prompt-suggestions/index.ts";
 import type { QuestionToolInvocation } from "./tools/question/index.ts";
+import type { UserActionToolInvocation } from "./tools/user-action/index.ts";
 import type { MammothToolName, mammothTools } from "./tools/index.ts";
 
 export type { MammothToolName } from "./tools/index.ts";
@@ -13,7 +14,8 @@ export type MammothToolInvocation =
   | ObjectiveToolInvocation
   | PromptSuggestionsToolInvocation
   | QuestionToolInvocation
-  | GatherContextToolInvocation;
+  | GatherContextToolInvocation
+  | UserActionToolInvocation;
 export type MammothToolPartType = `tool-${MammothToolName}`;
 export type MammothDataTypes = Record<string, never>;
 export type MammothUIMessage = UIMessage<
@@ -27,6 +29,7 @@ export const MAMMOTH_TOOL_PART_TYPES = [
   "tool-promptSuggestions",
   "tool-question",
   "tool-gatherContext",
+  "tool-userAction",
 ] as const satisfies readonly MammothToolPartType[];
 
 export const MAMMOTH_TOOL_LABELS = {
@@ -34,6 +37,7 @@ export const MAMMOTH_TOOL_LABELS = {
   "tool-promptSuggestions": "Creating prompt suggestions...",
   "tool-question": "Creating a question...",
   "tool-gatherContext": "Gathering context...",
+  "tool-userAction": "Requesting a user action...",
 } as const satisfies Record<MammothToolPartType, string>;
 
 export const MAMMOTH_TOOL_STATES = [

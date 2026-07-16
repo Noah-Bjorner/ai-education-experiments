@@ -21,8 +21,7 @@ function isUIMessage(value: unknown): value is MammothUIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
-export const MAMMOTH_DEFAULT_MODEL = "openai/gpt-5.6-terra" as const;
-//change to grok-4.5 when available world wide
+export const MAMMOTH_DEFAULT_MODEL = "xai/grok-4.5" as const;
 
 export const MAMMOTH_MODEL_OPTIONS = [
   "auto",
@@ -69,6 +68,13 @@ export const mammothRequestSchema = z.object({
     error: "memory must be at most 10,000 characters.",
   }).optional(),
   model: mammothModelSchema,
+
+  space_id: z.string().trim().max(500, {
+    error: "space_id must be at most 500 characters.",
+  }).optional(),
+  course_id: z.string().trim().max(500, {
+    error: "course_id must be at most 500 characters.",
+  }).optional(),
 });
 
 export type MammothRequest = z.infer<typeof mammothRequestSchema>;

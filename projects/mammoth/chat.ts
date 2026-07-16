@@ -40,7 +40,7 @@ export type {
 } from "./types.ts";
 
 const MAX_TOOL_STEPS = 15;
-const REPAIR_TOOL_CALL_MODEL = "google/gemini-3.5-flash";
+const REPAIR_TOOL_CALL_MODEL = "xai/grok-4.5";
 
 const repairedToolCallInputSchema = z.object({
   input: z.string().min(1).describe(
@@ -101,8 +101,9 @@ export async function streamMammoth(
       };
     },
     stopWhen: [
-      hasToolCall("prompt-suggestions"),
+      hasToolCall("promptSuggestions"),
       hasToolCall("question"),
+      hasToolCall("userAction"),
       isStepCount(MAX_TOOL_STEPS),
     ],
   });
