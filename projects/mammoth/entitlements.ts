@@ -35,32 +35,6 @@ export async function hasActiveSubscription(userID: string): Promise<boolean> {
     new Date(entitlement.expires_at).getTime() > Date.now();
 }
 
-export async function recordMammothRequest({
-  userID,
-  method,
-  path,
-  responseStatus,
-}: {
-  userID: string;
-  method: string;
-  path: string;
-  responseStatus: number;
-}): Promise<void> {
-  await supabaseRequest("/rest/v1/request_logs", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      user_id: userID,
-      method,
-      path,
-      response_status: responseStatus,
-    }),
-  });
-}
-
 async function supabaseRequest(
   path: string,
   init: RequestInit = {},

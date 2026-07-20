@@ -33,9 +33,9 @@ Required backend environment variables:
 - `SUPABASE_DB_URL` (migration tooling only)
 
 Apply the migrations in `supabase/migrations` before serving Mammoth requests.
-They create user profiles, subscription
-entitlements, request logs, ownership policies, and the Auth user/profile sync
-trigger.
+They create the `users` table, subscription entitlements, ownership policies,
+and the Auth user sync trigger. Each Auth user's email is copied into
+`public.users`; the Supabase Auth UUID remains the stable user identifier.
 
 Subscription enforcement is prepared but disabled by default. Set
 `MAMMOTH_REQUIRE_ACTIVE_SUBSCRIPTION=true` only after the StoreKit entitlement
