@@ -1,20 +1,58 @@
 import { Hono } from "@hono/hono";
 import { createUIMessageStreamResponse } from "@ai";
 
+import { mammothAuthMiddleware, type MammothEnv } from "./auth.ts";
 import { createMammothUIMessageStream } from "./chat.ts";
-import { mammothApiKeyMiddleware } from "./middleware.ts";
 import { mammothRequestSchema } from "./schema.ts";
+import {
+  hasActiveSubscription,
+  recordMammothRequest,
+  subscriptionEnforcementEnabled,
+} from "./supabase.ts";
 
-export const mammothRoutes = new Hono();
+export const mammothRoutes = new Hono<MammothEnv>();
 
-mammothRoutes.use("*", mammothApiKeyMiddleware);
+mammothRoutes.use("*", mammothAuthMiddleware);
+mammothRoutes.use("*", async (c, next) => {
+  const user = c.get("mammothUser");
+  await next();
 
+  try {
+    await recordMammothRequest({
+      userID: user.id,
+      method: c.req.method,
+      path: c.req.path,
+      responseStatus: c.res.status,
+    });
+  } catch (error) {
+    console.error("Failed to record authenticated Mammoth request", error);
+  }
+});
 
 mammothRoutes.post("/test", (c) => {
-  return c.json({ message: "Hello, world!" });
+  const user = c.get("mammothUser");
+  return c.json({ ok: true, data: { user_id: user.id } });
 });
 
 mammothRoutes.post("/chat", async (c) => {
+  const user = c.get("mammothUser");
+
+  if (
+    subscriptionEnforcementEnabled() &&
+    !(await hasActiveSubscription(user.id))
+  ) {
+    return c.json(
+      {
+        ok: false,
+        error: {
+          code: "ACTIVE_SUBSCRIPTION_REQUIRED",
+          message: "An active subscription is required to send messages.",
+        },
+      },
+      403,
+    );
+  }
+
   const body = await c.req.json();
   const parsedRequest = mammothRequestSchema.safeParse(body);
 

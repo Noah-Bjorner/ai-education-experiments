@@ -76,7 +76,6 @@ export const mammothRequestSchema = z.object({
     error: "memory must be at most 10,000 characters.",
   }).optional(),
   model: mammothModelSchema,
-
   space_id: z.string().trim().max(500, {
     error: "space_id must be at most 500 characters.",
   }).optional(),

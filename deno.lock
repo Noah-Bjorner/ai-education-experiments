@@ -4,6 +4,7 @@
     "jsr:@hono/hono@^4.12.15": "4.12.15",
     "jsr:@openai/openai@6.10.0": "6.10.0",
     "jsr:@std/assert@*": "1.0.19",
+    "jsr:@std/assert@1.0.18": "1.0.18",
     "jsr:@std/dotenv@~0.225.5": "0.225.6",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "npm:@ai-sdk/google@*": "4.0.1_zod@4.4.3",
@@ -16,6 +17,8 @@
     "npm:ai@7": "7.0.3_zod@4.4.3",
     "npm:ai@7.0.3": "7.0.3_zod@4.4.3",
     "npm:esbuild@~0.28.1": "0.28.1",
+    "npm:jose@6.2.3": "6.2.3",
+    "npm:postgres@3.4.7": "3.4.7",
     "npm:replicate@1.4.0": "1.4.0",
     "npm:unpdf@^1.6.2": "1.6.2",
     "npm:zod@3": "3.25.76",
@@ -29,6 +32,12 @@
       "integrity": "eeb7539cd44f1c9c4518d6805fa7df92cf44225d9ee5ddcc6a9d9c33b5211378",
       "dependencies": [
         "npm:zod@3"
+      ]
+    },
+    "@std/assert@1.0.18": {
+      "integrity": "270245e9c2c13b446286de475131dc688ca9abcd94fc5db41d43a219b34d1c78",
+      "dependencies": [
+        "jsr:@std/internal"
       ]
     },
     "@std/assert@1.0.19": {
@@ -1498,7 +1507,7 @@
         "eventsource-parser",
         "execa",
         "humanize-duration",
-        "jose",
+        "jose@5.10.0",
         "nanoid",
         "prom-client",
         "socket.io",
@@ -1975,6 +1984,9 @@
     "jose@5.10.0": {
       "integrity": "sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg=="
     },
+    "jose@6.2.3": {
+      "integrity": "sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw=="
+    },
     "json-bigint@1.0.0": {
       "integrity": "sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==",
       "dependencies": [
@@ -2127,6 +2139,9 @@
       "dependencies": [
         "xtend"
       ]
+    },
+    "postgres@3.4.7": {
+      "integrity": "sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw=="
     },
     "process@0.11.10": {
       "integrity": "sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A=="
@@ -2408,6 +2423,7 @@
       "npm:@trigger.dev/sdk@4.4.6",
       "npm:ai@7",
       "npm:esbuild@~0.28.1",
+      "npm:jose@6.2.3",
       "npm:replicate@1.4.0",
       "npm:unpdf@^1.6.2",
       "npm:zod@^4.4.3"
