@@ -1,5 +1,6 @@
 import { type ToolSet } from "@ai";
 
+import { assessmentTool } from "./assessment/index.ts";
 import { gatherContextTool } from "./gather-context/index.ts";
 import { objectiveTool } from "./objective/index.ts";
 import { promptSuggestionsTool } from "./prompt-suggestions/index.ts";
@@ -9,6 +10,7 @@ import { userActionTool } from "./user-action/index.ts";
 export const mammothTools = {
   objective: objectiveTool,
   question: questionTool,
+  assessment: assessmentTool,
   promptSuggestions: promptSuggestionsTool,
   gatherContext: gatherContextTool,
   userAction: userActionTool,

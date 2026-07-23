@@ -14,7 +14,7 @@ const gatherContextInputSchema = z.object({
 export const gatherContext = async (prompt: string) => {
   const start = performance.now();
   const { text } = await generateText({
-    model: "google/gemini-3.5-flash",
+    model: "google/gemini-3.6-flash",
     reasoning: "medium",
     tools: {
       google_search: google.tools.googleSearch({}),

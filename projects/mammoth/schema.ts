@@ -32,7 +32,7 @@ export const MAMMOTH_MODEL_OPTIONS = [
   "openai/gpt-5.6-terra",
   "anthropic/claude-sonnet-5",
   "xai/grok-4.5",
-  "google/gemini-3.5-flash",
+  "google/gemini-3.6-flash",
   "meta/muse-spark-1.1",
   "zai/glm-5.2",
   "zai/glm-5.2-fast",

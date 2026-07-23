@@ -459,12 +459,14 @@ const questionOutputSchema = z.discriminatedUnion("questionType", [
   matchingSchema,
 ]);
 
-type QuestionInput = z.infer<typeof questionSchema>;
+export type QuestionInput = z.infer<typeof questionSchema>;
 type MultipleChoiceImageInput = z.infer<typeof multipleChoiceImageSchema>;
-type ResolvedQuestion = z.infer<typeof questionOutputSchema>;
+export type ResolvedQuestion = z.infer<typeof questionOutputSchema>;
 type ResolvedMultipleChoiceImageQuestion = z.infer<
   typeof resolvedMultipleChoiceImageSchema
 >;
+
+export { questionSchema, questionOutputSchema };
 
 async function resolveImageOption(
   option: MultipleChoiceImageInput["options"][number],
@@ -537,14 +539,20 @@ async function resolveImageQuestion(
   };
 }
 
-async function executeQuestion(
-  { question }: { question: QuestionInput },
+export async function resolveQuestion(
+  question: QuestionInput,
 ): Promise<ResolvedQuestion> {
   if (question.questionType === "multiple_choice_image") {
     return await resolveImageQuestion(question);
   }
 
   return question;
+}
+
+async function executeQuestion(
+  { question }: { question: QuestionInput },
+): Promise<ResolvedQuestion> {
+  return await resolveQuestion(question);
 }
 
 // The union is nested under an object because models require a tool's

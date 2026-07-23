@@ -1,0 +1,272 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <defs>
+    <pattern id="dotGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="rgba(31,31,31,0.10)" />
+    </pattern>
+    <clipPath id="plotClip">
+      <rect x="140" y="160" width="920" height="480" />
+    </clipPath>
+    <!-- Bell curve path (shared) -->
+    <path id="bellPath" d="M140,600 C200,600 260,595 300,560 C340,520 380,400 440,320 C500,240 540,200 600,200 C660,200 700,240 760,320 C820,400 860,520 900,560 C940,595 1000,600 1060,600" />
+  </defs>
+
+  <style>
+    svg {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .title {
+      font-size: 36px;
+      font-weight: 700;
+      fill: #1F1F1F;
+    }
+    .subtitle {
+      font-size: 20px;
+      font-weight: 500;
+      fill: #6B6B6B;
+    }
+    .axis-label {
+      font-size: 18px;
+      font-weight: 500;
+      fill: #6B6B6B;
+    }
+    .tick-label {
+      font-size: 16px;
+      font-weight: 500;
+      fill: #6B6B6B;
+    }
+    .mean-label {
+      font-size: 18px;
+      font-weight: 700;
+      fill: #F54E00;
+    }
+    .band-pct {
+      font-size: 22px;
+      font-weight: 700;
+      fill: #1F1F1F;
+      paint-order: stroke fill;
+      stroke: #FCFAF8;
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+    .band-desc {
+      font-size: 15px;
+      font-weight: 500;
+      fill: #6B6B6B;
+      paint-order: stroke fill;
+      stroke: #FCFAF8;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+    .callout {
+      font-size: 18px;
+      font-weight: 600;
+      fill: #1F1F1F;
+      paint-order: stroke fill;
+      stroke: #FCFAF8;
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+    .callout-sub {
+      font-size: 15px;
+      font-weight: 500;
+      fill: #6B6B6B;
+      paint-order: stroke fill;
+      stroke: #FCFAF8;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+    .sigma-label {
+      font-size: 15px;
+      font-weight: 600;
+      fill: #6B6B6B;
+    }
+
+    .curve-draw {
+      fill: none;
+      stroke: #F54E00;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pathLength: 1;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      animation: drawCurve 2s ease-out 0.2s forwards;
+    }
+    @keyframes drawCurve {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .band {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    .band-3 {
+      animation: fadeBand 0.8s ease-out 2.2s forwards;
+    }
+    .band-2 {
+      animation: fadeBand 0.8s ease-out 3.4s forwards;
+    }
+    .band-1 {
+      animation: fadeBand 0.8s ease-out 4.6s forwards;
+    }
+    @keyframes fadeBand {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .after-curve {
+      opacity: 0;
+      animation: fadeIn 0.6s ease-out 2.0s forwards;
+    }
+    .label-1 {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out 5.0s forwards;
+    }
+    .label-2 {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out 3.8s forwards;
+    }
+    .label-3 {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out 2.6s forwards;
+    }
+    .cluster-callout {
+      opacity: 0;
+      animation: fadeInUp 0.6s ease-out 6.0s forwards;
+    }
+    .tails-callout {
+      opacity: 0;
+      animation: fadeInUp 0.6s ease-out 7.2s forwards;
+    }
+    .symmetry-callout {
+      opacity: 0;
+      animation: fadeIn 0.6s ease-out 8.4s forwards;
+    }
+    .symmetry-arrow {
+      opacity: 0;
+      animation: fadeIn 0.6s ease-out 8.4s forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mean-line {
+      stroke: #F54E00;
+      stroke-width: 2;
+      stroke-dasharray: 6 4;
+      opacity: 0.9;
+    }
+    .sigma-line {
+      stroke: #979797;
+      stroke-width: 1.5;
+      stroke-dasharray: 4 4;
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out 2.2s forwards;
+    }
+  </style>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#FCFAF8" />
+  <rect width="1200" height="800" fill="url(#dotGrid)" />
+
+  <!-- Title (static establishing) -->
+  <text x="600" y="56" text-anchor="middle" class="title">Normal Distribution (Bell Curve)</text>
+  <text x="600" y="88" text-anchor="middle" class="subtitle">Values cluster around the mean · fewer in the tails · symmetric shape</text>
+
+  <!-- Graph region -->
+  <g id="graph">
+    <!-- Axes -->
+    <line x1="140" y1="600" x2="1060" y2="600" stroke="#6B6B6B" stroke-width="2" />
+    <line x1="140" y1="600" x2="140" y2="170" stroke="#6B6B6B" stroke-width="2" />
+
+    <!-- Y-axis label -->
+    <text x="56" y="390" text-anchor="middle" class="axis-label" transform="rotate(-90 56 390)">Frequency</text>
+    <!-- X-axis label -->
+    <text x="600" y="680" text-anchor="middle" class="axis-label">Value</text>
+
+    <!-- SD band fills (back to front: 3σ, 2σ, 1σ) — under curve -->
+    <g clip-path="url(#plotClip)">
+      <!-- ±3σ band: x from 240 to 960 (mean±3*120) -->
+      <path class="band band-3" d="M240,600 L240,560 C280,530 320,450 360,370 C420,260 500,210 600,210 C700,210 780,260 840,370 C880,450 920,530 960,560 L960,600 Z" fill="#F59E0B" fill-opacity="0.12" />
+      <!-- ±2σ band: x from 360 to 840 -->
+      <path class="band band-2" d="M360,600 L360,370 C420,260 500,210 600,210 C700,210 780,260 840,370 L840,600 Z" fill="#06B6D4" fill-opacity="0.16" />
+      <!-- ±1σ band: x from 480 to 720 -->
+      <path class="band band-1" d="M480,600 L480,268 C520,220 560,200 600,200 C640,200 680,220 720,268 L720,600 Z" fill="#F54E00" fill-opacity="0.22" />
+    </g>
+
+    <!-- Sigma vertical guides -->
+    <g class="sigma-line">
+      <line x1="480" y1="200" x2="480" y2="600" />
+      <line x1="720" y1="200" x2="720" y2="600" />
+      <line x1="360" y1="280" x2="360" y2="600" />
+      <line x1="840" y1="280" x2="840" y2="600" />
+      <line x1="240" y1="520" x2="240" y2="600" />
+      <line x1="960" y1="520" x2="960" y2="600" />
+    </g>
+
+    <!-- Mean line -->
+    <line class="mean-line after-curve" x1="600" y1="200" x2="600" y2="600" />
+
+    <!-- Bell curve stroke -->
+    <path class="curve-draw" d="M140,600 C200,600 260,595 300,560 C340,520 380,400 440,320 C500,240 540,200 600,200 C660,200 700,240 760,320 C820,400 860,520 900,560 C940,595 1000,600 1060,600" />
+
+    <!-- X tick labels at sigma marks -->
+    <g class="after-curve">
+      <text x="600" y="628" text-anchor="middle" class="mean-label">mean (μ)</text>
+      <text x="480" y="628" text-anchor="middle" class="tick-label">−1σ</text>
+      <text x="720" y="628" text-anchor="middle" class="tick-label">+1σ</text>
+      <text x="360" y="628" text-anchor="middle" class="tick-label">−2σ</text>
+      <text x="840" y="628" text-anchor="middle" class="tick-label">+2σ</text>
+      <text x="240" y="628" text-anchor="middle" class="tick-label">−3σ</text>
+      <text x="960" y="628" text-anchor="middle" class="tick-label">+3σ</text>
+    </g>
+
+    <!-- Percentage labels on bands -->
+    <g class="label-1">
+      <text x="600" y="420" text-anchor="middle" class="band-pct">≈ 68%</text>
+      <text x="600" y="444" text-anchor="middle" class="band-desc">within 1σ</text>
+    </g>
+    <g class="label-2">
+      <text x="400" y="520" text-anchor="middle" class="band-pct" style="font-size:18px">95%</text>
+      <text x="400" y="542" text-anchor="middle" class="band-desc">within 2σ</text>
+      <text x="800" y="520" text-anchor="middle" class="band-pct" style="font-size:18px">95%</text>
+      <text x="800" y="542" text-anchor="middle" class="band-desc">within 2σ</text>
+    </g>
+    <g class="label-3">
+      <text x="290" y="575" text-anchor="middle" class="band-desc" style="font-size:14px">99.7% within 3σ</text>
+      <text x="910" y="575" text-anchor="middle" class="band-desc" style="font-size:14px">99.7% within 3σ</text>
+    </g>
+  </g>
+
+  <!-- Bottom callouts -->
+  <g class="cluster-callout">
+    <circle cx="200" cy="730" r="8" fill="#F54E00" fill-opacity="0.85" />
+    <text x="220" y="726" text-anchor="start" class="callout">Most values near the center</text>
+    <text x="220" y="748" text-anchor="start" class="callout-sub">Highest frequency around the mean</text>
+  </g>
+
+  <g class="tails-callout">
+    <circle cx="560" cy="730" r="8" fill="#F59E0B" fill-opacity="0.85" />
+    <text x="580" y="726" text-anchor="start" class="callout">Fewer values in the tails</text>
+    <text x="580" y="748" text-anchor="start" class="callout-sub">Rarer as you move farther out</text>
+  </g>
+
+  <!-- Symmetry arrows + label -->
+  <g class="symmetry-callout">
+    <text x="1000" y="726" text-anchor="middle" class="callout">Symmetric</text>
+    <text x="1000" y="748" text-anchor="middle" class="callout-sub">left mirrors right</text>
+  </g>
+  <g class="symmetry-arrow" stroke="#06B6D4" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <!-- double-headed arrow above curve suggesting mirror -->
+    <path d="M480,160 L720,160" />
+    <path d="M492,152 L480,160 L492,168" />
+    <path d="M708,152 L720,160 L708,168" />
+    <line x1="600" y1="150" x2="600" y2="170" stroke="#F54E00" stroke-width="2" />
+  </g>
+</svg>

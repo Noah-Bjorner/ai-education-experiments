@@ -40,7 +40,7 @@ export type {
 } from "./types.ts";
 
 const MAX_TOOL_STEPS = 15;
-const REPAIR_TOOL_CALL_MODEL = "xai/grok-4.5";
+const REPAIR_TOOL_CALL_MODEL = "openai/gpt-5.6-sol";
 
 const repairedToolCallInputSchema = z.object({
   input: z.string().min(1).describe(

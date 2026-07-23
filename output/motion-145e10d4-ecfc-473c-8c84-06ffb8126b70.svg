@@ -1,0 +1,418 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-labelledby="title desc">
+  <title id="title">Soccer offside rule demonstration</title>
+  <desc id="desc">Two field views compare an attacker beyond the second-to-last defender at the moment of a pass with an attacker who is behind the defender when the pass is played.</desc>
+
+  <defs>
+    <pattern id="dotGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#1F1F1F" opacity="0.10"/>
+    </pattern>
+
+    <pattern id="netPattern" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M0 0H8M0 0V8" fill="none" stroke="#DCE7E2" stroke-width="1"/>
+    </pattern>
+
+    <marker id="arrowWhite" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#FFFFFF"/>
+    </marker>
+
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#F54E00"/>
+    </marker>
+
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#22C55E"/>
+    </marker>
+  </defs>
+
+  <style>
+    text {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .field-line {
+      fill: none;
+      stroke: #FFFFFF;
+      stroke-width: 2;
+      opacity: 0.72;
+    }
+
+    .field-label {
+      fill: #FFFFFF;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+    }
+
+    .small-label {
+      fill: #FFFFFF;
+      font-size: 16px;
+      font-weight: 600;
+      paint-order: stroke;
+      stroke: #198754;
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+
+    .player-letter {
+      fill: #FFFFFF;
+      font-size: 17px;
+      font-weight: 800;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .player {
+      stroke: #FFFFFF;
+      stroke-width: 4;
+    }
+
+    .offside-line,
+    .onside-line {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+      transform: scaleY(0);
+    }
+
+    .offside-line {
+      animation: revealLine 0.65s ease-out 0.75s forwards;
+    }
+
+    .onside-line {
+      animation: revealLine 0.65s ease-out 5.35s forwards;
+    }
+
+    .top-pass-ring {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: passPulse 1s ease-out 0.2s forwards;
+    }
+
+    .bottom-pass-ring {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: passPulse 1s ease-out 4.85s forwards;
+    }
+
+    .top-pass-label {
+      opacity: 0;
+      animation: fadeIn 0.35s ease-out 0.35s forwards;
+    }
+
+    .bottom-pass-label {
+      opacity: 0;
+      animation: fadeIn 0.35s ease-out 5s forwards;
+    }
+
+    .top-measure {
+      opacity: 0;
+      animation: fadeIn 0.45s ease-out 1.45s forwards;
+    }
+
+    .bottom-measure {
+      opacity: 0;
+      animation: fadeIn 0.45s ease-out 5.95s forwards;
+    }
+
+    .top-pass-path,
+    .bottom-pass-path {
+      fill: none;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+    }
+
+    .top-pass-path {
+      stroke: #FFFFFF;
+      animation: drawPath 1.35s ease-in-out 2.2s forwards;
+    }
+
+    .bottom-pass-path {
+      stroke: #FFFFFF;
+      animation: drawPath 1.5s ease-in-out 6.55s forwards;
+    }
+
+    .top-ball {
+      animation: topBallMove 1.35s ease-in-out 2.25s forwards;
+    }
+
+    .bottom-ball {
+      animation: bottomBallMove 1.5s ease-in-out 6.6s forwards;
+    }
+
+    .bottom-runner {
+      animation: runnerMove 1.5s ease-in-out 6.6s forwards;
+    }
+
+    .top-involvement {
+      opacity: 0;
+      animation: fadeIn 0.45s ease-out 3.65s forwards;
+    }
+
+    .bottom-involvement {
+      opacity: 0;
+      animation: fadeIn 0.45s ease-out 8.1s forwards;
+    }
+
+    .top-verdict {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: verdictIn 0.5s ease-out 4.05s forwards;
+    }
+
+    .bottom-verdict {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: verdictIn 0.5s ease-out 8.35s forwards;
+    }
+
+    .final-note {
+      opacity: 0;
+      animation: fadeIn 0.55s ease-out 9s forwards;
+    }
+
+    @keyframes revealLine {
+      from { opacity: 0; transform: scaleY(0); }
+      to { opacity: 1; transform: scaleY(1); }
+    }
+
+    @keyframes passPulse {
+      0% { opacity: 0; transform: scale(0.6); }
+      35% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.75); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes drawPath {
+      from { stroke-dashoffset: 1; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes topBallMove {
+      from { transform: translate(0, 0); }
+      to { transform: translate(525px, -10px); }
+    }
+
+    @keyframes bottomBallMove {
+      from { transform: translate(0, 0); }
+      to { transform: translate(535px, -45px); }
+    }
+
+    @keyframes runnerMove {
+      from { transform: translate(0, 0); }
+      to { transform: translate(120px, -10px); }
+    }
+
+    @keyframes verdictIn {
+      from { opacity: 0; transform: scale(0.88); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#FCFAF8"/>
+  <rect width="1200" height="800" fill="url(#dotGrid)"/>
+
+  <!-- Heading -->
+  <text x="600" y="54" text-anchor="middle" fill="#1F1F1F" font-size="36" font-weight="800">
+    Offside is judged when the pass is played
+  </text>
+  <text x="600" y="91" text-anchor="middle" fill="#6B6B6B" font-size="20" font-weight="500">
+    Compare each attacker’s position with the second-to-last defender
+  </text>
+
+  <g transform="translate(914 83)">
+    <text x="0" y="0" fill="#1F1F1F" font-size="17" font-weight="700">ATTACKING</text>
+    <path d="M106 -6H170" fill="none" stroke="#F54E00" stroke-width="4" stroke-linecap="round" marker-end="url(#arrowOrange)"/>
+  </g>
+
+  <!-- Top field: offside example -->
+  <g id="offside-example">
+    <rect x="80" y="160" width="1000" height="250" rx="12" fill="#238B57"/>
+    <path d="M330 160V410M580 160V410" class="field-line" opacity="0.32"/>
+    <rect x="80" y="160" width="1000" height="250" rx="12" class="field-line"/>
+    <rect x="900" y="205" width="180" height="160" class="field-line"/>
+    <rect x="1008" y="245" width="72" height="80" class="field-line"/>
+    <path d="M1080 252H1120V318H1080Z" fill="url(#netPattern)" stroke="#DCE7E2" stroke-width="3"/>
+    <circle cx="580" cy="285" r="38" class="field-line" opacity="0.36"/>
+
+    <rect x="96" y="174" width="198" height="34" rx="17" fill="#163D2B" opacity="0.92"/>
+    <text x="195" y="197" text-anchor="middle" class="field-label">OFFSIDE EXAMPLE</text>
+
+    <!-- Pass trajectory -->
+    <path class="top-pass-path" pathLength="1" d="M420 305C600 300 760 294 934 295" marker-end="url(#arrowWhite)"/>
+
+    <!-- Offside reference line -->
+    <g class="offside-line">
+      <line x1="870" y1="181" x2="870" y2="394" stroke="#FCD34D" stroke-width="5"/>
+      <rect x="765" y="174" width="210" height="32" rx="16" fill="#1F1F1F" opacity="0.92"/>
+      <text x="870" y="196" text-anchor="middle" fill="#FCD34D" font-size="16" font-weight="700">SECOND-TO-LAST DEFENDER</text>
+    </g>
+
+    <!-- Defenders -->
+    <g transform="translate(760 350)">
+      <circle r="20" fill="#06B6D4" class="player"/>
+      <text class="player-letter">D</text>
+    </g>
+    <g transform="translate(870 260)">
+      <circle r="21" fill="#06B6D4" class="player"/>
+      <text class="player-letter">D</text>
+    </g>
+    <g transform="translate(1030 300)">
+      <circle r="21" fill="#F59E0B" class="player"/>
+      <text class="player-letter">GK</text>
+    </g>
+
+    <!-- Passer -->
+    <g transform="translate(390 305)">
+      <circle r="21" fill="#F54E00" class="player"/>
+      <text class="player-letter">A</text>
+      <text x="0" y="43" text-anchor="middle" class="small-label">passer</text>
+    </g>
+
+    <!-- Attacker beyond line -->
+    <g transform="translate(935 295)">
+      <circle r="22" fill="#F54E00" class="player"/>
+      <text class="player-letter">A</text>
+    </g>
+
+    <!-- Ball -->
+    <g class="top-ball" transform="translate(410 305)">
+      <circle r="11" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="3"/>
+      <path d="M0 -5L5 -1L3 5H-3L-5 -1Z" fill="#1F1F1F"/>
+    </g>
+
+    <!-- Pass moment -->
+    <circle class="top-pass-ring" cx="410" cy="305" r="24" fill="none" stroke="#FCD34D" stroke-width="5"/>
+    <g class="top-pass-label">
+      <rect x="325" y="235" width="170" height="38" rx="19" fill="#FCD34D"/>
+      <text x="410" y="261" text-anchor="middle" fill="#1F1F1F" font-size="17" font-weight="800">PASS MOMENT</text>
+      <path d="M410 274V286" stroke="#FCD34D" stroke-width="4"/>
+    </g>
+
+    <!-- Beyond-line measurement -->
+    <g class="top-measure">
+      <rect x="870" y="218" width="65" height="38" fill="#EF4444" opacity="0.20"/>
+      <path d="M870 228V246M870 237H935M935 228V246" fill="none" stroke="#FFD5D5" stroke-width="4"/>
+      <text x="902" y="276" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="700"
+            paint-order="stroke" stroke="#238B57" stroke-width="5">beyond line</text>
+    </g>
+
+    <!-- Active involvement -->
+    <g class="top-involvement">
+      <circle cx="935" cy="295" r="33" fill="none" stroke="#EF4444" stroke-width="5"/>
+      <path d="M955 333L940 315" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+      <rect x="842" y="337" width="208" height="34" rx="17" fill="#163D2B" opacity="0.94"/>
+      <text x="946" y="360" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="700">actively plays the ball</text>
+    </g>
+
+    <!-- Verdict -->
+    <g class="top-verdict">
+      <rect x="96" y="354" width="220" height="42" rx="21" fill="#EF4444"/>
+      <text x="206" y="382" text-anchor="middle" fill="#FFFFFF" font-size="22" font-weight="800">OFFSIDE</text>
+    </g>
+  </g>
+
+  <!-- Bottom field: onside example -->
+  <g id="onside-example">
+    <rect x="80" y="470" width="1000" height="250" rx="12" fill="#238B57"/>
+    <path d="M330 470V720M580 470V720" class="field-line" opacity="0.32"/>
+    <rect x="80" y="470" width="1000" height="250" rx="12" class="field-line"/>
+    <rect x="900" y="515" width="180" height="160" class="field-line"/>
+    <rect x="1008" y="555" width="72" height="80" class="field-line"/>
+    <path d="M1080 562H1120V628H1080Z" fill="url(#netPattern)" stroke="#DCE7E2" stroke-width="3"/>
+    <circle cx="580" cy="595" r="38" class="field-line" opacity="0.36"/>
+
+    <rect x="96" y="484" width="190" height="34" rx="17" fill="#163D2B" opacity="0.92"/>
+    <text x="191" y="507" text-anchor="middle" class="field-label">ONSIDE EXAMPLE</text>
+
+    <!-- Pass and run paths -->
+    <path class="bottom-pass-path" pathLength="1" d="M420 635C610 625 785 602 945 590" marker-end="url(#arrowWhite)"/>
+    <path class="bottom-measure" d="M842 589C885 575 919 574 950 580" fill="none" stroke="#22C55E" stroke-width="4" stroke-dasharray="8 8" marker-end="url(#arrowGreen)"/>
+
+    <!-- Onside reference line -->
+    <g class="onside-line">
+      <line x1="870" y1="491" x2="870" y2="704" stroke="#FCD34D" stroke-width="5"/>
+      <rect x="765" y="484" width="210" height="32" rx="16" fill="#1F1F1F" opacity="0.92"/>
+      <text x="870" y="506" text-anchor="middle" fill="#FCD34D" font-size="16" font-weight="700">SECOND-TO-LAST DEFENDER</text>
+    </g>
+
+    <!-- Defenders -->
+    <g transform="translate(760 665)">
+      <circle r="20" fill="#06B6D4" class="player"/>
+      <text class="player-letter">D</text>
+    </g>
+    <g transform="translate(870 560)">
+      <circle r="21" fill="#06B6D4" class="player"/>
+      <text class="player-letter">D</text>
+    </g>
+    <g transform="translate(1030 610)">
+      <circle r="21" fill="#F59E0B" class="player"/>
+      <text class="player-letter">GK</text>
+    </g>
+
+    <!-- Passer -->
+    <g transform="translate(390 635)">
+      <circle r="21" fill="#F54E00" class="player"/>
+      <text class="player-letter">A</text>
+      <text x="0" y="43" text-anchor="middle" class="small-label">passer</text>
+    </g>
+
+    <!-- Runner begins behind line -->
+    <g class="bottom-runner" transform="translate(830 590)">
+      <circle r="22" fill="#F54E00" class="player"/>
+      <text class="player-letter">A</text>
+    </g>
+
+    <!-- Ball -->
+    <g class="bottom-ball" transform="translate(410 635)">
+      <circle r="11" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="3"/>
+      <path d="M0 -5L5 -1L3 5H-3L-5 -1Z" fill="#1F1F1F"/>
+    </g>
+
+    <!-- Pass moment -->
+    <circle class="bottom-pass-ring" cx="410" cy="635" r="24" fill="none" stroke="#FCD34D" stroke-width="5"/>
+    <g class="bottom-pass-label">
+      <rect x="325" y="565" width="170" height="38" rx="19" fill="#FCD34D"/>
+      <text x="410" y="591" text-anchor="middle" fill="#1F1F1F" font-size="17" font-weight="800">PASS MOMENT</text>
+      <path d="M410 604V616" stroke="#FCD34D" stroke-width="4"/>
+    </g>
+
+    <!-- Behind-line measurement -->
+    <g class="bottom-measure">
+      <rect x="830" y="524" width="40" height="34" fill="#22C55E" opacity="0.24"/>
+      <path d="M830 532V550M830 541H870M870 532V550" fill="none" stroke="#BFF3CF" stroke-width="4"/>
+      <text x="850" y="580" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="700"
+            paint-order="stroke" stroke="#238B57" stroke-width="5">behind at pass</text>
+    </g>
+
+    <!-- Active involvement after legal run -->
+    <g class="bottom-involvement">
+      <circle cx="950" cy="580" r="33" fill="none" stroke="#22C55E" stroke-width="5"/>
+      <rect x="774" y="622" width="276" height="34" rx="17" fill="#163D2B" opacity="0.94"/>
+      <text x="912" y="645" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="700">may run beyond after the pass</text>
+    </g>
+
+    <!-- Verdict -->
+    <g class="bottom-verdict">
+      <rect x="96" y="664" width="220" height="42" rx="21" fill="#22C55E"/>
+      <text x="206" y="692" text-anchor="middle" fill="#FFFFFF" font-size="22" font-weight="800">ONSIDE</text>
+    </g>
+  </g>
+
+  <g class="final-note">
+    <rect x="336" y="744" width="528" height="40" rx="20" fill="#1F1F1F"/>
+    <text x="600" y="771" text-anchor="middle" fill="#FFFFFF" font-size="18" font-weight="700">
+      Position at the pass—not at the reception—decides it
+    </text>
+  </g>
+</svg>

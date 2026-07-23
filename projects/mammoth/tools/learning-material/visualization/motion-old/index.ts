@@ -151,7 +151,7 @@ const svgGroundingSchema = z.object({
 async function getGroundingSVGs(instruction: string): Promise<string[]> {
   try {
     const { output } = await generateText({
-      model: "google/gemini-3.5-flash",
+      model: "google/gemini-3.6-flash",
       reasoning: "low",
       output: Output.object({
         schema: svgGroundingSchema,

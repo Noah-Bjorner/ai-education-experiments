@@ -1,5 +1,6 @@
 import type { ObjectiveToolOutput } from "./tools/objective/index.ts";
 
+import { ASSESSMENT_SYSTEM_PROMPT_DESCRIPTION } from "./tools/assessment/index.ts";
 import { GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION } from "./tools/gather-context/index.ts";
 import { OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION } from "./tools/objective/index.ts";
 import { PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION } from "./tools/prompt-suggestions/index.ts";
@@ -50,6 +51,7 @@ When calling tools, use the exact input field names from the tool schema. Do not
 
 - objective: ${OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION}
 - question: ${QUESTION_SYSTEM_PROMPT_DESCRIPTION}
+- assessment: ${ASSESSMENT_SYSTEM_PROMPT_DESCRIPTION}
 - gatherContext: ${GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION}
 - userAction: ${USER_ACTION_SYSTEM_PROMPT_DESCRIPTION}
 - promptSuggestions: ${PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION}

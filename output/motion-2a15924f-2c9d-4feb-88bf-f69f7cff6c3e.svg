@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Bell curve distribution around a mean</title>
+  <desc id="desc">A symmetric normal distribution showing values clustered at the mean and increasingly rare values one, two, and three standard deviations away.</desc>
+  <defs>
+    <pattern id="dotGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#1F1F1F" opacity="0.09"/>
+    </pattern>
+    <clipPath id="bellClip">
+      <path d="M255 620
+               C330 620 370 610 415 578
+               C470 539 507 451 550 348
+               C570 300 583 274 600 264
+               C617 274 630 300 650 348
+               C693 451 730 539 785 578
+               C830 610 870 620 945 620
+               L945 620 L255 620 Z"/>
+    </clipPath>
+    <linearGradient id="bellBase" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0.06"/>
+    </linearGradient>
+    <style>
+      text { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #1F1F1F; }
+      .heading { font-size: 42px; font-weight: 700; letter-spacing: -1px; }
+      .subhead { font-size: 20px; font-weight: 500; fill: #6B6B6B; }
+      .label { font-size: 18px; font-weight: 600; }
+      .small { font-size: 16px; font-weight: 500; fill: #6B6B6B; }
+      .axis { stroke: #6B6B6B; stroke-width: 2.5; }
+      .guide { stroke: #6B6B6B; stroke-width: 1.5; stroke-dasharray: 5 7; opacity: .62; }
+      .tick { stroke: #6B6B6B; stroke-width: 2; }
+      .band1 { fill: #F54E00; opacity: .30; animation: bandOne 2.4s ease-out .7s forwards; }
+      .band2 { fill: #F59E0B; opacity: .18; animation: bandTwo 2.4s ease-out 2.5s forwards; }
+      .band3 { fill: #06B6D4; opacity: .14; animation: bandThree 2.4s ease-out 4.3s forwards; }
+      .curve-base { fill: url(#bellBase); }
+      .curve-draw { fill: none; stroke: #F54E00; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: drawCurve 1.7s ease-in-out .15s forwards; }
+      .mean-line { stroke: #F54E00; stroke-width: 3; stroke-dasharray: 7 7; animation: meanPulse .8s ease-out .8s both; }
+      .focus-center { animation: centerPulse 1.05s ease-in-out .9s 2; transform-box: fill-box; transform-origin: center; }
+      .callout1 { opacity: .15; animation: labelBrighten .8s ease-out 1.45s forwards; }
+      .callout2 { opacity: .15; animation: labelBrighten .8s ease-out 3.2s forwards; }
+      .callout3 { opacity: .15; animation: labelBrighten .8s ease-out 5s forwards; }
+      .symmetric { opacity: 0; animation: reveal .8s ease-out 6.5s forwards; }
+      @keyframes drawCurve { to { stroke-dashoffset: 0; } }
+      @keyframes bandOne { 0%,30% { opacity:.30; } 62%,100% { opacity:.52; } }
+      @keyframes bandTwo { 0%,30% { opacity:.18; } 62%,100% { opacity:.38; } }
+      @keyframes bandThree { 0%,30% { opacity:.14; } 62%,100% { opacity:.27; } }
+      @keyframes labelBrighten { to { opacity: 1; } }
+      @keyframes reveal { to { opacity: 1; } }
+      @keyframes meanPulse { from { opacity:.25; } to { opacity:1; } }
+      @keyframes centerPulse { 50% { transform: scale(1.07); } }
+    </style>
+  </defs>
+
+  <rect width="1200" height="800" fill="#FCFAF8"/>
+  <rect width="1200" height="800" fill="url(#dotGrid)"/>
+
+  <text x="600" y="78" text-anchor="middle" class="heading">The bell curve: values gather around the average</text>
+  <text x="600" y="112" text-anchor="middle" class="subhead">A normal distribution is balanced on both sides of its mean</text>
+
+  <g id="distribution">
+    <line x1="235" y1="620" x2="965" y2="620" class="axis"/>
+    <path class="curve-base" d="M255 620
+             C330 620 370 610 415 578
+             C470 539 507 451 550 348
+             C570 300 583 274 600 264
+             C617 274 630 300 650 348
+             C693 451 730 539 785 578
+             C830 610 870 620 945 620
+             L945 620 L255 620 Z"/>
+
+    <g clip-path="url(#bellClip)">
+      <rect x="285" y="240" width="660" height="380" class="band3"/>
+      <rect x="390" y="240" width="420" height="380" class="band2"/>
+      <rect x="495" y="240" width="210" height="380" class="band1"/>
+    </g>
+
+    <path class="curve-draw" pathLength="1" d="M255 620
+             C330 620 370 610 415 578
+             C470 539 507 451 550 348
+             C570 300 583 274 600 264
+             C617 274 630 300 650 348
+             C693 451 730 539 785 578
+             C830 610 870 620 945 620"/>
+
+    <line x1="285" y1="620" x2="285" y2="609" class="tick"/>
+    <line x1="390" y1="620" x2="390" y2="609" class="tick"/>
+    <line x1="495" y1="620" x2="495" y2="609" class="tick"/>
+    <line x1="600" y1="620" x2="600" y2="604" class="tick"/>
+    <line x1="705" y1="620" x2="705" y2="609" class="tick"/>
+    <line x1="810" y1="620" x2="810" y2="609" class="tick"/>
+    <line x1="915" y1="620" x2="915" y2="609" class="tick"/>
+
+    <line x1="495" y1="620" x2="495" y2="484" class="guide"/>
+    <line x1="705" y1="620" x2="705" y2="484" class="guide"/>
+    <line x1="390" y1="620" x2="390" y2="593" class="guide"/>
+    <line x1="810" y1="620" x2="810" y2="593" class="guide"/>
+    <line x1="285" y1="620" x2="285" y2="613" class="guide"/>
+    <line x1="915" y1="620" x2="915" y2="613" class="guide"/>
+
+    <line x1="600" y1="620" x2="600" y2="244" class="mean-line"/>
+    <circle cx="600" cy="264" r="9" fill="#F54E00" class="focus-center"/>
+    <circle cx="600" cy="264" r="17" fill="none" stroke="#F54E00" stroke-width="2" opacity=".38" class="focus-center"/>
+
+    <text x="600" y="222" text-anchor="middle" class="label" fill="#F54E00">most values</text>
+    <text x="600" y="648" text-anchor="middle" class="label" fill="#F54E00">mean (μ)</text>
+
+    <text x="285" y="650" text-anchor="middle" class="small">−3σ</text>
+    <text x="390" y="650" text-anchor="middle" class="small">−2σ</text>
+    <text x="495" y="650" text-anchor="middle" class="small">−1σ</text>
+    <text x="705" y="650" text-anchor="middle" class="small">+1σ</text>
+    <text x="810" y="650" text-anchor="middle" class="small">+2σ</text>
+    <text x="915" y="650" text-anchor="middle" class="small">+3σ</text>
+
+    <g class="callout1">
+      <path d="M495 696 L705 696" stroke="#F54E00" stroke-width="3" stroke-linecap="round"/>
+      <path d="M495 690 L495 702 M705 690 L705 702" stroke="#F54E00" stroke-width="3" stroke-linecap="round"/>
+      <text x="600" y="732" text-anchor="middle" class="label" fill="#F54E00">within 1 standard deviation: about 68%</text>
+    </g>
+
+    <g class="callout2">
+      <path d="M390 677 L810 677" stroke="#D88900" stroke-width="3" stroke-linecap="round"/>
+      <path d="M390 671 L390 683 M810 671 L810 683" stroke="#D88900" stroke-width="3" stroke-linecap="round"/>
+      <text x="600" y="758" text-anchor="middle" class="small" fill="#A86700">within 2σ: about 95%</text>
+    </g>
+
+    <g class="callout3">
+      <text x="964" y="587" text-anchor="start" class="small" fill="#078FA8">rare tail values</text>
+      <path d="M953 582 L910 603" fill="none" stroke="#078FA8" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+
+    <g class="symmetric">
+      <path d="M454 179 C500 148 552 142 590 159" fill="none" stroke="#6B6B6B" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M746 179 C700 148 648 142 610 159" fill="none" stroke="#6B6B6B" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M452 179 l13 -3 l-6 12 M748 179 l-13 -3 l6 12" fill="none" stroke="#6B6B6B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="600" y="170" text-anchor="middle" class="small">symmetric around the mean</text>
+    </g>
+  </g>
+</svg>
