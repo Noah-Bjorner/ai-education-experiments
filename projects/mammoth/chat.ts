@@ -11,6 +11,7 @@ import {
 } from "@ai";
 import { z } from "@zod";
 
+import { transformMessages } from "./message-transforms.ts";
 import { getLatestActiveObjective } from "./helper.ts";
 import { createMammothSystemPrompt } from "./prompt.ts";
 import type { MammothRequest } from "./schema.ts";
@@ -68,10 +69,12 @@ export async function streamMammoth(
     currentObjective,
   );
 
+  const transformedMessages = await transformMessages(messages);
+
   return streamText({
     model,
     system: systemPrompt,
-    messages: await convertToModelMessages(messages),
+    messages: await convertToModelMessages(transformedMessages),
     tools: mammothTools,
     experimental_repairToolCall: async ({ toolCall, inputSchema, error }) => {
       if (!(toolCall.toolName in mammothTools)) {

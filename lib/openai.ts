@@ -181,3 +181,55 @@ export const getGPTImage2 = async (options: GPTImage2Options): Promise<GPTImage2
       cost,
     };
 };
+
+export type CreateRealtimeClientSecretOptions = {
+  /** TTL in seconds (10–7200). Omit to use OpenAI’s default (600). */
+  expiresAfterSeconds?: number;
+  /**
+   * Privacy-preserving end-user identifier for OpenAI abuse monitoring.
+   * Prefer a hash of your internal user id — not raw email/username.
+   * Bound to the secret via the OpenAI-Safety-Identifier header.
+   */
+  safetyIdentifier?: string;
+};
+
+export type RealtimeClientSecret = {
+  value: string;
+  expiresAt: number;
+};
+
+export async function createRealtimeClientSecret(
+  options: CreateRealtimeClientSecretOptions = {},
+): Promise<RealtimeClientSecret> {
+  const { expiresAfterSeconds, safetyIdentifier } = options;
+
+  if (
+    expiresAfterSeconds !== undefined &&
+    (!Number.isInteger(expiresAfterSeconds) ||
+      expiresAfterSeconds < 10 ||
+      expiresAfterSeconds > 7200)
+  ) {
+    throw new Error("expiresAfterSeconds must be an integer between 10 and 7200");
+  }
+
+  const response = await client.realtime.clientSecrets.create(
+    expiresAfterSeconds === undefined
+      ? {}
+      : {
+        expires_after: {
+          anchor: "created_at",
+          seconds: expiresAfterSeconds,
+        },
+      },
+    safetyIdentifier
+      ? { headers: { "OpenAI-Safety-Identifier": safetyIdentifier } }
+      : undefined,
+  );
+
+  return {
+    value: response.value,
+    expiresAt: response.expires_at,
+  };
+}
+
+console.log(await createRealtimeClientSecret());

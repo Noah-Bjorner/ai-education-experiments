@@ -2,6 +2,7 @@ import { Hono, type Context } from "@hono/hono";
 import { createUIMessageStreamResponse } from "@ai";
 
 import { createZodJsonBodyMiddleware } from "../../helper/hono.ts";
+import { createRealtimeClientSecret } from "../../lib/openai.ts";
 import { mammothAuthMiddleware, type MammothEnv } from "./auth.ts";
 import { createMammothUIMessageStream } from "./chat.ts";
 import { mammothRequestSchema, type MammothRequest } from "./schema.ts";
@@ -45,3 +46,46 @@ mammothRoutes.post(
     return createUIMessageStreamResponse({ stream });
   },
 );
+
+mammothRoutes.post(
+  "/realtime/client-secret",
+  async (c) => {
+    const user = c.get("mammothUser");
+
+    try {
+      const secret = await createRealtimeClientSecret({
+        safetyIdentifier: await hashSafetyIdentifier(user.id),
+      });
+
+      return c.json({
+        ok: true,
+        data: {
+          value: secret.value,
+          expires_at: secret.expiresAt,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to create Realtime client secret", error);
+      return c.json(
+        {
+          ok: false,
+          error: {
+            code: "CLIENT_SECRET_CREATE_FAILED",
+            message: "Failed to create a Realtime client secret.",
+          },
+        },
+        500,
+      );
+    }
+  },
+);
+
+async function hashSafetyIdentifier(userId: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(userId),
+  );
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
+}
