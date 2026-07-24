@@ -85,3 +85,14 @@ export const mammothRequestSchema = z.object({
 });
 
 export type MammothRequest = z.infer<typeof mammothRequestSchema>;
+
+export const realtimeClientSecretRequestSchema = z.object({
+  type: z.literal("realtime").optional(),
+  model: z.string().trim().min(1).max(200, {
+    error: "model must be at most 200 characters.",
+  }).optional(),
+});
+
+export type RealtimeClientSecretRequest = z.infer<
+  typeof realtimeClientSecretRequestSchema
+>;

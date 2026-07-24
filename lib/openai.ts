@@ -182,6 +182,8 @@ export const getGPTImage2 = async (options: GPTImage2Options): Promise<GPTImage2
     };
 };
 
+export type RealtimeSessionType = "realtime";
+
 export type CreateRealtimeClientSecretOptions = {
   /** TTL in seconds (10–7200). Omit to use OpenAI’s default (600). */
   expiresAfterSeconds?: number;
@@ -191,6 +193,13 @@ export type CreateRealtimeClientSecretOptions = {
    * Bound to the secret via the OpenAI-Safety-Identifier header.
    */
   safetyIdentifier?: string;
+  /**
+   * Session type bound to the client secret. Defaults to `"realtime"` when
+   * `model` is set. Omit both to use OpenAI’s default session config.
+   */
+  type?: RealtimeSessionType;
+  /** Realtime model bound to the client secret, e.g. `"gpt-realtime-2.1"`. */
+  model?: string;
 };
 
 export type RealtimeClientSecret = {
@@ -201,7 +210,7 @@ export type RealtimeClientSecret = {
 export async function createRealtimeClientSecret(
   options: CreateRealtimeClientSecretOptions = {},
 ): Promise<RealtimeClientSecret> {
-  const { expiresAfterSeconds, safetyIdentifier } = options;
+  const { expiresAfterSeconds, safetyIdentifier, type, model } = options;
 
   if (
     expiresAfterSeconds !== undefined &&
@@ -212,15 +221,32 @@ export async function createRealtimeClientSecret(
     throw new Error("expiresAfterSeconds must be an integer between 10 and 7200");
   }
 
+  if (model !== undefined && model.trim() === "") {
+    throw new Error("model must be a non-empty string when provided");
+  }
+
+  const sessionType = type ?? (model !== undefined ? "realtime" : undefined);
+  const body: {
+    expires_after?: { anchor: "created_at"; seconds: number };
+    session?: { type: RealtimeSessionType; model?: string };
+  } = {};
+
+  if (expiresAfterSeconds !== undefined) {
+    body.expires_after = {
+      anchor: "created_at",
+      seconds: expiresAfterSeconds,
+    };
+  }
+
+  if (sessionType !== undefined) {
+    body.session = {
+      type: sessionType,
+      ...(model !== undefined ? { model: model.trim() } : {}),
+    };
+  }
+
   const response = await client.realtime.clientSecrets.create(
-    expiresAfterSeconds === undefined
-      ? {}
-      : {
-        expires_after: {
-          anchor: "created_at",
-          seconds: expiresAfterSeconds,
-        },
-      },
+    body,
     safetyIdentifier
       ? { headers: { "OpenAI-Safety-Identifier": safetyIdentifier } }
       : undefined,
@@ -231,5 +257,3 @@ export async function createRealtimeClientSecret(
     expiresAt: response.expires_at,
   };
 }
-
-console.log(await createRealtimeClientSecret());

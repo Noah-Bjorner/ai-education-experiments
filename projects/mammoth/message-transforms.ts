@@ -1,5 +1,5 @@
 import type { MammothUIMessage } from "./types.ts";
-// prepare-messages.ts
+
 export async function transformMessages(
     messages: MammothUIMessage[],
   ): Promise<MammothUIMessage[]> {
@@ -14,4 +14,4 @@ export async function transformMessages(
       default:
         return messages;
     }
-  }
+}

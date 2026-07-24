@@ -5,7 +5,11 @@ import { createZodJsonBodyMiddleware } from "../../helper/hono.ts";
 import { createRealtimeClientSecret } from "../../lib/openai.ts";
 import { mammothAuthMiddleware, type MammothEnv } from "./auth.ts";
 import { createMammothUIMessageStream } from "./chat.ts";
-import { mammothRequestSchema, type MammothRequest } from "./schema.ts";
+import {
+  mammothRequestSchema,
+  realtimeClientSecretRequestSchema,
+  type MammothRequest,
+} from "./schema.ts";
 import { mammothSubscriptionMiddleware } from "./subscription.ts";
 
 type MammothChatEnv = {
@@ -52,8 +56,46 @@ mammothRoutes.post(
   async (c) => {
     const user = c.get("mammothUser");
 
+    let rawBody: unknown = {};
+    const contentType = c.req.header("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      try {
+        rawBody = await c.req.json();
+      } catch {
+        return c.json(
+          {
+            ok: false,
+            error: {
+              code: "INVALID_CLIENT_SECRET_REQUEST",
+              message: "Request body must be valid JSON.",
+            },
+          },
+          400,
+        );
+      }
+    }
+
+    const parsed = realtimeClientSecretRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return c.json(
+        {
+          ok: false,
+          error: {
+            code: "INVALID_CLIENT_SECRET_REQUEST",
+            message: "Expected a JSON body with optional type and model.",
+            issues: parsed.error.issues,
+          },
+        },
+        400,
+      );
+    }
+
+    const { type, model } = parsed.data;
+
     try {
       const secret = await createRealtimeClientSecret({
+        type,
+        model,
         safetyIdentifier: await hashSafetyIdentifier(user.id),
       });
 
