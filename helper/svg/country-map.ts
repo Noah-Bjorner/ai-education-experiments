@@ -44,17 +44,13 @@ export const regionSchema = z.enum([
 
 const mapTargetSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("countries").describe(
-      "Highlight one or more specific countries on the map.",
-    ),
+    type: z.literal("countries"),
     countries: z.array(z.string().trim().min(1)).min(1).describe(
       "Country selectors matched case-insensitively by ISO 3166-1 alpha-2 code, ISO 3166-1 alpha-3 code, or English name, for example 'SE', 'SWE', or 'Sweden'.",
     ),
   }),
   z.object({
-    type: z.literal("region").describe(
-      "Frame the map to a predefined geographic region.",
-    ),
+    type: z.literal("region"),
     region: regionSchema.describe(
       "Predefined region used to frame and crop the map view, for example 'nordics' or 'europe'.",
     ),

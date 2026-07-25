@@ -1,16 +1,26 @@
-import { generateText, Output } from "@ai";
-import { z } from "@zod";
+import { generateText, isStepCount, type StopCondition } from "@ai";
 
 import {
-  questionSchema,
-  resolveQuestion,
+  QUESTION_TYPE_GUIDANCE,
+  questionTool,
   type ResolvedQuestion,
 } from "../question/index.ts";
+import { createToolCallRepair } from "../shared/repair-tool-call/index.ts";
+
+const EXAM_GENERATOR_MODEL = "google/gemini-3.6-flash" as const;
+const EXAM_REPAIR_TOOL_CALL_MODEL = "openai/gpt-5.6-sol" as const;
+
+const MIN_EXAM_QUESTIONS = 2;
+const MAX_EXAM_QUESTIONS = 15;
+const MAX_EXAM_GENERATION_STEPS = 4;
+
+const examQuestionTools = { question: questionTool };
 
 export type ExamAssessmentInput = {
   assessmentType: "exam";
   title: string;
   instructions: string;
+  questionPlan: string;
   sourceMaterial?: string;
 };
 
@@ -20,58 +30,84 @@ export type ExamAssessmentOutput = ExamAssessmentInput & {
 
 export function buildExamGenerationPrompt(exam: ExamAssessmentInput): string {
   const sections = [
-    "Create a multi-question exam that matches the title and learner instructions.",
+    "Create a multi-question exam.",
     `Title: ${exam.title}`,
     "",
-    "Learner instructions:",
-    exam.instructions,
+    "Question plan:",
+    exam.questionPlan,
   ];
 
   if (exam.sourceMaterial) {
     sections.push(
       "",
-      "Source material (base questions on this; do not invent conflicting facts):",
+      "Source material (optional reference — use when the question plan needs facts from it; do not feel bound to cover all of it):",
       exam.sourceMaterial,
     );
   }
 
   sections.push(
     "",
-    "Requirements:",
-    "- Generate between 2 and 15 questions (choose a count that fits the instructions).",
-    "- Each question must be a complete, valid question object (correct answers, options, blanks, etc.).",
-    "- Prefer variety across question types when the instructions allow it.",
-    "- Align questions with the learner instructions.",
-    "- When source material is provided, ground questions in it.",
-    "- Do not include multiple_choice_image questions.",
-    "- Make questions self-contained; do not assume prior chat context beyond any source material above.",
+    "Follow the question plan. Call the question tool once per question in a single parallel response.",
+    `Generate between ${MIN_EXAM_QUESTIONS} and ${MAX_EXAM_QUESTIONS} questions (use the plan's count when it states one).`,
+    "",
+    "Question type guidance:",
+    QUESTION_TYPE_GUIDANCE,
   );
 
   return sections.join("\n");
 }
 
-const examQuestionsResultSchema = z.object({
-  questions: z.array(questionSchema).min(2).max(15),
-});
+function countQuestions(
+  steps: ReadonlyArray<{ staticToolResults: ReadonlyArray<unknown> }>,
+): number {
+  return steps.reduce((total, step) => total + step.staticToolResults.length, 0);
+}
 
-const EXAM_GENERATOR_MODEL = "google/gemini-3.6-flash" as const;
+const stopWhenExamIsFull: StopCondition<typeof examQuestionTools> = (
+  { steps },
+) => countQuestions(steps) >= MAX_EXAM_QUESTIONS;
+
+function dedupeQuestions(questions: ResolvedQuestion[]): ResolvedQuestion[] {
+  const seenQuestionTexts = new Set<string>();
+
+  return questions.filter((question) => {
+    const key = question.questionText.trim().toLowerCase();
+    if (seenQuestionTexts.has(key)) {
+      return false;
+    }
+
+    seenQuestionTexts.add(key);
+    return true;
+  });
+}
 
 async function createExamQuestions(
   exam: ExamAssessmentInput,
 ): Promise<ResolvedQuestion[]> {
-  const { output } = await generateText({
+  const result = await generateText({
     model: EXAM_GENERATOR_MODEL,
-    output: Output.object({
-      schema: examQuestionsResultSchema,
-      name: "exam_questions",
-      description: "The full list of exam questions for the assessment.",
-    }),
+    tools: examQuestionTools,
     prompt: buildExamGenerationPrompt(exam),
+    prepareStep: ({ stepNumber }) =>
+      stepNumber === 0 ? { toolChoice: "required" } : {},
+    stopWhen: [stopWhenExamIsFull, isStepCount(MAX_EXAM_GENERATION_STEPS)],
+    experimental_repairToolCall: createToolCallRepair({
+      model: EXAM_REPAIR_TOOL_CALL_MODEL,
+      tools: examQuestionTools,
+    }),
   });
 
-  return await Promise.all(
-    output.questions.map((question) => resolveQuestion(question)),
-  );
+  const questions = dedupeQuestions(
+    result.staticToolResults.map((toolResult) => toolResult.output),
+  ).slice(0, MAX_EXAM_QUESTIONS);
+
+  if (questions.length < MIN_EXAM_QUESTIONS) {
+    throw new Error(
+      `Exam generation produced ${questions.length} question(s); at least ${MIN_EXAM_QUESTIONS} are required.`,
+    );
+  }
+
+  return questions;
 }
 
 export async function createExam(

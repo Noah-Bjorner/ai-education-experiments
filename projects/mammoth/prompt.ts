@@ -56,6 +56,8 @@ When calling tools, use the exact input field names from the tool schema. Do not
 - userAction: ${USER_ACTION_SYSTEM_PROMPT_DESCRIPTION}
 - promptSuggestions: ${PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION}
 
+Prefer question for practice and quick checks during teaching; prefer assessment for a more formal evaluation of mastery.
+
 ${
     current_objective
       ? `## Current Learning Objective

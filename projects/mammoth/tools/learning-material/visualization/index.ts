@@ -22,25 +22,19 @@ export type VisualizationOutput = z.infer<typeof visualizationOutputSchema>;
 
 const createVisualizationInputSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("static").describe(
-      "A single static image: a diagram, chart, illustration, or labeled structure. Best for showing structure, relationships, or a snapshot that does not change over time.",
-    ),
+    type: z.literal("static"),
     instruction: z.string().min(1).describe(
       "A self-contained plan for the static image: what concept to show, what appears on screen, and how the elements are laid out and labeled.",
     ),
   }),
   z.object({
-    type: z.literal("animation").describe(
-      "A short animated motion graphic. Best for showing change over time, processes, cause and effect, or transformations.",
-    ),
+    type: z.literal("animation"),
     instruction: z.string().min(1).describe(
       "A self-contained plan for the animation: what concept to show, what appears on screen, and how the motion unfolds over time.",
     ),
   }),
   z.object({
-    type: z.literal("interactive").describe(
-      "An interactive widget the student manipulates. Best when exploring the effect of changing inputs or parameters deepens understanding.",
-    ),
+    type: z.literal("interactive"),
     instruction: z.string().min(1).describe(
       "A self-contained plan for the interactive widget: what concept to show, what appears on screen, what the student can manipulate, and how the visualization responds.",
     ),

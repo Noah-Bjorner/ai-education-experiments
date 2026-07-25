@@ -3,15 +3,13 @@ import {
   convertToModelMessages,
   createGateway,
   createUIMessageStream,
-  generateText,
   hasToolCall,
   isStepCount,
-  Output,
   streamText,
 } from "@ai";
-import { z } from "@zod";
 
 import { transformMessages } from "./message-transforms.ts";
+import { createToolCallRepair } from "./tools/shared/repair-tool-call/index.ts";
 import { getLatestActiveObjective } from "./helper.ts";
 import { createMammothSystemPrompt } from "./prompt.ts";
 import type { MammothRequest } from "./schema.ts";
@@ -43,12 +41,6 @@ export type {
 const MAX_TOOL_STEPS = 15;
 const REPAIR_TOOL_CALL_MODEL = "openai/gpt-5.6-sol";
 
-const repairedToolCallInputSchema = z.object({
-  input: z.string().min(1).describe(
-    "A stringified JSON object containing the corrected tool input.",
-  ),
-});
-
 export async function streamMammoth(
   { messages, tutor_instructions, student_profile, memory, model: modelId }:
     MammothRequest,
@@ -76,33 +68,10 @@ export async function streamMammoth(
     system: systemPrompt,
     messages: await convertToModelMessages(transformedMessages),
     tools: mammothTools,
-    experimental_repairToolCall: async ({ toolCall, inputSchema, error }) => {
-      if (!(toolCall.toolName in mammothTools)) {
-        return null;
-      }
-      const schema = await inputSchema({ toolName: toolCall.toolName });
-      const repairModel = gateway(REPAIR_TOOL_CALL_MODEL);
-      const repair = await generateText({
-        model: repairModel,
-        output: Output.object({ schema: repairedToolCallInputSchema }),
-        prompt: [
-          `The model produced invalid input for the "${toolCall.toolName}" tool.`,
-          "Rewrite only the tool input so it matches the provided JSON schema exactly.",
-          "Return the corrected input as a stringified JSON object.",
-          "",
-          `Validation error: ${String(error)}`,
-          "",
-          `JSON schema: ${JSON.stringify(schema)}`,
-          "",
-          `Invalid input: ${toolCall.input}`,
-        ].join("\n"),
-      });
-
-      return {
-        ...toolCall,
-        input: repair.output.input,
-      };
-    },
+    experimental_repairToolCall: createToolCallRepair({
+      model: gateway(REPAIR_TOOL_CALL_MODEL),
+      tools: mammothTools,
+    }),
     stopWhen: [
       hasToolCall("promptSuggestions"),
       hasToolCall("question"),
