@@ -25,28 +25,36 @@ function isUIMessage(value: unknown): value is MammothUIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
-export const MAMMOTH_DEFAULT_MODEL = "xai/grok-4.5" as const;
+export const MAMMOTH_GATEWAY_MODEL_CONFIG = {
+  "openai/gpt-5.6-terra": { reasoning: "high" },
+  "openai/gpt-5.6-sol": { reasoning: "medium" },
+  "anthropic/claude-sonnet-5": { reasoning: "high" },
+  "anthropic/claude-opus-5": { reasoning: "medium" },
+  "xai/grok-4.5": { reasoning: "high" },
+  "google/gemini-3.6-flash": { reasoning: "high" },
+  "meta/muse-spark-1.1": { reasoning: "high" },
+  "zai/glm-5.2": { reasoning: "high" },
+  "zai/glm-5.2-fast": { reasoning: "high" },
+  "minimax/minimax-m3": { reasoning: "high" },
+  "alibaba/qwen3.7-max": { reasoning: "high" },
+} as const;
+
+export type MammothGatewayModel = keyof typeof MAMMOTH_GATEWAY_MODEL_CONFIG;
+
+export const MAMMOTH_DEFAULT_MODEL =
+  "xai/grok-4.5" as const satisfies MammothGatewayModel;
+
+const MAMMOTH_GATEWAY_MODELS = Object.keys(
+  MAMMOTH_GATEWAY_MODEL_CONFIG,
+) as [MammothGatewayModel, ...MammothGatewayModel[]];
 
 export const MAMMOTH_MODEL_OPTIONS = [
   "auto",
-  "openai/gpt-5.6-terra",
-  "anthropic/claude-sonnet-5",
-  "xai/grok-4.5",
-  "google/gemini-3.6-flash",
-  "meta/muse-spark-1.1",
-  "zai/glm-5.2",
-  "zai/glm-5.2-fast",
-  "minimax/minimax-m3",
-  "alibaba/qwen3.7-max",
+  ...MAMMOTH_GATEWAY_MODELS,
 ] as const;
 
 export type MammothModelPickerOption =
   typeof MAMMOTH_MODEL_OPTIONS[number];
-
-type MammothGatewayModel = typeof MAMMOTH_DEFAULT_MODEL | Exclude<
-  MammothModelPickerOption,
-  "auto"
->;
 
 const mammothModelSchema = z
   .enum(MAMMOTH_MODEL_OPTIONS)

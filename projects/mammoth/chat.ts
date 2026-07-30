@@ -12,7 +12,10 @@ import { transformMessages } from "./message-transforms.ts";
 import { createToolCallRepair } from "./tools/shared/repair-tool-call/index.ts";
 import { getLatestActiveObjective } from "./helper.ts";
 import { createMammothSystemPrompt } from "./prompt.ts";
-import type { MammothRequest } from "./schema.ts";
+import {
+  MAMMOTH_GATEWAY_MODEL_CONFIG,
+  type MammothRequest,
+} from "./schema.ts";
 import { mammothTools } from "./tools/index.ts";
 import type { MammothUIMessage } from "./types.ts";
 
@@ -25,9 +28,14 @@ export {
 } from "./types.ts";
 export {
   MAMMOTH_DEFAULT_MODEL,
+  MAMMOTH_GATEWAY_MODEL_CONFIG,
   MAMMOTH_MODEL_OPTIONS,
 } from "./schema.ts";
-export type { MammothModelPickerOption, MammothRequest } from "./schema.ts";
+export type {
+  MammothGatewayModel,
+  MammothModelPickerOption,
+  MammothRequest,
+} from "./schema.ts";
 export type {
   MammothDataTypes,
   MammothToolInvocation,
@@ -64,7 +72,8 @@ export async function streamMammoth(
   const transformedMessages = await transformMessages(messages);
 
   return streamText({
-    model,
+    model: modelId,
+    reasoning: MAMMOTH_GATEWAY_MODEL_CONFIG[modelId].reasoning,
     system: systemPrompt,
     messages: await convertToModelMessages(transformedMessages),
     tools: mammothTools,
