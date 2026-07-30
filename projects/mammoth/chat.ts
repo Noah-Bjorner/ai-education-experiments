@@ -72,7 +72,7 @@ export async function streamMammoth(
   const transformedMessages = await transformMessages(messages);
 
   return streamText({
-    model: modelId,
+    model: model,
     reasoning: MAMMOTH_GATEWAY_MODEL_CONFIG[modelId].reasoning,
     system: systemPrompt,
     messages: await convertToModelMessages(transformedMessages),
