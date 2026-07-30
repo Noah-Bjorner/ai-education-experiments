@@ -82,7 +82,8 @@ mammothRoutes.post(
           ok: false,
           error: {
             code: "INVALID_CLIENT_SECRET_REQUEST",
-            message: "Expected a JSON body with optional type and model.",
+            message:
+              'Expected JSON body with optional type: "realtime" | "transcription".',
             issues: parsed.error.issues,
           },
         },
@@ -90,12 +91,9 @@ mammothRoutes.post(
       );
     }
 
-    const { type, model } = parsed.data;
-
     try {
       const secret = await createRealtimeClientSecret({
-        type,
-        model,
+        type: parsed.data.type,
         safetyIdentifier: await hashSafetyIdentifier(user.id),
       });
 

@@ -182,9 +182,14 @@ export const getGPTImage2 = async (options: GPTImage2Options): Promise<GPTImage2
     };
 };
 
-export type RealtimeSessionType = "realtime";
+export type RealtimeSessionType = "realtime" | "transcription";
 
 export type CreateRealtimeClientSecretOptions = {
+  /**
+   * Session type bound to the client secret.
+   * Defaults to `"realtime"` (voice call). Use `"transcription"` for dictation.
+   */
+  type?: RealtimeSessionType;
   /** TTL in seconds (10–7200). Omit to use OpenAI’s default (600). */
   expiresAfterSeconds?: number;
   /**
@@ -193,13 +198,6 @@ export type CreateRealtimeClientSecretOptions = {
    * Bound to the secret via the OpenAI-Safety-Identifier header.
    */
   safetyIdentifier?: string;
-  /**
-   * Session type bound to the client secret. Defaults to `"realtime"` when
-   * `model` is set. Omit both to use OpenAI’s default session config.
-   */
-  type?: RealtimeSessionType;
-  /** Realtime model bound to the client secret, e.g. `"gpt-realtime-2.1"`. */
-  model?: string;
 };
 
 export type RealtimeClientSecret = {
@@ -207,10 +205,19 @@ export type RealtimeClientSecret = {
   expiresAt: number;
 };
 
+const DEFAULT_REALTIME_MODEL = "gpt-realtime-2.1";
+
+const MAMMOTH_DICTATION_PROMPT =
+  "Faithfully transcribe the user's speech for an educational chat composer. Preserve the speaker's language, wording, punctuation, and intent.";
+
 export async function createRealtimeClientSecret(
   options: CreateRealtimeClientSecretOptions = {},
 ): Promise<RealtimeClientSecret> {
-  const { expiresAfterSeconds, safetyIdentifier, type, model } = options;
+  const {
+    type = "realtime",
+    expiresAfterSeconds,
+    safetyIdentifier,
+  } = options;
 
   if (
     expiresAfterSeconds !== undefined &&
@@ -221,15 +228,43 @@ export async function createRealtimeClientSecret(
     throw new Error("expiresAfterSeconds must be an integer between 10 and 7200");
   }
 
-  if (model !== undefined && model.trim() === "") {
-    throw new Error("model must be a non-empty string when provided");
-  }
-
-  const sessionType = type ?? (model !== undefined ? "realtime" : undefined);
   const body: {
     expires_after?: { anchor: "created_at"; seconds: number };
-    session?: { type: RealtimeSessionType; model?: string };
-  } = {};
+    session:
+      | { type: "realtime"; model: string }
+      | {
+        type: "transcription";
+        audio: {
+          input: {
+            transcription: {
+              model: "gpt-live-transcribe";
+              prompt: string;
+              delay: "minimal";
+            };
+            turn_detection: null;
+          };
+        };
+      };
+  } = {
+    session: type === "transcription"
+      ? {
+        type: "transcription",
+        audio: {
+          input: {
+            transcription: {
+              model: "gpt-live-transcribe",
+              prompt: MAMMOTH_DICTATION_PROMPT,
+              delay: "minimal",
+            },
+            turn_detection: null,
+          },
+        },
+      }
+      : {
+        type: "realtime",
+        model: DEFAULT_REALTIME_MODEL,
+      },
+  };
 
   if (expiresAfterSeconds !== undefined) {
     body.expires_after = {
@@ -238,15 +273,12 @@ export async function createRealtimeClientSecret(
     };
   }
 
-  if (sessionType !== undefined) {
-    body.session = {
-      type: sessionType,
-      ...(model !== undefined ? { model: model.trim() } : {}),
-    };
-  }
-
+  // The installed SDK's generated types predate gpt-live-transcribe, but its
+  // client-secret transport forwards the current documented JSON contract.
   const response = await client.realtime.clientSecrets.create(
-    body,
+    body as unknown as Parameters<
+      typeof client.realtime.clientSecrets.create
+    >[0],
     safetyIdentifier
       ? { headers: { "OpenAI-Safety-Identifier": safetyIdentifier } }
       : undefined,
