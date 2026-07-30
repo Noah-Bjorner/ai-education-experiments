@@ -42,6 +42,7 @@ function getDocumentContentType(fileExtension: string): string {
   const ext = fileExtension.toLowerCase();
   if (ext === "md" || ext === "markdown") return "text/markdown; charset=utf-8";
   if (ext === "txt") return "text/plain; charset=utf-8";
+  if (ext === "json") return "application/json; charset=utf-8";
   return "application/octet-stream";
 }
 

@@ -4,10 +4,10 @@
     "start": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys --allow-ffi main.ts"
   },
   "imports": {
-    "@ai-sdk/google": "npm:@ai-sdk/google",
     "@ai-sdk/openai": "npm:@ai-sdk/openai",
     "@hono/hono": "jsr:@hono/hono@^4.12.15",
     "@jose": "npm:jose@6.2.3",
+    "@parallel-web": "npm:parallel-web@^1.1.0",
     "@std/dotenv": "jsr:@std/dotenv@^0.225.5",
     "@neondatabase/serverless": "npm:@neondatabase/serverless@1.0.2",
     "@unpdf": "npm:unpdf@^1.6.2",

@@ -1,6 +1,7 @@
 import { type InferUITools, type UIMessage } from "@ai";
 import type { AssessmentToolInvocation } from "./tools/assessment/index.ts";
 import type { GatherContextToolInvocation } from "./tools/gather-context/index.ts";
+import type { LearningMaterialToolInvocation } from "./tools/learning-material/index.ts";
 import type { ObjectiveToolInvocation } from "./tools/objective/index.ts";
 import type { PromptSuggestionsToolInvocation } from "./tools/prompt-suggestions/index.ts";
 import type { QuestionToolInvocation } from "./tools/question/index.ts";
@@ -12,6 +13,7 @@ export type { MammothToolName } from "./tools/index.ts";
 export type MammothUITools = InferUITools<typeof mammothTools>;
 export type MammothToolInvocation =
   | AssessmentToolInvocation
+  | LearningMaterialToolInvocation
   | ObjectiveToolInvocation
   | PromptSuggestionsToolInvocation
   | QuestionToolInvocation
@@ -27,6 +29,7 @@ export type MammothUIMessage = UIMessage<
 
 export const MAMMOTH_TOOL_PART_TYPES = [
   "tool-assessment",
+  "tool-learningMaterial",
   "tool-objective",
   "tool-promptSuggestions",
   "tool-question",
@@ -36,6 +39,7 @@ export const MAMMOTH_TOOL_PART_TYPES = [
 
 export const MAMMOTH_TOOL_LABELS = {
   "tool-assessment": "Creating an assessment...",
+  "tool-learningMaterial": "Creating learning material...",
   "tool-objective": "Updating the learning objective...",
   "tool-promptSuggestions": "Creating prompt suggestions...",
   "tool-question": "Creating a question...",

@@ -7,18 +7,19 @@
     "jsr:@std/assert@1.0.18": "1.0.18",
     "jsr:@std/dotenv@~0.225.5": "0.225.6",
     "jsr:@std/internal@^1.0.12": "1.0.12",
-    "npm:@ai-sdk/google@*": "4.0.1_zod@4.4.3",
     "npm:@ai-sdk/openai@*": "4.0.1_zod@4.4.3",
     "npm:@ai-sdk/provider-utils@*": "5.0.0_zod@4.4.3",
     "npm:@aws-sdk/client-s3@3.948.0": "3.948.0",
     "npm:@google/genai@*": "1.41.0",
     "npm:@neondatabase/serverless@1.0.2": "1.0.2",
-    "npm:@trigger.dev/sdk@4.4.6": "4.4.6_ai@7.0.0-canary.126__zod@4.4.3_zod@4.4.3",
+    "npm:@trigger.dev/sdk@4.4.6": "4.4.6_ai@7.0.3__zod@4.4.3_zod@4.4.3",
     "npm:ai@*": "7.0.3_zod@4.4.3",
     "npm:ai@7": "7.0.3_zod@4.4.3",
     "npm:ai@7.0.3": "7.0.3_zod@4.4.3",
     "npm:esbuild@~0.28.1": "0.28.1",
     "npm:jose@6.2.3": "6.2.3",
+    "npm:parallel-web@1.1.0": "1.1.0",
+    "npm:parallel-web@^1.1.0": "1.1.0",
     "npm:postgres@3.4.7": "3.4.7",
     "npm:replicate@1.4.0": "1.4.0",
     "npm:unpdf@^1.6.2": "1.6.2",
@@ -55,54 +56,27 @@
     }
   },
   "npm": {
-    "@ai-sdk/gateway@4.0.0-canary.73_zod@4.4.3": {
-      "integrity": "sha512-Kj5GOHqtP7PYYTdI0lZWeM9Z4rFj6lDr1VPREx3881WI3G5C31zvzrNBx5Fdqm/a7zu+bFxUk52nijtsdFw//A==",
-      "dependencies": [
-        "@ai-sdk/provider@4.0.0-canary.16",
-        "@ai-sdk/provider-utils@5.0.0-canary.35_zod@4.4.3",
-        "@vercel/oidc",
-        "zod@4.4.3"
-      ]
-    },
     "@ai-sdk/gateway@4.0.3_zod@4.4.3": {
       "integrity": "sha512-V8p0skqA9I5ZvZ4JDrvdh+TrZ0OVvkoP4CPEMxy777yBcVO5febhtLUJ+t0V0ROvSIkWIm5R9nvyOsyZRtO9sQ==",
       "dependencies": [
-        "@ai-sdk/provider@4.0.0",
-        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
+        "@ai-sdk/provider",
+        "@ai-sdk/provider-utils",
         "@vercel/oidc",
-        "zod@4.4.3"
-      ]
-    },
-    "@ai-sdk/google@4.0.1_zod@4.4.3": {
-      "integrity": "sha512-FZAliYDNgpe96H8fh8ccW2PrPYMf7fRoT/oySfRVdkqQUAO+DI5jIouYbF1D9xl1+qGb6s0zaRZKD8Ig+zDO4g==",
-      "dependencies": [
-        "@ai-sdk/provider@4.0.0",
-        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
         "zod@4.4.3"
       ]
     },
     "@ai-sdk/openai@4.0.1_zod@4.4.3": {
       "integrity": "sha512-SZ036CbBdQcf8Q8EoGKU7kYBJpX+KPChGXUO8IPXDKMYvo/CDjBpPLWOm4DMa++s9skxuxTZtmNLqTeaY2GjTg==",
       "dependencies": [
-        "@ai-sdk/provider@4.0.0",
-        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
-        "zod@4.4.3"
-      ]
-    },
-    "@ai-sdk/provider-utils@5.0.0-canary.35_zod@4.4.3": {
-      "integrity": "sha512-4+g1k/lpUt9KI4+NgOwq7lBYbxGmhDOUXmLxcjt+2BV6QnUvc2glD+ocSRhlOCbmjbwiI9Muw1LyEVECQX3VQQ==",
-      "dependencies": [
-        "@ai-sdk/provider@4.0.0-canary.16",
-        "@standard-schema/spec",
-        "@workflow/serde",
-        "eventsource-parser",
+        "@ai-sdk/provider",
+        "@ai-sdk/provider-utils",
         "zod@4.4.3"
       ]
     },
     "@ai-sdk/provider-utils@5.0.0_zod@4.4.3": {
       "integrity": "sha512-zj66M02jc6ASYwIgWZowsooDUwaVngeNZQ3H10GwcPMZ+KR6gHMhcUuKl6tkai+JPXTKDyHY1pnszuxRtw2D4A==",
       "dependencies": [
-        "@ai-sdk/provider@4.0.0",
+        "@ai-sdk/provider",
         "@standard-schema/spec",
         "@workflow/serde",
         "eventsource-parser",
@@ -111,12 +85,6 @@
     },
     "@ai-sdk/provider@4.0.0": {
       "integrity": "sha512-fr9Gs89prDWiuox/T+kCA+i2cJkHpxU5S+tr4megjTzRC27ZsvFhwjU/+XrqqMbvBUlfmXxTOYWy8ng45dsjIg==",
-      "dependencies": [
-        "json-schema"
-      ]
-    },
-    "@ai-sdk/provider@4.0.0-canary.16": {
-      "integrity": "sha512-IJKj5cOfRNbc1+rBIdyqFbsd4tjWY3wrM3y2D2YdZCHLi6qpS2yLN0P+ajEPCEnto6iZFWQHk28iRMwgvFSJRg==",
       "dependencies": [
         "json-schema"
       ]
@@ -1521,13 +1489,13 @@
         "zod-validation-error"
       ]
     },
-    "@trigger.dev/sdk@4.4.6_ai@7.0.0-canary.126__zod@4.4.3_zod@4.4.3": {
+    "@trigger.dev/sdk@4.4.6_ai@7.0.3__zod@4.4.3_zod@4.4.3": {
       "integrity": "sha512-FAC5/oES4dClLWlLGvnuNUlhfzWXDA6ResxB7B6/2UohSdxn3yWt9uOtjEL434JiN0xNUCiSAN8KTP1azpOgBg==",
       "dependencies": [
         "@opentelemetry/api",
         "@opentelemetry/semantic-conventions",
         "@trigger.dev/core",
-        "ai@7.0.0-canary.126_zod@4.4.3",
+        "ai",
         "chalk",
         "cronstrue",
         "debug@4.4.3",
@@ -1539,7 +1507,7 @@
         "zod@4.4.3"
       ],
       "optionalPeers": [
-        "ai@7.0.0-canary.126_zod@4.4.3"
+        "ai"
       ]
     },
     "@types/cookie@0.4.1": {
@@ -1597,21 +1565,12 @@
     "agent-base@7.1.4": {
       "integrity": "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="
     },
-    "ai@7.0.0-canary.126_zod@4.4.3": {
-      "integrity": "sha512-gvhNdn5bp+vbpQKTB5p9lsk/HPCvdgS7fUzj2G+30on0M+koOdeoPugkwyLnnP32wnTG45Yj0zotpM+krsdjwA==",
-      "dependencies": [
-        "@ai-sdk/gateway@4.0.0-canary.73_zod@4.4.3",
-        "@ai-sdk/provider@4.0.0-canary.16",
-        "@ai-sdk/provider-utils@5.0.0-canary.35_zod@4.4.3",
-        "zod@4.4.3"
-      ]
-    },
     "ai@7.0.3_zod@4.4.3": {
       "integrity": "sha512-ze2nTtoNW1hYhkjAVUVoLQGC/vDmNv+nIo3n8aCv2QQS8WCuC8o3CF6ywnUlui/i7lfGU4V8aPClVRH62WUHeA==",
       "dependencies": [
-        "@ai-sdk/gateway@4.0.3_zod@4.4.3",
-        "@ai-sdk/provider@4.0.0",
-        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
+        "@ai-sdk/gateway",
+        "@ai-sdk/provider",
+        "@ai-sdk/provider-utils",
         "zod@4.4.3"
       ]
     },
@@ -2094,6 +2053,9 @@
     "package-json-from-dist@1.0.1": {
       "integrity": "sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw=="
     },
+    "parallel-web@1.1.0": {
+      "integrity": "sha512-lGbSbuBVBT5OD+5N157HuccucFLC4LHklZfNzqLp6OCgVbQD8dw3ZfzFvNZ3a8e6sdJixmYH65YQbkioo1KfjQ=="
+    },
     "path-key@3.1.1": {
       "integrity": "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q=="
     },
@@ -2416,7 +2378,6 @@
       "jsr:@hono/hono@^4.12.15",
       "jsr:@openai/openai@6.10.0",
       "jsr:@std/dotenv@~0.225.5",
-      "npm:@ai-sdk/google@*",
       "npm:@ai-sdk/openai@*",
       "npm:@aws-sdk/client-s3@3.948.0",
       "npm:@google/genai@*",
@@ -2425,6 +2386,7 @@
       "npm:ai@7",
       "npm:esbuild@~0.28.1",
       "npm:jose@6.2.3",
+      "npm:parallel-web@^1.1.0",
       "npm:replicate@1.4.0",
       "npm:unpdf@^1.6.2",
       "npm:zod@^4.4.3"

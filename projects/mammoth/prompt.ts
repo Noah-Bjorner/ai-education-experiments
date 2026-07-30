@@ -2,6 +2,7 @@ import type { ObjectiveToolOutput } from "./tools/objective/index.ts";
 
 import { ASSESSMENT_SYSTEM_PROMPT_DESCRIPTION } from "./tools/assessment/index.ts";
 import { GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION } from "./tools/gather-context/index.ts";
+import { LEARNING_MATERIAL_SYSTEM_PROMPT_DESCRIPTION } from "./tools/learning-material/index.ts";
 import { OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION } from "./tools/objective/index.ts";
 import { PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION } from "./tools/prompt-suggestions/index.ts";
 import { QUESTION_SYSTEM_PROMPT_DESCRIPTION } from "./tools/question/index.ts";
@@ -52,11 +53,12 @@ When calling tools, use the exact input field names from the tool schema. Do not
 - objective: ${OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION}
 - question: ${QUESTION_SYSTEM_PROMPT_DESCRIPTION}
 - assessment: ${ASSESSMENT_SYSTEM_PROMPT_DESCRIPTION}
+- learningMaterial: ${LEARNING_MATERIAL_SYSTEM_PROMPT_DESCRIPTION}
 - gatherContext: ${GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION}
 - userAction: ${USER_ACTION_SYSTEM_PROMPT_DESCRIPTION}
 - promptSuggestions: ${PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION}
 
-Prefer question for practice and quick checks during teaching; prefer assessment for a more formal evaluation of mastery.
+Prefer question for practice and quick checks during teaching; prefer assessment for a more formal evaluation of mastery. Prefer learningMaterial for study or reference materials the learner can work with on their own.
 
 ${
     current_objective

@@ -1,0 +1,290 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-labelledby="svgTitle svgDesc">
+  <title id="svgTitle">The New Testament as a 27-Book Library</title>
+  <desc id="svgDesc">An animated shelf fills in canonical order with four Gospels, Acts, thirteen letters associated with Paul, eight other letters, and Revelation, totaling twenty-seven books.</desc>
+
+  <defs>
+    <pattern id="dotGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#1F1F1F" opacity="0.09"/>
+    </pattern>
+  </defs>
+
+  <style>
+    text {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .book {
+      opacity: 0;
+      transform: translateY(42px);
+      animation: placeBook 0.42s ease-out var(--d) forwards;
+    }
+
+    .group-label {
+      opacity: 0;
+      transform: translateY(8px);
+      animation: revealLabel 0.4s ease-out var(--d) forwards;
+    }
+
+    .equation {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: equationIn 0.65s ease-out 8.1s forwards;
+    }
+
+    .final-note {
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out 9s forwards;
+    }
+
+    .order-label {
+      opacity: 0.65;
+      animation: emphasizeOrder 0.6s ease-out 7.5s forwards;
+    }
+
+    @keyframes placeBook {
+      0% {
+        opacity: 0;
+        transform: translateY(42px);
+      }
+      70% {
+        opacity: 1;
+        transform: translateY(-3px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes revealLabel {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes equationIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.96);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes emphasizeOrder {
+      from { opacity: 0.65; }
+      to { opacity: 1; }
+    }
+  </style>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#FCFAF8"/>
+  <rect width="1200" height="800" fill="url(#dotGrid)"/>
+
+  <!-- Title -->
+  <text x="600" y="72" text-anchor="middle" fill="#1F1F1F" font-size="42" font-weight="700">
+    The New Testament as a 27-Book Library
+  </text>
+  <text x="600" y="108" text-anchor="middle" fill="#6B6B6B" font-size="20" font-weight="500">
+    Books arranged from left to right in canonical order
+  </text>
+
+  <!-- Group labels -->
+  <g class="group-label" style="--d:1.45s">
+    <text x="167.5" y="180" text-anchor="middle" fill="#C63F00" font-size="19" font-weight="700">Gospels · 4</text>
+    <line x1="105" y1="194" x2="230" y2="194" stroke="#F54E00" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g class="group-label" style="--d:2.15s">
+    <text x="268" y="180" text-anchor="middle" fill="#07849A" font-size="19" font-weight="700">Acts · 1</text>
+    <line x1="254" y1="194" x2="282" y2="194" stroke="#06B6D4" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g class="group-label" style="--d:5.05s">
+    <text x="526" y="180" text-anchor="middle" fill="#4F46B8" font-size="19" font-weight="700">Paul-associated letters · 13</text>
+    <line x1="306" y1="194" x2="746" y2="194" stroke="#6366F1" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g class="group-label" style="--d:6.95s">
+    <text x="906.5" y="180" text-anchor="middle" fill="#168A3C" font-size="19" font-weight="700">Other letters · 8</text>
+    <line x1="774" y1="194" x2="1039" y2="194" stroke="#22C55E" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g class="group-label" style="--d:7.65s">
+    <text x="1077" y="180" text-anchor="middle" fill="#BE123C" font-size="19" font-weight="700">Apocalypse · 1</text>
+    <line x1="1063" y1="194" x2="1091" y2="194" stroke="#E11D48" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Shelf structure -->
+  <g id="shelf">
+    <rect x="82" y="552" width="1036" height="20" rx="4" fill="#B89B80"/>
+    <rect x="92" y="572" width="16" height="42" rx="3" fill="#8D725D"/>
+    <rect x="1092" y="572" width="16" height="42" rx="3" fill="#8D725D"/>
+    <line x1="82" y1="552" x2="1118" y2="552" stroke="#725B49" stroke-width="4"/>
+  </g>
+
+  <!-- Four Gospels -->
+  <g class="book" style="--d:0.35s">
+    <rect x="99" y="304" width="32" height="248" rx="4" fill="#F54E00"/>
+    <rect x="103" y="314" width="24" height="4" rx="2" fill="#FFB28E"/>
+    <text transform="translate(115 535) rotate(-90)" fill="#FFFFFF" font-size="14" font-weight="700">Matthew</text>
+  </g>
+  <g class="book" style="--d:0.58s">
+    <rect x="134" y="322" width="32" height="230" rx="4" fill="#F54E00"/>
+    <rect x="138" y="332" width="24" height="4" rx="2" fill="#FFB28E"/>
+    <text transform="translate(150 535) rotate(-90)" fill="#FFFFFF" font-size="14" font-weight="700">Mark</text>
+  </g>
+  <g class="book" style="--d:0.81s">
+    <rect x="169" y="294" width="32" height="258" rx="4" fill="#F54E00"/>
+    <rect x="173" y="304" width="24" height="4" rx="2" fill="#FFB28E"/>
+    <text transform="translate(185 535) rotate(-90)" fill="#FFFFFF" font-size="14" font-weight="700">Luke</text>
+  </g>
+  <g class="book" style="--d:1.04s">
+    <rect x="204" y="312" width="32" height="240" rx="4" fill="#F54E00"/>
+    <rect x="208" y="322" width="24" height="4" rx="2" fill="#FFB28E"/>
+    <text transform="translate(220 535) rotate(-90)" fill="#FFFFFF" font-size="14" font-weight="700">John</text>
+  </g>
+
+  <!-- Acts -->
+  <g class="book" style="--d:1.72s">
+    <rect x="252" y="282" width="32" height="270" rx="4" fill="#06B6D4"/>
+    <rect x="256" y="292" width="24" height="4" rx="2" fill="#A5F3FC"/>
+    <text transform="translate(268 535) rotate(-90)" fill="#FFFFFF" font-size="14" font-weight="700">Acts</text>
+  </g>
+
+  <!-- Thirteen letters associated with Paul -->
+  <g class="book" style="--d:2.2s">
+    <rect x="300" y="310" width="32" height="242" rx="4" fill="#6366F1"/>
+    <text transform="translate(316 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Romans</text>
+  </g>
+  <g class="book" style="--d:2.4s">
+    <rect x="335" y="326" width="32" height="226" rx="4" fill="#6366F1"/>
+    <text transform="translate(351 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">1 Corinthians</text>
+  </g>
+  <g class="book" style="--d:2.6s">
+    <rect x="370" y="318" width="32" height="234" rx="4" fill="#6366F1"/>
+    <text transform="translate(386 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">2 Corinthians</text>
+  </g>
+  <g class="book" style="--d:2.8s">
+    <rect x="405" y="334" width="32" height="218" rx="4" fill="#6366F1"/>
+    <text transform="translate(421 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Galatians</text>
+  </g>
+  <g class="book" style="--d:3s">
+    <rect x="440" y="316" width="32" height="236" rx="4" fill="#6366F1"/>
+    <text transform="translate(456 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Ephesians</text>
+  </g>
+  <g class="book" style="--d:3.2s">
+    <rect x="475" y="328" width="32" height="224" rx="4" fill="#6366F1"/>
+    <text transform="translate(491 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Philippians</text>
+  </g>
+  <g class="book" style="--d:3.4s">
+    <rect x="510" y="320" width="32" height="232" rx="4" fill="#6366F1"/>
+    <text transform="translate(526 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Colossians</text>
+  </g>
+  <g class="book" style="--d:3.6s">
+    <rect x="545" y="342" width="32" height="210" rx="4" fill="#6366F1"/>
+    <text transform="translate(561 535) rotate(-90)" fill="#FFFFFF" font-size="12.5" font-weight="700">1 Thessalonians</text>
+  </g>
+  <g class="book" style="--d:3.8s">
+    <rect x="580" y="336" width="32" height="216" rx="4" fill="#6366F1"/>
+    <text transform="translate(596 535) rotate(-90)" fill="#FFFFFF" font-size="12.5" font-weight="700">2 Thessalonians</text>
+  </g>
+  <g class="book" style="--d:4s">
+    <rect x="615" y="324" width="32" height="228" rx="4" fill="#6366F1"/>
+    <text transform="translate(631 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">1 Timothy</text>
+  </g>
+  <g class="book" style="--d:4.2s">
+    <rect x="650" y="332" width="32" height="220" rx="4" fill="#6366F1"/>
+    <text transform="translate(666 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">2 Timothy</text>
+  </g>
+  <g class="book" style="--d:4.4s">
+    <rect x="685" y="344" width="32" height="208" rx="4" fill="#6366F1"/>
+    <text transform="translate(701 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Titus</text>
+  </g>
+  <g class="book" style="--d:4.6s">
+    <rect x="720" y="338" width="32" height="214" rx="4" fill="#6366F1"/>
+    <text transform="translate(736 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Philemon</text>
+  </g>
+
+  <!-- Eight other letters -->
+  <g class="book" style="--d:5.25s">
+    <rect x="768" y="306" width="32" height="246" rx="4" fill="#22C55E"/>
+    <text transform="translate(784 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Hebrews</text>
+  </g>
+  <g class="book" style="--d:5.48s">
+    <rect x="803" y="324" width="32" height="228" rx="4" fill="#22C55E"/>
+    <text transform="translate(819 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">James</text>
+  </g>
+  <g class="book" style="--d:5.71s">
+    <rect x="838" y="314" width="32" height="238" rx="4" fill="#22C55E"/>
+    <text transform="translate(854 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">1 Peter</text>
+  </g>
+  <g class="book" style="--d:5.94s">
+    <rect x="873" y="328" width="32" height="224" rx="4" fill="#22C55E"/>
+    <text transform="translate(889 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">2 Peter</text>
+  </g>
+  <g class="book" style="--d:6.17s">
+    <rect x="908" y="310" width="32" height="242" rx="4" fill="#22C55E"/>
+    <text transform="translate(924 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">1 John</text>
+  </g>
+  <g class="book" style="--d:6.4s">
+    <rect x="943" y="334" width="32" height="218" rx="4" fill="#22C55E"/>
+    <text transform="translate(959 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">2 John</text>
+  </g>
+  <g class="book" style="--d:6.63s">
+    <rect x="978" y="340" width="32" height="212" rx="4" fill="#22C55E"/>
+    <text transform="translate(994 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">3 John</text>
+  </g>
+  <g class="book" style="--d:6.86s">
+    <rect x="1013" y="330" width="32" height="222" rx="4" fill="#22C55E"/>
+    <text transform="translate(1029 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Jude</text>
+  </g>
+
+  <!-- Revelation -->
+  <g class="book" style="--d:7.25s">
+    <rect x="1061" y="276" width="32" height="276" rx="4" fill="#E11D48"/>
+    <rect x="1065" y="286" width="24" height="4" rx="2" fill="#FDA4AF"/>
+    <text transform="translate(1077 535) rotate(-90)" fill="#FFFFFF" font-size="13" font-weight="700">Revelation</text>
+  </g>
+
+  <!-- Canonical direction -->
+  <g class="order-label">
+    <text x="600" y="605" text-anchor="middle" fill="#6B6B6B" font-size="17" font-weight="600">
+      Canonical order
+    </text>
+    <line x1="685" y1="599" x2="770" y2="599" stroke="#6B6B6B" stroke-width="2.5"/>
+    <path d="M770 599 L758 592 M770 599 L758 606" fill="none" stroke="#6B6B6B" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Final equation -->
+  <g class="equation">
+    <rect x="98" y="630" width="1004" height="76" rx="16" fill="#FFFFFF" stroke="#DDD5CE" stroke-width="2"/>
+    <text x="600" y="680" text-anchor="middle" font-size="30" font-weight="700">
+      <tspan fill="#F54E00">4 Gospels</tspan>
+      <tspan fill="#6B6B6B"> + </tspan>
+      <tspan fill="#06B6D4">1 Acts</tspan>
+      <tspan fill="#6B6B6B"> + </tspan>
+      <tspan fill="#5558D9">21 letters</tspan>
+      <tspan fill="#6B6B6B"> + </tspan>
+      <tspan fill="#E11D48">1 Revelation</tspan>
+      <tspan fill="#1F1F1F"> = 27 books</tspan>
+    </text>
+  </g>
+
+  <text class="final-note" x="600" y="752" text-anchor="middle" fill="#6B6B6B" font-size="19" font-weight="600">
+    Canonical order is not chronological order.
+  </text>
+</svg>
