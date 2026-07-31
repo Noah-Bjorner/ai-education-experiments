@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supply and Demand Equilibrium</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #f5f7fb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #172033;
+    }
+    body {
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .visual {
+      width: min(1200px, 100%);
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .grid {
+      stroke: #e8edf3;
+      stroke-width: 1;
+    }
+    .axis {
+      stroke: #263244;
+      stroke-width: 2.5;
+    }
+    .tick {
+      stroke: #536174;
+      stroke-width: 1.5;
+    }
+    .tick-label {
+      fill: #657286;
+      font-size: 15px;
+    }
+    .axis-label {
+      fill: #263244;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .demand {
+      fill: none;
+      stroke: #2563eb;
+      stroke-width: 6;
+      stroke-linecap: round;
+    }
+    .supply {
+      fill: none;
+      stroke: #ea580c;
+      stroke-width: 6;
+      stroke-linecap: round;
+    }
+    .guide {
+      stroke: #7c3aed;
+      stroke-width: 2;
+      stroke-dasharray: 8 7;
+    }
+  </style>
+</head>
+<body>
+  <main class="visual">
+    <svg viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+      <title id="title">Supply and demand equilibrium graph</title>
+      <desc id="desc">Price is on the vertical axis and quantity is on the horizontal axis. A downward-sloping demand curve and an upward-sloping supply curve meet at the market equilibrium.</desc>
+
+      <defs>
+        <marker id="axisArrow" viewBox="0 0 10 10" refX="8.5" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 Z" fill="#263244"/>
+        </marker>
+      </defs>
+
+      <!-- Header -->
+      <text x="70" y="62" font-size="34" font-weight="750" fill="#172033">Supply and demand</text>
+      <text x="70" y="94" font-size="18" fill="#657286">
+        The market settles where buyers’ demand equals sellers’ supply.
+      </text>
+
+      <!-- Legend -->
+      <g transform="translate(790 47)">
+        <rect x="0" y="0" width="340" height="54" rx="12" fill="#f8fafc" stroke="#dbe2ea"/>
+        <line x1="24" y1="27" x2="62" y2="27" class="demand"/>
+        <text x="74" y="33" font-size="16" font-weight="650" fill="#2563eb">Demand</text>
+        <line x1="185" y1="27" x2="223" y2="27" class="supply"/>
+        <text x="235" y="33" font-size="16" font-weight="650" fill="#c2410c">Supply</text>
+      </g>
+
+      <!-- Chart area -->
+      <rect x="55" y="125" width="1090" height="570" rx="16" fill="#fbfcfe" stroke="#dbe2ea"/>
+
+      <!-- Horizontal grid -->
+      <line x1="180" y1="570" x2="1030" y2="570" class="grid"/>
+      <line x1="180" y1="495" x2="1030" y2="495" class="grid"/>
+      <line x1="180" y1="420" x2="1030" y2="420" class="grid"/>
+      <line x1="180" y1="345" x2="1030" y2="345" class="grid"/>
+      <line x1="180" y1="270" x2="1030" y2="270" class="grid"/>
+      <line x1="180" y1="195" x2="1030" y2="195" class="grid"/>
+
+      <!-- Vertical grid -->
+      <line x1="320" y1="155" x2="320" y2="630" class="grid"/>
+      <line x1="465" y1="155" x2="465" y2="630" class="grid"/>
+      <line x1="610" y1="155" x2="610" y2="630" class="grid"/>
+      <line x1="755" y1="155" x2="755" y2="630" class="grid"/>
+      <line x1="900" y1="155" x2="900" y2="630" class="grid"/>
+
+      <!-- Axes -->
+      <line x1="180" y1="630" x2="1045" y2="630" class="axis" marker-end="url(#axisArrow)"/>
+      <line x1="180" y1="630" x2="180" y2="145" class="axis" marker-end="url(#axisArrow)"/>
+
+      <!-- Y-axis ticks and labels -->
+      <g text-anchor="end">
+        <line x1="172" y1="570" x2="180" y2="570" class="tick"/>
+        <text x="161" y="576" class="tick-label">10</text>
+
+        <line x1="172" y1="495" x2="180" y2="495" class="tick"/>
+        <text x="161" y="501" class="tick-label">20</text>
+
+        <line x1="170" y1="420" x2="180" y2="420" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="161" y="426" font-size="16" font-weight="750" fill="#7c3aed">P*</text>
+
+        <line x1="172" y1="345" x2="180" y2="345" class="tick"/>
+        <text x="161" y="351" class="tick-label">40</text>
+
+        <line x1="172" y1="270" x2="180" y2="270" class="tick"/>
+        <text x="161" y="276" class="tick-label">50</text>
+
+        <line x1="172" y1="195" x2="180" y2="195" class="tick"/>
+        <text x="161" y="201" class="tick-label">60</text>
+      </g>
+
+      <!-- X-axis ticks and labels -->
+      <g text-anchor="middle">
+        <line x1="320" y1="630" x2="320" y2="638" class="tick"/>
+        <text x="320" y="660" class="tick-label">20</text>
+
+        <line x1="465" y1="630" x2="465" y2="638" class="tick"/>
+        <text x="465" y="660" class="tick-label">40</text>
+
+        <line x1="610" y1="630" x2="610" y2="641" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="610" y="662" font-size="16" font-weight="750" fill="#7c3aed">Q*</text>
+
+        <line x1="755" y1="630" x2="755" y2="638" class="tick"/>
+        <text x="755" y="660" class="tick-label">80</text>
+
+        <line x1="900" y1="630" x2="900" y2="638" class="tick"/>
+        <text x="900" y="660" class="tick-label">100</text>
+      </g>
+
+      <!-- Axis labels -->
+      <text x="610" y="688" text-anchor="middle" class="axis-label">Quantity</text>
+      <text x="92" y="390" text-anchor="middle" class="axis-label"
+            transform="rotate(-90 92 390)">Price</text>
+
+      <!-- Equilibrium guides -->
+      <line x1="180" y1="420" x2="610" y2="420" class="guide"/>
+      <line x1="610" y1="420" x2="610" y2="630" class="guide"/>
+
+      <!-- Curves, both passing through (610, 420) -->
+      <path d="M 235 210 Q 450 330 610 420 Q 790 525 965 605" class="demand"/>
+      <path d="M 235 600 Q 430 510 610 420 Q 790 325 965 235" class="supply"/>
+
+      <!-- Curve labels -->
+      <g transform="translate(835 545)">
+        <rect x="0" y="0" width="146" height="42" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+        <circle cx="21" cy="21" r="6" fill="#2563eb"/>
+        <text x="37" y="27" font-size="17" font-weight="700" fill="#1d4ed8">Demand</text>
+      </g>
+
+      <g transform="translate(830 225)">
+        <rect x="0" y="0" width="136" height="42" rx="10" fill="#fff7ed" stroke="#fed7aa"/>
+        <circle cx="21" cy="21" r="6" fill="#ea580c"/>
+        <text x="37" y="27" font-size="17" font-weight="700" fill="#c2410c">Supply</text>
+      </g>
+
+      <!-- Equilibrium point and annotation -->
+      <circle cx="610" cy="420" r="16" fill="#ffffff" stroke="#7c3aed" stroke-width="4"/>
+      <circle cx="610" cy="420" r="6" fill="#7c3aed"/>
+
+      <g transform="translate(638 365)">
+        <path d="M 0 44 L -17 55 L 4 56 Z" fill="#f5f3ff" stroke="#c4b5fd"/>
+        <rect x="0" y="0" width="270" height="58" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
+        <text x="18" y="24" font-size="18" font-weight="750" fill="#6d28d9">Equilibrium</text>
+        <text x="18" y="45" font-size="15" fill="#5b4b73">quantity demanded = quantity supplied</text>
+      </g>
+
+      <!-- Teaching summary -->
+      <g transform="translate(70 724)">
+        <rect x="0" y="0" width="1060" height="50" rx="13" fill="#eef2ff"/>
+        <text x="28" y="31" font-size="17" fill="#344054">
+          <tspan font-weight="750" fill="#172033">Demand slopes down:</tspan>
+          lower prices attract more buyers.
+          <tspan dx="24" font-weight="750" fill="#172033">Supply slopes up:</tspan>
+          higher prices encourage more production.
+        </text>
+      </g>
+    </svg>
+  </main>
+</body>
+</html>

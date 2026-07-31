@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Celsius to Fahrenheit</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #f5f7fb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #172033;
+    }
+    body {
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .visual {
+      width: min(1200px, 100%);
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <main class="visual">
+    <svg viewBox="0 0 1200 800" role="img" aria-labelledby="chart-title">
+      <title id="chart-title">Celsius to Fahrenheit</title>
+      <rect width="1200" height="800" fill="#ffffff"/>
+      <text x="96" y="52" font-size="32" font-weight="700" fill="#172033">Celsius to Fahrenheit</text>
+      
+      <g class="grid"><line x1="96" y1="712" x2="1152" y2="712" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="610" x2="1152" y2="610" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="508" x2="1152" y2="508" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="406" x2="1152" y2="406" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="304" x2="1152" y2="304" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="202" x2="1152" y2="202" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="100" x2="1152" y2="100" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="100" x2="96" y2="712" stroke="#e8edf3" stroke-width="1"/><line x1="360" y1="100" x2="360" y2="712" stroke="#e8edf3" stroke-width="1"/><line x1="624" y1="100" x2="624" y2="712" stroke="#e8edf3" stroke-width="1"/><line x1="888" y1="100" x2="888" y2="712" stroke="#e8edf3" stroke-width="1"/><line x1="1152" y1="100" x2="1152" y2="712" stroke="#e8edf3" stroke-width="1"/></g>
+      <g class="axes"><line x1="96" y1="712" x2="1152" y2="712" stroke="#263244" stroke-width="2"/><line x1="96" y1="100" x2="96" y2="712" stroke="#263244" stroke-width="2"/><line x1="90" y1="712" x2="96" y2="712" stroke="#536174" stroke-width="1.5"/><text x="84" y="717" text-anchor="end" font-size="14" fill="#657286">0</text><line x1="90" y1="610" x2="96" y2="610" stroke="#536174" stroke-width="1.5"/><text x="84" y="615" text-anchor="end" font-size="14" fill="#657286">20</text><line x1="90" y1="508" x2="96" y2="508" stroke="#536174" stroke-width="1.5"/><text x="84" y="513" text-anchor="end" font-size="14" fill="#657286">40</text><line x1="90" y1="406" x2="96" y2="406" stroke="#536174" stroke-width="1.5"/><text x="84" y="411" text-anchor="end" font-size="14" fill="#657286">60</text><line x1="90" y1="304" x2="96" y2="304" stroke="#536174" stroke-width="1.5"/><text x="84" y="309" text-anchor="end" font-size="14" fill="#657286">80</text><line x1="90" y1="202" x2="96" y2="202" stroke="#536174" stroke-width="1.5"/><text x="84" y="207" text-anchor="end" font-size="14" fill="#657286">100</text><line x1="90" y1="100" x2="96" y2="100" stroke="#536174" stroke-width="1.5"/><text x="84" y="105" text-anchor="end" font-size="14" fill="#657286">120</text><line x1="96" y1="712" x2="96" y2="718" stroke="#536174" stroke-width="1.5"/><text x="96" y="738" text-anchor="middle" font-size="14" fill="#657286">-20</text><line x1="360" y1="712" x2="360" y2="718" stroke="#536174" stroke-width="1.5"/><text x="360" y="738" text-anchor="middle" font-size="14" fill="#657286">0</text><line x1="624" y1="712" x2="624" y2="718" stroke="#536174" stroke-width="1.5"/><text x="624" y="738" text-anchor="middle" font-size="14" fill="#657286">20</text><line x1="888" y1="712" x2="888" y2="718" stroke="#536174" stroke-width="1.5"/><text x="888" y="738" text-anchor="middle" font-size="14" fill="#657286">40</text><line x1="1152" y1="712" x2="1152" y2="718" stroke="#536174" stroke-width="1.5"/><text x="1152" y="738" text-anchor="middle" font-size="14" fill="#657286">60</text><text x="624" y="770" text-anchor="middle" font-size="18" font-weight="700" fill="#263244">Celsius (°C)</text><text x="28" y="406" text-anchor="middle" font-size="18" font-weight="700" fill="#263244" transform="rotate(-90 28 406)">Fahrenheit (°F)</text></g>
+      <g class="series" data-name="F = 1.8C + 32">
+      <path d="M 228 640.6 L 360 548.8 L 492 457 L 624 365.2 L 756 273.4 L 888 181.6" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="228" cy="640.6" r="5" fill="#2563eb" stroke="#ffffff" stroke-width="2"/><circle cx="360" cy="548.8" r="5" fill="#2563eb" stroke="#ffffff" stroke-width="2"/><circle cx="492" cy="457" r="5" fill="#2563eb" stroke="#ffffff" stroke-width="2"/><circle cx="624" cy="365.2" r="5" fill="#2563eb" stroke="#ffffff" stroke-width="2"/><circle cx="756" cy="273.4" r="5" fill="#2563eb" stroke="#ffffff" stroke-width="2"/><circle cx="888" cy="181.6" r="5" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+    </g>
+    </svg>
+  </main>
+</body>
+</html>

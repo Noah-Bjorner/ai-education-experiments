@@ -5,6 +5,7 @@
     "jsr:@openai/openai@6.10.0": "6.10.0",
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/assert@1.0.18": "1.0.18",
+    "jsr:@std/assert@^1.0.13": "1.0.19",
     "jsr:@std/dotenv@~0.225.5": "0.225.6",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "npm:@ai-sdk/openai@*": "4.0.1_zod@4.4.3",
@@ -2377,6 +2378,7 @@
     "dependencies": [
       "jsr:@hono/hono@^4.12.15",
       "jsr:@openai/openai@6.10.0",
+      "jsr:@std/assert@^1.0.13",
       "jsr:@std/dotenv@~0.225.5",
       "npm:@ai-sdk/openai@*",
       "npm:@aws-sdk/client-s3@3.948.0",

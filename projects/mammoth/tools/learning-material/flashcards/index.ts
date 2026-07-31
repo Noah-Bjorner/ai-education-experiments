@@ -11,6 +11,8 @@ import { z } from "@zod";
 
 import { uploadDocument } from "../../../../../lib/cloudflare.ts";
 import { gatherContextTool } from "../../gather-context/index.ts";
+
+//maybe replace with visual static instead of 
 import { imageSearchSelector } from "../../shared/image-search-selector/index.ts";
 import { createToolCallRepair } from "../../shared/repair-tool-call/index.ts";
 import {

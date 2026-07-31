@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Scores by Class</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #f5f7fb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #172033;
+    }
+    body {
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .visual {
+      width: min(1200px, 100%);
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <main class="visual">
+    <svg viewBox="0 0 1200 800" role="img" aria-labelledby="chart-title">
+      <title id="chart-title">Quiz Scores by Class</title>
+      <rect width="1200" height="800" fill="#ffffff"/>
+      <text x="96" y="52" font-size="32" font-weight="700" fill="#172033">Quiz Scores by Class</text>
+      <g class="legend">
+      <line x1="880" y1="40" x2="908" y2="40" stroke="#2563eb" stroke-width="4" stroke-linecap="round"/>
+      <text x="916" y="45" font-size="15" font-weight="600" fill="#2563eb">Class A</text>
+      <line x1="1020" y1="40" x2="1048" y2="40" stroke="#ea580c" stroke-width="4" stroke-linecap="round"/>
+      <text x="1056" y="45" font-size="15" font-weight="600" fill="#ea580c">Class B</text></g>
+      <g class="grid"><line x1="96" y1="712" x2="1152" y2="712" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="593.6" x2="1152" y2="593.6" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="475.2" x2="1152" y2="475.2" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="356.8" x2="1152" y2="356.8" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="238.39999999999998" x2="1152" y2="238.39999999999998" stroke="#e8edf3" stroke-width="1"/><line x1="96" y1="120" x2="1152" y2="120" stroke="#e8edf3" stroke-width="1"/></g>
+      <g class="axes"><line x1="96" y1="712" x2="1152" y2="712" stroke="#263244" stroke-width="2"/><line x1="96" y1="120" x2="96" y2="712" stroke="#263244" stroke-width="2"/><line x1="90" y1="712" x2="96" y2="712" stroke="#536174" stroke-width="1.5"/><text x="84" y="717" text-anchor="end" font-size="14" fill="#657286">0</text><line x1="90" y1="593.6" x2="96" y2="593.6" stroke="#536174" stroke-width="1.5"/><text x="84" y="598.6" text-anchor="end" font-size="14" fill="#657286">20</text><line x1="90" y1="475.2" x2="96" y2="475.2" stroke="#536174" stroke-width="1.5"/><text x="84" y="480.2" text-anchor="end" font-size="14" fill="#657286">40</text><line x1="90" y1="356.8" x2="96" y2="356.8" stroke="#536174" stroke-width="1.5"/><text x="84" y="361.8" text-anchor="end" font-size="14" fill="#657286">60</text><line x1="90" y1="238.39999999999998" x2="96" y2="238.39999999999998" stroke="#536174" stroke-width="1.5"/><text x="84" y="243.39999999999998" text-anchor="end" font-size="14" fill="#657286">80</text><line x1="90" y1="120" x2="96" y2="120" stroke="#536174" stroke-width="1.5"/><text x="84" y="125" text-anchor="end" font-size="14" fill="#657286">100</text><line x1="323.04" y1="712" x2="323.04" y2="718" stroke="#536174" stroke-width="1.5"/><text x="323.04" y="738" text-anchor="middle" font-size="14" fill="#657286">Math</text><line x1="523.6800000000001" y1="712" x2="523.6800000000001" y2="718" stroke="#536174" stroke-width="1.5"/><text x="523.6800000000001" y="738" text-anchor="middle" font-size="14" fill="#657286">Science</text><line x1="724.32" y1="712" x2="724.32" y2="718" stroke="#536174" stroke-width="1.5"/><text x="724.32" y="738" text-anchor="middle" font-size="14" fill="#657286">History</text><line x1="924.96" y1="712" x2="924.96" y2="718" stroke="#536174" stroke-width="1.5"/><text x="924.96" y="738" text-anchor="middle" font-size="14" fill="#657286">English</text><text x="624" y="770" text-anchor="middle" font-size="18" font-weight="700" fill="#263244">Subject</text><text x="28" y="416" text-anchor="middle" font-size="18" font-weight="700" fill="#263244" transform="rotate(-90 28 416)">Average score</text></g>
+      <g class="bars"><line x1="96" y1="712" x2="1152" y2="712" stroke="#94a3b8" stroke-width="1.5"/><rect x="250.8096" y="226.56" width="71.2304" height="485.44" rx="3" fill="#2563eb"/><rect x="324.04" y="273.92" width="71.2304" height="438.08" rx="3" fill="#ea580c"/><rect x="451.4496" y="250.24" width="71.2304" height="461.76" rx="3" fill="#2563eb"/><rect x="524.68" y="232.48" width="71.2304" height="479.52" rx="3" fill="#ea580c"/><rect x="652.0896" y="191.04" width="71.2304" height="520.96" rx="3" fill="#2563eb"/><rect x="725.32" y="244.32" width="71.2304" height="467.68" rx="3" fill="#ea580c"/><rect x="852.7296" y="208.8" width="71.2304" height="503.2" rx="3" fill="#2563eb"/><rect x="925.96" y="202.88" width="71.2304" height="509.12" rx="3" fill="#ea580c"/></g>
+    </svg>
+  </main>
+</body>
+</html>

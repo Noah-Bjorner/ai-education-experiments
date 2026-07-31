@@ -26,6 +26,7 @@ function isUIMessage(value: unknown): value is MammothUIMessage {
 }
 
 export const MAMMOTH_GATEWAY_MODEL_CONFIG = {
+  "openai/gpt-5.6-luna": { reasoning: "high" },
   "openai/gpt-5.6-terra": { reasoning: "high" },
   "openai/gpt-5.6-sol": { reasoning: "medium" },
   "anthropic/claude-sonnet-5": { reasoning: "high" },

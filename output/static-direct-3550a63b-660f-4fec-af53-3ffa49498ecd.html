@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supply, Demand, and Market Equilibrium</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --grid: #dfe4ec;
+      --axis: #344054;
+      --demand: #d94b52;
+      --supply: #2878c8;
+      --equilibrium: #7656c8;
+      --paper: #ffffff;
+      --background: #f5f7fa;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--background);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1200px, 100%);
+      background: var(--paper);
+      border: 1px solid #e2e7ef;
+      border-radius: 18px;
+      padding: 26px 28px 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 0 14px 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 3vw, 36px);
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      padding-bottom: 3px;
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      white-space: nowrap;
+    }
+
+    .legend-line {
+      width: 30px;
+      height: 0;
+      border-top: 4px solid;
+      border-radius: 10px;
+    }
+
+    .legend-line.demand {
+      border-color: var(--demand);
+    }
+
+    .legend-line.supply {
+      border-color: var(--supply);
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .grid {
+      stroke: var(--grid);
+      stroke-width: 1;
+    }
+
+    .grid.major {
+      stroke: #cfd6e1;
+    }
+
+    .axis {
+      stroke: var(--axis);
+      stroke-width: 2.2;
+    }
+
+    .tick {
+      stroke: var(--axis);
+      stroke-width: 1.5;
+    }
+
+    .tick-label {
+      fill: var(--muted);
+      font-size: 15px;
+    }
+
+    .axis-label {
+      fill: var(--ink);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .series {
+      fill: none;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .series.demand {
+      stroke: var(--demand);
+    }
+
+    .series.supply {
+      stroke: var(--supply);
+    }
+
+    .point {
+      stroke: #fff;
+      stroke-width: 2.5;
+    }
+
+    .point.demand {
+      fill: var(--demand);
+    }
+
+    .point.supply {
+      fill: var(--supply);
+    }
+
+    .guide {
+      stroke: var(--equilibrium);
+      stroke-width: 2;
+      stroke-dasharray: 7 7;
+    }
+
+    .equilibrium-ring {
+      fill: #fff;
+      stroke: var(--equilibrium);
+      stroke-width: 5;
+    }
+
+    .equilibrium-core {
+      fill: var(--equilibrium);
+    }
+
+    .callout {
+      fill: #f7f4ff;
+      stroke: #b9a9e7;
+      stroke-width: 1.5;
+    }
+
+    .callout-title {
+      fill: #4f369c;
+      font-size: 17px;
+      font-weight: 750;
+    }
+
+    .callout-value {
+      fill: var(--ink);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .series-label {
+      font-size: 17px;
+      font-weight: 750;
+      paint-order: stroke;
+      stroke: #fff;
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+
+    .series-label.demand {
+      fill: var(--demand);
+    }
+
+    .series-label.supply {
+      fill: var(--supply);
+    }
+
+    .note {
+      fill: var(--muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <main aria-labelledby="chart-title">
+    <header>
+      <div>
+        <h1 id="chart-title">Supply, Demand, and Market Equilibrium</h1>
+        <p class="subtitle">Equilibrium occurs where quantity demanded equals quantity supplied.</p>
+      </div>
+      <div class="legend" aria-label="Legend">
+        <span class="legend-item"><span class="legend-line demand"></span>Demand</span>
+        <span class="legend-item"><span class="legend-line supply"></span>Supply</span>
+      </div>
+    </header>
+
+    <svg viewBox="0 0 1140 680" role="img" aria-labelledby="svg-title svg-desc">
+      <title id="svg-title">Supply and demand line chart</title>
+      <desc id="svg-desc">Demand slopes downward and supply slopes upward. They intersect at quantity 50 and price 50.</desc>
+
+      <!-- Plot background -->
+      <rect x="120" y="40" width="900" height="550" rx="8" fill="#fbfcfe"/>
+
+      <!-- Vertical grid lines: quantities 0–100 -->
+      <g aria-hidden="true">
+        <line class="grid major" x1="120" y1="40" x2="120" y2="590"/>
+        <line class="grid" x1="210" y1="40" x2="210" y2="590"/>
+        <line class="grid" x1="300" y1="40" x2="300" y2="590"/>
+        <line class="grid" x1="390" y1="40" x2="390" y2="590"/>
+        <line class="grid" x1="480" y1="40" x2="480" y2="590"/>
+        <line class="grid major" x1="570" y1="40" x2="570" y2="590"/>
+        <line class="grid" x1="660" y1="40" x2="660" y2="590"/>
+        <line class="grid" x1="750" y1="40" x2="750" y2="590"/>
+        <line class="grid" x1="840" y1="40" x2="840" y2="590"/>
+        <line class="grid" x1="930" y1="40" x2="930" y2="590"/>
+        <line class="grid major" x1="1020" y1="40" x2="1020" y2="590"/>
+
+        <!-- Horizontal grid lines: prices 0–100 -->
+        <line class="grid major" x1="120" y1="590" x2="1020" y2="590"/>
+        <line class="grid" x1="120" y1="535" x2="1020" y2="535"/>
+        <line class="grid" x1="120" y1="480" x2="1020" y2="480"/>
+        <line class="grid" x1="120" y1="425" x2="1020" y2="425"/>
+        <line class="grid" x1="120" y1="370" x2="1020" y2="370"/>
+        <line class="grid major" x1="120" y1="315" x2="1020" y2="315"/>
+        <line class="grid" x1="120" y1="260" x2="1020" y2="260"/>
+        <line class="grid" x1="120" y1="205" x2="1020" y2="205"/>
+        <line class="grid" x1="120" y1="150" x2="1020" y2="150"/>
+        <line class="grid" x1="120" y1="95" x2="1020" y2="95"/>
+        <line class="grid major" x1="120" y1="40" x2="1020" y2="40"/>
+      </g>
+
+      <!-- Axes -->
+      <line class="axis" x1="120" y1="590" x2="1034" y2="590"/>
+      <path d="M1034 590 L1023 584 L1023 596 Z" fill="#344054"/>
+      <line class="axis" x1="120" y1="590" x2="120" y2="27"/>
+      <path d="M120 27 L114 38 L126 38 Z" fill="#344054"/>
+
+      <!-- X ticks and labels -->
+      <g text-anchor="middle">
+        <line class="tick" x1="120" y1="590" x2="120" y2="598"/><text class="tick-label" x="120" y="620">0</text>
+        <line class="tick" x1="210" y1="590" x2="210" y2="598"/><text class="tick-label" x="210" y="620">10</text>
+        <line class="tick" x1="300" y1="590" x2="300" y2="598"/><text class="tick-label" x="300" y="620">20</text>
+        <line class="tick" x1="390" y1="590" x2="390" y2="598"/><text class="tick-label" x="390" y="620">30</text>
+        <line class="tick" x1="480" y1="590" x2="480" y2="598"/><text class="tick-label" x="480" y="620">40</text>
+        <line class="tick" x1="570" y1="590" x2="570" y2="598"/><text x="570" y="620" fill="#7656c8" font-size="15" font-weight="750">50</text>
+        <line class="tick" x1="660" y1="590" x2="660" y2="598"/><text class="tick-label" x="660" y="620">60</text>
+        <line class="tick" x1="750" y1="590" x2="750" y2="598"/><text class="tick-label" x="750" y="620">70</text>
+        <line class="tick" x1="840" y1="590" x2="840" y2="598"/><text class="tick-label" x="840" y="620">80</text>
+        <line class="tick" x1="930" y1="590" x2="930" y2="598"/><text class="tick-label" x="930" y="620">90</text>
+        <line class="tick" x1="1020" y1="590" x2="1020" y2="598"/><text class="tick-label" x="1020" y="620">100</text>
+      </g>
+
+      <!-- Y ticks and labels -->
+      <g text-anchor="end" dominant-baseline="middle">
+        <line class="tick" x1="112" y1="590" x2="120" y2="590"/><text class="tick-label" x="102" y="590">0</text>
+        <line class="tick" x1="112" y1="535" x2="120" y2="535"/><text class="tick-label" x="102" y="535">10</text>
+        <line class="tick" x1="112" y1="480" x2="120" y2="480"/><text class="tick-label" x="102" y="480">20</text>
+        <line class="tick" x1="112" y1="425" x2="120" y2="425"/><text class="tick-label" x="102" y="425">30</text>
+        <line class="tick" x1="112" y1="370" x2="120" y2="370"/><text class="tick-label" x="102" y="370">40</text>
+        <line class="tick" x1="112" y1="315" x2="120" y2="315"/><text x="102" y="315" fill="#7656c8" font-size="15" font-weight="750">50</text>
+        <line class="tick" x1="112" y1="260" x2="120" y2="260"/><text class="tick-label" x="102" y="260">60</text>
+        <line class="tick" x1="112" y1="205" x2="120" y2="205"/><text class="tick-label" x="102" y="205">70</text>
+        <line class="tick" x1="112" y1="150" x2="120" y2="150"/><text class="tick-label" x="102" y="150">80</text>
+        <line class="tick" x1="112" y1="95" x2="120" y2="95"/><text class="tick-label" x="102" y="95">90</text>
+        <line class="tick" x1="112" y1="40" x2="120" y2="40"/><text class="tick-label" x="102" y="40">100</text>
+      </g>
+
+      <!-- Equilibrium guide lines -->
+      <line class="guide" x1="120" y1="315" x2="570" y2="315"/>
+      <line class="guide" x1="570" y1="315" x2="570" y2="590"/>
+
+      <!-- Demand line: (10,90), (30,70), (50,50), (70,30), (90,10) -->
+      <polyline class="series demand" points="210,95 390,205 570,315 750,425 930,535"/>
+
+      <!-- Supply line: (10,10), (30,30), (50,50), (70,70), (90,90) -->
+      <polyline class="series supply" points="210,535 390,425 570,315 750,205 930,95"/>
+
+      <!-- Data points -->
+      <g aria-hidden="true">
+        <circle class="point demand" cx="210" cy="95" r="6"/>
+        <circle class="point demand" cx="390" cy="205" r="6"/>
+        <circle class="point demand" cx="750" cy="425" r="6"/>
+        <circle class="point demand" cx="930" cy="535" r="6"/>
+
+        <circle class="point supply" cx="210" cy="535" r="6"/>
+        <circle class="point supply" cx="390" cy="425" r="6"/>
+        <circle class="point supply" cx="750" cy="205" r="6"/>
+        <circle class="point supply" cx="930" cy="95" r="6"/>
+      </g>
+
+      <!-- Equilibrium marker -->
+      <circle class="equilibrium-ring" cx="570" cy="315" r="13"/>
+      <circle class="equilibrium-core" cx="570" cy="315" r="5"/>
+
+      <!-- Series labels -->
+      <text class="series-label demand" x="883" y="503">Demand</text>
+      <text class="series-label supply" x="868" y="122">Supply</text>
+
+      <!-- Equilibrium callout -->
+      <path d="M590 298 L622 271" fill="none" stroke="#7656c8" stroke-width="2"/>
+      <rect class="callout" x="622" y="226" width="222" height="75" rx="10"/>
+      <text class="callout-title" x="640" y="251">Market equilibrium</text>
+      <text class="callout-value" x="640" y="278">Q = 50 · P = 50</text>
+
+      <!-- Axis labels -->
+      <text class="axis-label" x="570" y="661" text-anchor="middle">Quantity (Q)</text>
+      <text class="axis-label" x="35" y="315" text-anchor="middle" transform="rotate(-90 35 315)">Price (P)</text>
+    </svg>
+  </main>
+</body>
+</html>

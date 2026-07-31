@@ -27,10 +27,15 @@ modalities
     - ex: infographics?, illustrations, pre-photographic reconstruction, annotate, stylize photo
 - **web searched:** 
     - ex: current events, real world objects, historical photos, people, artworks, landmarks, flags
-- **html:** 
-    - ex: maps, mind maps, anatomy, diagrams, flowcharts, diagrams, astrology, worked examples, map directions between pins, map with pin, 360 world image, 
-    - logic: take instructions then output json like {content: "xyz", type: "mermaid"} based on type then have reliable logic that converts it into html
+- **svg/programmatic:** 
+    - ex: maps, mind maps, anatomy, diagrams, flowcharts, diagrams, astrology, worked examples, map directions between pins, map with pin, 
+    - logic: take instructions then output JSON like `{ content: "xyz", type: "xy_chart" }` and render that typed spec directly to standalone SVG
     - challenge: how do I make it reliable as well as fast and cover all possible educational use cases
+
+Programmatic renderer layout:
+- `static/renderers/<type>.ts`: one typed spec → standalone SVG
+- `static/shared/`: SVG helpers and visual tokens shared by renderers
+- `static/render.ts`: dispatch a diagram spec to the appropriate renderer
 
 logic
 1. route to correct modality
