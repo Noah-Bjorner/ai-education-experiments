@@ -56,12 +56,15 @@ export interface AssemblyAITranscriptResponse {
 export interface AssemblyAITranscriptionOptions {
   audioPath?: string;
   audioURL?: string;
+  audioFile?: Blob;
   languageDetection?: boolean;
   speakerLabels?: boolean;
   speechModels?: string[];
   pollIntervalMs?: number;
   timeoutMs?: number;
 }
+
+export type TranscribeFileInput = string | Blob;
 
 export interface AssemblyAITimedText {
   start: number;
@@ -75,7 +78,8 @@ export interface AssemblyAICaptionsJson {
 }
 
 export interface AssemblyAICaptionOptions
-  extends Omit<AssemblyAITranscriptionOptions, "audioPath" | "audioURL"> {
+  extends
+    Omit<AssemblyAITranscriptionOptions, "audioPath" | "audioURL" | "audioFile"> {
   maxWordsPerCaption?: number;
   maxCaptionDurationMs?: number;
 }
@@ -176,11 +180,30 @@ const fetchAssemblyAIJson = async <T>(
   );
 };
 
+const uploadAudioToAssemblyAI = async (audio: Blob): Promise<string> => {
+  const result = await fetchAssemblyAIJson<{ upload_url: string }>(
+    "/upload",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/octet-stream",
+      },
+      body: audio,
+    },
+  );
+
+  return result.upload_url;
+};
+
 const resolveAudioUrl = async (
   options: AssemblyAITranscriptionOptions,
 ): Promise<string> => {
   if (options.audioURL) {
     return options.audioURL;
+  }
+
+  if (options.audioFile) {
+    return await uploadAudioToAssemblyAI(options.audioFile);
   }
 
   if (options.audioPath) {
@@ -190,7 +213,7 @@ const resolveAudioUrl = async (
     });
   }
 
-  throw new Error("No audioPath or audioURL provided");
+  throw new Error("No audioPath, audioURL, or audioFile provided");
 };
 
 export const submitTranscription = async (
@@ -259,21 +282,31 @@ export const transcribeAudio = async (
 };
 
 export const transcribeFile = async (
-  filePathOrUrl: string,
-  options: Omit<AssemblyAITranscriptionOptions, "audioPath" | "audioURL"> = {},
+  file: TranscribeFileInput,
+  options: Omit<
+    AssemblyAITranscriptionOptions,
+    "audioPath" | "audioURL" | "audioFile"
+  > = {},
 ): Promise<AssemblyAITranscriptResponse> => {
-  if (isRemoteUrl(filePathOrUrl)) {
-    return await transcribeAudio({ ...options, audioURL: filePathOrUrl });
+  if (typeof file !== "string") {
+    return await transcribeAudio({ ...options, audioFile: file });
   }
 
-  return await transcribeAudio({ ...options, audioPath: filePathOrUrl });
+  if (isRemoteUrl(file)) {
+    return await transcribeAudio({ ...options, audioURL: file });
+  }
+
+  return await transcribeAudio({ ...options, audioPath: file });
 };
 
 export const transcribeFileToText = async (
-  filePathOrUrl: string,
-  options: Omit<AssemblyAITranscriptionOptions, "audioPath" | "audioURL"> = {},
+  file: TranscribeFileInput,
+  options: Omit<
+    AssemblyAITranscriptionOptions,
+    "audioPath" | "audioURL" | "audioFile"
+  > = {},
 ): Promise<string> => {
-  const transcript = await transcribeFile(filePathOrUrl, options);
+  const transcript = await transcribeFile(file, options);
   return transcript.text ?? "";
 };
 
@@ -297,10 +330,13 @@ const formatTimestamp = (ms: number): string => {
 };
 
 export const transcribeFileToMarkdown = async (
-  filePathOrUrl: string,
-  options: Omit<AssemblyAITranscriptionOptions, "audioPath" | "audioURL"> = {},
+  file: TranscribeFileInput,
+  options: Omit<
+    AssemblyAITranscriptionOptions,
+    "audioPath" | "audioURL" | "audioFile"
+  > = {},
 ): Promise<{ markdown: string; cost_dollars: number }> => {
-  const transcript = await transcribeFile(filePathOrUrl, options);
+  const transcript = await transcribeFile(file, options);
   const utterances = transcript.utterances ?? [];
   const markdown = utterances.map((utterance) => {
     const speaker = formatSpeakerLabel(utterance.speaker);

@@ -5,6 +5,8 @@ import { createZodJsonBodyMiddleware } from "../../helper/hono.ts";
 import { createRealtimeClientSecret } from "../../lib/openai.ts";
 import { mammothAuthMiddleware, type MammothEnv } from "./auth.ts";
 import { createMammothUIMessageStream } from "./chat.ts";
+import { fileFromUrl } from "../../helper/file.ts";
+import { handleLibraryUpload } from "./library/upload.ts";
 import {
   mammothRequestSchema,
   realtimeClientSecretRequestSchema,
@@ -48,6 +50,115 @@ mammothRoutes.post(
     });
 
     return createUIMessageStreamResponse({ stream });
+  },
+);
+
+
+mammothRoutes.post(
+  "/library/upload",
+  mammothSubscriptionMiddleware,
+  async (c) => {
+    const user = c.get("mammothUser");
+
+    let form: Awaited<ReturnType<typeof c.req.parseBody>>;
+    try {
+      form = await c.req.parseBody();
+    } catch {
+      return c.json(
+        {
+          ok: false,
+          error: {
+            code: "INVALID_LIBRARY_UPLOAD",
+            message:
+              'Expected multipart/form-data with either a "file" or a "url" field.',
+          },
+        },
+        400,
+      );
+    }
+
+    const rawFile = form.file;
+    const rawUrl = typeof form.url === "string" ? form.url.trim() : "";
+    const hasFile = rawFile instanceof File;
+    const hasUrl = rawUrl.length > 0;
+
+    if (hasFile === hasUrl) {
+      return c.json(
+        {
+          ok: false,
+          error: {
+            code: "INVALID_LIBRARY_UPLOAD",
+            message:
+              'Send exactly one of "file" (multipart file) or "url" (http/https link).',
+          },
+        },
+        400,
+      );
+    }
+
+    let file: File;
+    let sourceUrl: string | undefined;
+
+    if (hasFile) {
+      file = rawFile;
+    } else {
+      try {
+        const parsed = new URL(rawUrl);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          throw new Error("URL must use http or https");
+        }
+      } catch {
+        return c.json(
+          {
+            ok: false,
+            error: {
+              code: "INVALID_LIBRARY_UPLOAD",
+              message: 'Invalid "url". Expected an absolute http(s) URL.',
+            },
+          },
+          400,
+        );
+      }
+
+      try {
+        file = await fileFromUrl(rawUrl);
+        sourceUrl = rawUrl;
+      } catch (error) {
+        console.error("Library upload URL fetch failed", error);
+        return c.json(
+          {
+            ok: false,
+            error: {
+              code: "INVALID_LIBRARY_UPLOAD",
+              message: "Failed to fetch the provided url.",
+            },
+          },
+          400,
+        );
+      }
+    }
+
+    try {
+      const artifact = await handleLibraryUpload({
+        userId: user.id,
+        file,
+        sourceUrl,
+      });
+
+      return c.json({ ok: true, data: { url: artifact.url, name: artifact.name, type: artifact.type } });
+    } catch (error) {
+      console.error("Library upload failed", error);
+      return c.json(
+        {
+          ok: false,
+          error: {
+            code: "LIBRARY_UPLOAD_FAILED",
+            message: "Failed to upload the file to the library.",
+          },
+        },
+        500,
+      );
+    }
   },
 );
 
