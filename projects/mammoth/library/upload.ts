@@ -3,9 +3,17 @@ import { resolveLibraryMediaKind } from "./media-kind.ts";
 import { toMarkdownBytes } from "@firecrawl/anydoc";
 import { uploadDocument, uploadImage } from "../../../lib/cloudflare.ts";
 import { getXaiTranscriptionToMarkdown } from "../../../lib/xai.ts";
+import {
+  createLibraryWithEmbeddings,
+  type LibraryEmbeddingChunk,
+  type LibraryItem,
+} from "../database/index.ts";
+import { embedMultimodal } from "./embedding.ts";
 
 export type { LibraryMediaKind } from "./media-kind.ts";
 export { isYouTubeUrl, resolveLibraryMediaKind } from "./media-kind.ts";
+import { chunkAndEmbedMarkdown } from "./embedding.ts";
+import { extractVideoTranscriptToMarkdown } from "../../../lib/supadata.ts";
 
 interface LibraryUploadInput {
   userId: string;
@@ -20,32 +28,62 @@ interface LibraryUploadOutput {
   type: "document" | "image" | "audio_transcript" | "website" | "youtube_transcript";
 }
 
-async function handleDocumentUpload(input: LibraryUploadInput): Promise<LibraryUploadOutput> {
+interface HandleLibraryUploadOutput {
+  embeddings: LibraryEmbeddingChunk[];
+  libraryItem: LibraryUploadOutput;
+}
+
+async function handleDocumentUpload(input: LibraryUploadInput): Promise<HandleLibraryUploadOutput> {
   try {
     const bytes = new Uint8Array(await input.file.arrayBuffer());
     const markdown = await toMarkdownBytes(bytes);
-    const url = await uploadDocument(
-      new Blob([markdown], { type: "text/markdown; charset=utf-8" }),
-      input.file.name.replace(/\.[^/.]+$/, ".md"),
-    );
+    const [url, embeddings] = await Promise.all([
+      uploadDocument(
+        new Blob([markdown], { type: "text/markdown; charset=utf-8" }),
+        input.file.name.replace(/\.[^/.]+$/, ".md"),
+      ),
+      chunkAndEmbedMarkdown(markdown),
+    ]);
     return {
-      name: input.file.name,
-      url,
-      type: "document",
-    };  
+      embeddings,
+      libraryItem: {
+        name: input.file.name,
+        url,
+        type: "audio_transcript",
+      },
+    };
   } catch (error) {
     console.error("Error uploading document: ", error);
     throw error;
   }
 }
 
-async function handleImageUpload(input: LibraryUploadInput): Promise<LibraryUploadOutput> {
+async function handleImageUpload(input: LibraryUploadInput): Promise<HandleLibraryUploadOutput> {
   try {
-    const url = await uploadImage(input.file, input.file.name);
+    const [url, embedding] = await Promise.all([
+      uploadImage(input.file, input.file.name),
+      (async () => {
+        const bytes = new Uint8Array(await input.file.arrayBuffer());
+        const data = btoa(bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), ""));
+        return embedMultimodal([{
+          inlineData: {
+            mimeType: input.file.type,
+            data,
+          },
+        }]);
+      })(),
+    ]);
     return {
-      name: input.file.name,
-      url,
-      type: "image",
+      embeddings: [{
+        chunkIndex: 0,
+        content: "",
+        embedding,
+      }],
+      libraryItem: {
+        name: input.file.name,
+        url,
+        type: "image",
+      },
     };
   } catch (error) {
     console.error("Error uploading image: ", error);
@@ -53,36 +91,93 @@ async function handleImageUpload(input: LibraryUploadInput): Promise<LibraryUplo
   }
 }
 
-async function handleAudioUpload(input: LibraryUploadInput): Promise<LibraryUploadOutput> {
+async function handleAudioUpload(input: LibraryUploadInput): Promise<HandleLibraryUploadOutput> {
   try {
     const markdown = await getXaiTranscriptionToMarkdown(input.file);
-    const url = await uploadDocument(
-      new Blob([markdown], { type: "text/markdown; charset=utf-8" }),
-      input.file.name.replace(/\.[^/.]+$/, ".md"),
-    );
+    const [url, embeddings] = await Promise.all([
+      uploadDocument(
+        new Blob([markdown], { type: "text/markdown; charset=utf-8" }),
+        input.file.name.replace(/\.[^/.]+$/, ".md"),
+      ),
+      chunkAndEmbedMarkdown(markdown),
+    ]);
     return {
-      name: input.file.name,
-      url,
-      type: "audio_transcript",
-    };  
+      embeddings,
+      libraryItem: {
+        name: input.file.name,
+        url,
+        type: "audio_transcript",
+      },
+    };
   } catch (error) {
     console.error("Error uploading audio: ", error);
     throw error;
   }
 }
 
-async function handleWebsiteUpload(_input: LibraryUploadInput): Promise<LibraryUploadOutput> {
-  throw new Error("Website upload is not implemented yet.");
+async function handleWebsiteUpload(input: LibraryUploadInput): Promise<HandleLibraryUploadOutput> {
+  try {
+    const sourceUrl = input.sourceUrl;
+    if (!sourceUrl) {
+      throw new Error("Website upload requires a sourceUrl");
+    }
+    const markdown = ""///extract
+    const name = `${sourceUrl.split("/").pop()?.split("?")[0]}`;
+    const [url, embeddings] = await Promise.all([
+      uploadDocument(
+        new Blob([markdown], { type: "text/markdown; charset=utf-8" }),
+        `${name}.md`,
+      ),
+      chunkAndEmbedMarkdown(markdown),
+    ]);
+    return {
+      embeddings,
+      libraryItem: {
+        name,
+        url,
+        type: "youtube_transcript",
+      },
+    };
+  } catch (error) {
+    console.error("Error uploading Website: ", error);
+    throw error;
+  }
 }
 
-async function handleYoutubeUpload(_input: LibraryUploadInput): Promise<LibraryUploadOutput> {
-  throw new Error("YouTube upload is not implemented yet.");
+async function handleYoutubeUpload(input: LibraryUploadInput): Promise<HandleLibraryUploadOutput> {
+  try {
+    const sourceUrl = input.sourceUrl;
+    if (!sourceUrl) {
+      throw new Error("YouTube upload requires a sourceUrl");
+    }
+  
+    const markdown = await extractVideoTranscriptToMarkdown({ url: sourceUrl });
+    const name = `${sourceUrl.split("/").pop()?.split("?")[0]}`;
+    const [url, embeddings] = await Promise.all([
+      uploadDocument(
+        new Blob([markdown], { type: "text/markdown; charset=utf-8" }),
+        `${name}.md`,
+      ),
+      chunkAndEmbedMarkdown(markdown),
+    ]);
+    return {
+      embeddings,
+      libraryItem: {
+        name,
+        url,
+        type: "youtube_transcript",
+      },
+    };  
+  } catch (error) {
+    console.error("Error uploading YouTube: ", error);
+    throw error;
+  }
 }
 
-export async function handleLibraryUpload(input: LibraryUploadInput): Promise<LibraryUploadOutput> {
+export async function handleLibraryUpload(input: LibraryUploadInput): Promise<LibraryItem> {
   const kind = resolveLibraryMediaKind(input.file, { sourceUrl: input.sourceUrl });
 
-  let output: LibraryUploadOutput;
+  let output: HandleLibraryUploadOutput;
   switch (kind) {
     case "document":
       output = await handleDocumentUpload(input);
@@ -90,9 +185,10 @@ export async function handleLibraryUpload(input: LibraryUploadInput): Promise<Li
     case "image":
       output = await handleImageUpload(input);
       break;
-    case "audio":
+    case "audio": {
       output = await handleAudioUpload(input);
       break;
+    }
     case "video":
       throw new Error("Video is currently not supported");
     case "website":
@@ -104,13 +200,15 @@ export async function handleLibraryUpload(input: LibraryUploadInput): Promise<Li
     default:
       throw new Error("Invalid file type");
   }
-  //store in database
-  //shoot of async task
-  return output;
+
+  return await createLibraryWithEmbeddings({
+    userId: input.userId,
+    name: output.libraryItem.name,
+    srcUrl: output.libraryItem.url,
+    type: output.libraryItem.type,
+    chunks: output.embeddings,
+  });
 }
-
-
-
 
 
 
@@ -126,8 +224,13 @@ export async function handleLibraryUpload(input: LibraryUploadInput): Promise<Li
 // youtube: https://www.youtube.com/watch?v=L4lh6lxHd3k
 // youtube 2: https://youtu.be/L4lh6lxHd3k
 
+/*
 if (import.meta.main) {
-  const file = await fileFromUrl("https://traffic.libsyn.com/secure/wordonfire/Word_on_Fire_Show_-_526_CC_v2_-_Mixed_English_Audio_Master.mp3?dest-id=302449")
+  const start = performance.now();
+  const file = await fileFromUrl("https://static.noahbjorner.com/tmp/25fra-gor_kpn.pdf")
   console.log("file: ", file);
-  console.log("handleLibraryUpload: ", await handleLibraryUpload({ userId: "123", file }));
+  console.log("handleLibraryUpload: ", await handleLibraryUpload({ userId: "ff52ec97-73c6-42f4-a9ea-c1c320ac1646", file }));
+  const end = performance.now();
+  console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);
 }
+*/

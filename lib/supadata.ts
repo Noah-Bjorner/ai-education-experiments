@@ -167,15 +167,24 @@ export async function extractVideoTranscript(
   };
 }
 
+export async function extractVideoTranscriptToMarkdown(
+  options: ExtractVideoTranscriptOptions,
+): Promise<string> {
+  const transcript = await extractVideoTranscript(options);
+  return formatTranscriptAsMarkdown(transcript.content, {
+    groupSize: DEFAULT_TRANSCRIPT_GROUP_SIZE,
+  });
+}
+
 function formatTimestamp(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+
+  return [hours, minutes, seconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
 }
 
 export interface FormatTranscriptOptions {
@@ -209,7 +218,7 @@ function groupChunks(
 }
 
 /**
- * Map transcript chunks to markdown sections with [start–end] timestamps.
+ * Map transcript chunks to lines with [start - end] timestamps (same shape as xAI).
  * Use `groupSize` to merge consecutive chunks (1 = one section per chunk).
  */
 export function formatTranscriptAsMarkdown(
@@ -230,9 +239,9 @@ export function formatTranscriptAsMarkdown(
     .map((chunk) => {
       const start = formatTimestamp(chunk.offset);
       const end = formatTimestamp(chunk.offset + chunk.duration);
-      return `[${start}–${end}]\n${chunk.text.trim()}`;
+      return `[${start} - ${end}] ${chunk.text.trim()}`;
     })
-    .join("\n\n");
+    .join("\n");
 }
 
 export const extractVideoTranscriptTool = tool({

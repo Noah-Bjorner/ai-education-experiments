@@ -145,7 +145,15 @@ mammothRoutes.post(
         sourceUrl,
       });
 
-      return c.json({ ok: true, data: { url: artifact.url, name: artifact.name, type: artifact.type } });
+      return c.json({
+        ok: true,
+        data: {
+          id: artifact.id,
+          url: artifact.src_url,
+          name: artifact.name,
+          type: artifact.type,
+        },
+      });
     } catch (error) {
       console.error("Library upload failed", error);
       return c.json(

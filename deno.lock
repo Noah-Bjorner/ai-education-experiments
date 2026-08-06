@@ -24,6 +24,7 @@
     "npm:jose@6.2.3": "6.2.3",
     "npm:parallel-web@1.1.0": "1.1.0",
     "npm:parallel-web@^1.1.0": "1.1.0",
+    "npm:postgres@*": "3.4.7",
     "npm:postgres@3.4.7": "3.4.7",
     "npm:replicate@1.4.0": "1.4.0",
     "npm:unpdf@^1.6.2": "1.6.2",
