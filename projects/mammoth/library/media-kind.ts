@@ -125,11 +125,15 @@ export interface ResolveLibraryMediaKindOptions {
 
 /** Resolves upload category from source URL (YouTube), MIME type, then filename extension. */
 export function resolveLibraryMediaKind(
-  file: File,
+  file?: File,
   options?: ResolveLibraryMediaKindOptions,
 ): LibraryMediaKind {
   if (options?.sourceUrl && isYouTubeUrl(options.sourceUrl)) {
     return "youtube";
+  }
+
+  if (!file) {
+    throw new Error("A file is required for non-YouTube uploads");
   }
 
   const mimeType = normalizeMimeType(file.type);
@@ -140,5 +144,7 @@ export function resolveLibraryMediaKind(
   if (fromExt) return fromExt;
 
   const label = mimeType || "unknown";
-  throw new Error(`Unsupported file type: ${label} (${file.name || "unnamed"})`);
+  throw new Error(
+    `Unsupported file type: ${label} (${file.name || "unnamed"})`,
+  );
 }

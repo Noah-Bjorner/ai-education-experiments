@@ -145,6 +145,28 @@ export async function createLibraryWithEmbeddings(input: {
   return item;
 }
 
+/** Lists library items for a user, newest first. Optionally filter by exact stored type. */
+export async function listLibraryItems(input: {
+  userId: string;
+  type?: LibraryItemType;
+}): Promise<LibraryItem[]> {
+  const params = new URLSearchParams({
+    user_id: `eq.${input.userId}`,
+    order: "created_at.desc",
+    select: "*",
+  });
+  if (input.type) {
+    params.set("type", `eq.${input.type}`);
+  }
+
+  const response = await supabaseRequest(
+    `/rest/v1/library?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  return await response.json() as LibraryItem[];
+}
+
 /** Semantic search: one best-matching library item per root row, ranked by chunk similarity. */
 export async function matchLibraryItems(input: {
   userId: string;

@@ -33,12 +33,14 @@ export async function searchLibrary(input: {
     return [];
   }
 
-  const queryEmbedding = await embedMultimodal([{ text: query }]);
+  const queryEmbedding = await embedMultimodal([{
+    text: `task: search result | query: ${query}`,
+  }]);
 
   const matches = await matchLibraryItems({
     userId: input.userId,
     queryEmbedding,
-    matchThreshold: input.matchThreshold ?? 0.55,
+    matchThreshold: input.matchThreshold ?? 0.6,
     matchCount: input.matchCount ?? 10,
   });
 
@@ -266,16 +268,3 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-
-if (import.meta.main) {
-  const start = performance.now();
-  const query = "Varför har Katolska kyrkan inte några kvinnliga präster?";
-  const results = await searchLibrary({
-    userId: "ff52ec97-73c6-42f4-a9ea-c1c320ac1646",
-    query,
-  });
-  const end = performance.now();
-  console.log("query:", query);
-  console.log("results:", results.length, results);
-  console.log(`Time taken: ${((end - start) / 1000).toFixed(2)} seconds`);
-}

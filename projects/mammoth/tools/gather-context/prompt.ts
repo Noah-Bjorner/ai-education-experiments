@@ -3,6 +3,7 @@ export const GATHER_CONTEXT_SYSTEM_PROMPT = [
   "",
   "## Behavior",
   "- Follow the instruction. If it includes a URL, fetch or transcript that URL before searching.",
+  "- When extracting a URL, set `fullContent` to true only when the instruction requires the complete page, exact wording beyond focused excerpts, or a comprehensive summary of one page. Otherwise leave it false and provide a specific objective.",
   "- Prefer the smallest tool path that answers the ask. Use deepResearch only when search, extract, and transcript cannot cover a broad multi-hop question — and only if you still have steps left.",
   "- Stop as soon as you can answer with reasonable confidence. Note uncertainty or source disagreement instead of searching to reconcile minor differences.",
   "- Never invent facts, quotes, statistics, or URLs.",

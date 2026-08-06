@@ -1,18 +1,27 @@
-import { Hono, type Context } from "@hono/hono";
+import { type Context, Hono } from "@hono/hono";
 import { createUIMessageStreamResponse } from "@ai";
 
 import { createZodJsonBodyMiddleware } from "../../helper/hono.ts";
 import { createRealtimeClientSecret } from "../../lib/openai.ts";
 import { mammothAuthMiddleware, type MammothEnv } from "./auth.ts";
 import { createMammothUIMessageStream } from "./chat.ts";
-import { fileFromUrl } from "../../helper/file.ts";
+import { deleteLibraryItem, listLibraryItems } from "./database/index.ts";
+import { createLibraryRoutes } from "./library/routes.ts";
+import { searchLibrary } from "./library/search.ts";
 import { handleLibraryUpload } from "./library/upload.ts";
 import {
+  type MammothRequest,
   mammothRequestSchema,
   realtimeClientSecretRequestSchema,
-  type MammothRequest,
 } from "./schema.ts";
 import { mammothSubscriptionMiddleware } from "./subscription.ts";
+
+const libraryRoutes = createLibraryRoutes({
+  listLibraryItems,
+  searchLibrary,
+  handleLibraryUpload,
+  deleteLibraryItem,
+});
 
 type MammothChatEnv = {
   Variables: MammothEnv["Variables"] & {
@@ -53,122 +62,7 @@ mammothRoutes.post(
   },
 );
 
-
-mammothRoutes.post(
-  "/library/upload",
-  mammothSubscriptionMiddleware,
-  async (c) => {
-    const user = c.get("mammothUser");
-
-    let form: Awaited<ReturnType<typeof c.req.parseBody>>;
-    try {
-      form = await c.req.parseBody();
-    } catch {
-      return c.json(
-        {
-          ok: false,
-          error: {
-            code: "INVALID_LIBRARY_UPLOAD",
-            message:
-              'Expected multipart/form-data with either a "file" or a "url" field.',
-          },
-        },
-        400,
-      );
-    }
-
-    const rawFile = form.file;
-    const rawUrl = typeof form.url === "string" ? form.url.trim() : "";
-    const hasFile = rawFile instanceof File;
-    const hasUrl = rawUrl.length > 0;
-
-    if (hasFile === hasUrl) {
-      return c.json(
-        {
-          ok: false,
-          error: {
-            code: "INVALID_LIBRARY_UPLOAD",
-            message:
-              'Send exactly one of "file" (multipart file) or "url" (http/https link).',
-          },
-        },
-        400,
-      );
-    }
-
-    let file: File;
-    let sourceUrl: string | undefined;
-
-    if (hasFile) {
-      file = rawFile;
-    } else {
-      try {
-        const parsed = new URL(rawUrl);
-        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-          throw new Error("URL must use http or https");
-        }
-      } catch {
-        return c.json(
-          {
-            ok: false,
-            error: {
-              code: "INVALID_LIBRARY_UPLOAD",
-              message: 'Invalid "url". Expected an absolute http(s) URL.',
-            },
-          },
-          400,
-        );
-      }
-
-      try {
-        file = await fileFromUrl(rawUrl);
-        sourceUrl = rawUrl;
-      } catch (error) {
-        console.error("Library upload URL fetch failed", error);
-        return c.json(
-          {
-            ok: false,
-            error: {
-              code: "INVALID_LIBRARY_UPLOAD",
-              message: "Failed to fetch the provided url.",
-            },
-          },
-          400,
-        );
-      }
-    }
-
-    try {
-      const artifact = await handleLibraryUpload({
-        userId: user.id,
-        file,
-        sourceUrl,
-      });
-
-      return c.json({
-        ok: true,
-        data: {
-          id: artifact.id,
-          url: artifact.src_url,
-          name: artifact.name,
-          type: artifact.type,
-        },
-      });
-    } catch (error) {
-      console.error("Library upload failed", error);
-      return c.json(
-        {
-          ok: false,
-          error: {
-            code: "LIBRARY_UPLOAD_FAILED",
-            message: "Failed to upload the file to the library.",
-          },
-        },
-        500,
-      );
-    }
-  },
-);
+mammothRoutes.route("/library", libraryRoutes);
 
 mammothRoutes.post(
   "/realtime/client-secret",
@@ -244,7 +138,8 @@ async function hashSafetyIdentifier(userId: string): Promise<string> {
     "SHA-256",
     new TextEncoder().encode(userId),
   );
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0")
+  return Array.from(
+    new Uint8Array(digest),
+    (byte) => byte.toString(16).padStart(2, "0"),
   ).join("");
 }

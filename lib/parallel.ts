@@ -8,6 +8,7 @@ const parallel = new Parallel({
   apiKey: Deno.env.get('PARALLEL_API_KEY'),
 });
 
+
 export const webSearch = tool({
   description: 'Search the web for information.',
   inputSchema: z.object({
@@ -33,16 +34,26 @@ export const webSearch = tool({
 });
 
 export const webExtract = tool({
-  description: 'Extract content from web URLs.',
+  description: 'Extract relevant content or full page content from web URLs.',
   inputSchema: z.object({
     urls: z.array(z.string()).min(1).describe('URLs to extract content from'),
     objective: z.string().nullable().optional().describe('What information to look for in the URLs'),
+    fullContent: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        'Return the full page content instead of only objective-relevant excerpts. Use only when the complete page is needed.',
+      ),
   }),
-  execute: async ({ urls, objective }, { abortSignal }) => {
+  execute: async ({ urls, objective, fullContent }, { abortSignal }) => {
     return await parallel.extract(
       {
         urls,
         objective,
+        ...(fullContent
+          ? { advanced_settings: { full_content: true } }
+          : {}),
       },
       { signal: abortSignal },
     );
@@ -84,3 +95,23 @@ export const deepResearch = tool({
     );
   },
 });
+
+
+export async function scrap(url: string): Promise<string> {
+  const result = await parallel.extract(
+    {
+      urls: [url],
+      objective: "",
+      advanced_settings: {
+        full_content: true,
+      },
+    },
+  );
+  if (result.results.length === 0) {
+    throw new Error("No results found");
+  }
+  if (!result.results[0].full_content) {
+    throw new Error("No full_content found");
+  }
+  return result.results[0].full_content;
+}
