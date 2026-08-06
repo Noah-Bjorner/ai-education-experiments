@@ -112,7 +112,7 @@ export function createLibraryRoutes(
 
       return c.json({
         ok: true,
-        data: results,
+        data: results.map(serializeLibrarySearchResult),
       });
     } catch (error) {
       console.error("Library search failed", error);
@@ -209,6 +209,19 @@ export function createLibraryRoutes(
         },
       });
     } catch (error) {
+      if (isLibraryClientError(error)) {
+        return c.json(
+          {
+            ok: false,
+            error: {
+              code: "INVALID_LIBRARY_UPLOAD",
+              message: error.message,
+            },
+          },
+          400,
+        );
+      }
+
       console.error("Library upload failed", error);
       return c.json(
         {
@@ -286,6 +299,10 @@ function isLibraryItemType(value: string): value is LibraryItemType {
   return (LIBRARY_ITEM_TYPES as readonly string[]).includes(value);
 }
 
+function isLibraryClientError(error: unknown): error is Error {
+  return error instanceof Error && error.name === "LibraryClientError";
+}
+
 function serializeLibraryItem(item: LibraryItem) {
   return {
     id: item.id,
@@ -293,5 +310,13 @@ function serializeLibraryItem(item: LibraryItem) {
     name: item.name,
     type: item.type,
     created_at: item.created_at,
+  };
+}
+
+function serializeLibrarySearchResult(result: LibrarySearchResult) {
+  const { src_url, ...rest } = result;
+  return {
+    ...rest,
+    url: src_url,
   };
 }

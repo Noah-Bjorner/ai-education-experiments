@@ -123,6 +123,25 @@ export interface ResolveLibraryMediaKindOptions {
   sourceUrl?: string;
 }
 
+/**
+ * Classifies a URL without downloading it.
+ * Known file extensions map to their media kind; everything else (including
+ * bare paths like /article) is treated as a website so we can scrape once.
+ */
+export function resolveLibraryMediaKindFromUrl(url: string): LibraryMediaKind {
+  if (isYouTubeUrl(url)) return "youtube";
+
+  try {
+    const pathname = new URL(url).pathname;
+    const fromExt = EXT_KIND[extensionFromFilename(pathname)];
+    if (fromExt) return fromExt;
+  } catch {
+    // Invalid URL — fall through to website.
+  }
+
+  return "website";
+}
+
 /** Resolves upload category from source URL (YouTube), MIME type, then filename extension. */
 export function resolveLibraryMediaKind(
   file?: File,

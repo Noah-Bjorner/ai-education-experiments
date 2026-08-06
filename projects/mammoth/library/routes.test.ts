@@ -153,7 +153,20 @@ Deno.test("GET /search delegates to searchLibrary", async () => {
 
   const response = await app.request("/search?q=grid%20of%20diagrams");
   assertEquals(response.status, 200);
-  assertEquals(await response.json(), { ok: true, data: results });
+  assertEquals(await response.json(), {
+    ok: true,
+    data: [{
+      id: 1,
+      name: "Notes",
+      url: "https://static.example.com/notes.md",
+      type: "document",
+      similarity: 0.9,
+      matched_content: "grid of diagrams",
+      matched_chunk_index: 0,
+      snippet: "grid of diagrams",
+      highlights: [{ start: 0, end: 16 }],
+    }],
+  });
   assertEquals(calls, [{
     userId: TEST_USER_ID,
     query: "grid of diagrams",
@@ -262,6 +275,32 @@ Deno.test("POST /upload rejects invalid urls", async () => {
     error: {
       code: "INVALID_LIBRARY_UPLOAD",
       message: 'Invalid "url". Expected an absolute http(s) URL.',
+    },
+  });
+});
+
+Deno.test("POST /upload returns 400 for LibraryClientError", async () => {
+  const app = createTestApp({
+    handleLibraryUpload: async () => {
+      const error = new Error("Video is currently not supported");
+      error.name = "LibraryClientError";
+      throw error;
+    },
+  });
+
+  const form = new FormData();
+  form.set("file", new File(["x"], "clip.mp4", { type: "video/mp4" }));
+
+  const response = await app.request("/upload", {
+    method: "POST",
+    body: form,
+  });
+  assertEquals(response.status, 400);
+  assertEquals(await response.json(), {
+    ok: false,
+    error: {
+      code: "INVALID_LIBRARY_UPLOAD",
+      message: "Video is currently not supported",
     },
   });
 });

@@ -1,4 +1,7 @@
-import { isYouTubeUrl, resolveLibraryMediaKind } from "./media-kind.ts";
+import {
+  resolveLibraryMediaKind,
+  resolveLibraryMediaKindFromUrl,
+} from "./media-kind.ts";
 import { toMarkdownBytes } from "@firecrawl/anydoc";
 import { uploadDocument, uploadImage } from "../../../lib/cloudflare.ts";
 import { getXaiTranscriptionToMarkdown } from "../../../lib/xai.ts";
@@ -13,7 +16,11 @@ import { getPageTitle } from "../../../helper/url.ts";
 import { fileFromUrl } from "../../../helper/file.ts";
 
 export type { LibraryMediaKind } from "./media-kind.ts";
-export { isYouTubeUrl, resolveLibraryMediaKind } from "./media-kind.ts";
+export {
+  isYouTubeUrl,
+  resolveLibraryMediaKind,
+  resolveLibraryMediaKindFromUrl,
+} from "./media-kind.ts";
 import { chunkAndEmbedMarkdown } from "./embedding.ts";
 import { extractVideoTranscriptToMarkdown } from "../../../lib/supadata.ts";
 
@@ -23,6 +30,11 @@ export type LibraryUploadInput = {
     | { type: "file"; file: File }
     | { type: "url"; url: string };
 };
+
+/** Thrown for user-fixable upload problems (unsupported type, etc.). */
+export class LibraryClientError extends Error {
+  override readonly name = "LibraryClientError";
+}
 
 interface LibraryUploadOutput {
   name: string;
@@ -58,7 +70,7 @@ async function handleDocumentUpload(
       libraryItem: {
         name: file.name,
         url,
-        type: "audio_transcript",
+        type: "document",
       },
     };
   } catch (error) {
@@ -142,7 +154,7 @@ async function handleWebsiteUpload(
         `${crypto.randomUUID()}.md`,
       ),
       chunkAndEmbedMarkdown(markdown),
-      getPageTitle(sourceUrl),
+      pageTitleOrFallback(sourceUrl),
     ]);
     return {
       embeddings,
@@ -169,7 +181,7 @@ async function handleYoutubeUpload(
         `${crypto.randomUUID()}.md`,
       ),
       chunkAndEmbedMarkdown(markdown),
-      getPageTitle(sourceUrl),
+      pageTitleOrFallback(sourceUrl),
     ]);
     return {
       embeddings,
@@ -188,7 +200,14 @@ async function handleYoutubeUpload(
 async function handleFileUpload(
   file: File,
 ): Promise<HandleLibraryUploadOutput> {
-  const kind = resolveLibraryMediaKind(file);
+  let kind;
+  try {
+    kind = resolveLibraryMediaKind(file);
+  } catch (error) {
+    throw new LibraryClientError(
+      error instanceof Error ? error.message : "Invalid file type",
+    );
+  }
 
   switch (kind) {
     case "document":
@@ -198,31 +217,31 @@ async function handleFileUpload(
     case "audio":
       return await handleAudioUpload(file);
     case "video":
-      throw new Error("Video is currently not supported");
+      throw new LibraryClientError("Video is currently not supported");
     case "website":
-      throw new Error(
+      throw new LibraryClientError(
         "HTML files are not supported; upload the website URL instead",
       );
     case "youtube":
-      throw new Error("YouTube uploads require a URL");
+      throw new LibraryClientError("YouTube uploads require a URL");
     default:
-      throw new Error("Invalid file type");
+      throw new LibraryClientError("Invalid file type");
   }
 }
 
 async function handleUrlUpload(
   sourceUrl: string,
 ): Promise<HandleLibraryUploadOutput> {
-  if (isYouTubeUrl(sourceUrl)) {
+  const kind = resolveLibraryMediaKindFromUrl(sourceUrl);
+
+  if (kind === "youtube") {
     return await handleYoutubeUpload(sourceUrl);
   }
-
-  const file = await fileFromUrl(sourceUrl);
-  const kind = resolveLibraryMediaKind(file);
   if (kind === "website") {
     return await handleWebsiteUpload(sourceUrl);
   }
 
+  const file = await fileFromUrl(sourceUrl);
   return await handleFileUpload(file);
 }
 
@@ -240,4 +259,16 @@ export async function handleLibraryUpload(
     type: output.libraryItem.type,
     chunks: output.embeddings,
   });
+}
+
+async function pageTitleOrFallback(sourceUrl: string): Promise<string> {
+  try {
+    return await getPageTitle(sourceUrl);
+  } catch {
+    try {
+      return new URL(sourceUrl).hostname;
+    } catch {
+      return sourceUrl;
+    }
+  }
 }
