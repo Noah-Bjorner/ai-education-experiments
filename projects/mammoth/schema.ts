@@ -95,9 +95,18 @@ export const mammothRequestSchema = z.object({
 
 export type MammothRequest = z.infer<typeof mammothRequestSchema>;
 
+export const realtimeCallModelSchema = z.enum([
+  "gpt-realtime-2.1",
+  "gpt-realtime-2.1-mini",
+]);
+
+export type RealtimeCallModel = z.infer<typeof realtimeCallModelSchema>;
+
 export const realtimeClientSecretRequestSchema = z.object({
   /** `"realtime"` for voice calls; `"transcription"` for dictation. */
   type: z.enum(["realtime", "transcription"]).default("realtime"),
+  /** Realtime call model to bind to the client secret. */
+  model: realtimeCallModelSchema.default("gpt-realtime-2.1"),
 }).strict();
 
 export type RealtimeClientSecretRequest = z.infer<

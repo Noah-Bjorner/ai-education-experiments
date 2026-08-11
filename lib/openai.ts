@@ -183,6 +183,9 @@ export const getGPTImage2 = async (options: GPTImage2Options): Promise<GPTImage2
 };
 
 export type RealtimeSessionType = "realtime" | "transcription";
+export type RealtimeCallModel =
+  | "gpt-realtime-2.1"
+  | "gpt-realtime-2.1-mini";
 
 export type CreateRealtimeClientSecretOptions = {
   /**
@@ -190,6 +193,8 @@ export type CreateRealtimeClientSecretOptions = {
    * Defaults to `"realtime"` (voice call). Use `"transcription"` for dictation.
    */
   type?: RealtimeSessionType;
+  /** Realtime call model to bind to the client secret. */
+  model?: RealtimeCallModel;
   /** TTL in seconds (10–7200). Omit to use OpenAI’s default (600). */
   expiresAfterSeconds?: number;
   /**
@@ -215,6 +220,7 @@ export async function createRealtimeClientSecret(
 ): Promise<RealtimeClientSecret> {
   const {
     type = "realtime",
+    model = DEFAULT_REALTIME_MODEL,
     expiresAfterSeconds,
     safetyIdentifier,
   } = options;
@@ -262,7 +268,7 @@ export async function createRealtimeClientSecret(
       }
       : {
         type: "realtime",
-        model: DEFAULT_REALTIME_MODEL,
+        model,
       },
   };
 

@@ -11,6 +11,7 @@ import { searchLibrary } from "./library/search.ts";
 import { handleLibraryUpload } from "./library/upload.ts";
 import {
   type MammothRequest,
+  type RealtimeClientSecretRequest,
   mammothRequestSchema,
   realtimeClientSecretRequestSchema,
 } from "./schema.ts";
@@ -96,7 +97,7 @@ mammothRoutes.post(
           error: {
             code: "INVALID_CLIENT_SECRET_REQUEST",
             message:
-              'Expected JSON body with optional type: "realtime" | "transcription".',
+              "Expected JSON body with optional type and Realtime call model.",
             issues: parsed.error.issues,
           },
         },
@@ -105,8 +106,10 @@ mammothRoutes.post(
     }
 
     try {
+      const { type, model }: RealtimeClientSecretRequest = parsed.data;
       const secret = await createRealtimeClientSecret({
-        type: parsed.data.type,
+        type,
+        model,
         safetyIdentifier: await hashSafetyIdentifier(user.id),
       });
 
