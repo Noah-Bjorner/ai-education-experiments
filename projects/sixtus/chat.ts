@@ -11,58 +11,58 @@ import {
 import { transformMessages } from "./message-transforms.ts";
 import { createToolCallRepair } from "./tools/shared/repair-tool-call/index.ts";
 import { getLatestActiveObjective } from "./helper.ts";
-import { createMammothSystemPrompt } from "./prompt.ts";
+import { createSixtusSystemPrompt } from "./prompt.ts";
 import {
-  MAMMOTH_GATEWAY_MODEL_CONFIG,
-  type MammothRequest,
+  SIXTUS_GATEWAY_MODEL_CONFIG,
+  type SixtusRequest,
 } from "./schema.ts";
-import { mammothTools } from "./tools/index.ts";
-import type { MammothUIMessage } from "./types.ts";
+import { sixtusTools } from "./tools/index.ts";
+import type { SixtusUIMessage } from "./types.ts";
 
-export { mammothTools } from "./tools/index.ts";
+export { sixtusTools } from "./tools/index.ts";
 export {
-  MAMMOTH_ACTIVE_TOOL_STATES,
-  MAMMOTH_TOOL_LABELS,
-  MAMMOTH_TOOL_PART_TYPES,
-  MAMMOTH_TOOL_STATES,
+  SIXTUS_ACTIVE_TOOL_STATES,
+  SIXTUS_TOOL_LABELS,
+  SIXTUS_TOOL_PART_TYPES,
+  SIXTUS_TOOL_STATES,
 } from "./types.ts";
 export {
-  MAMMOTH_DEFAULT_MODEL,
-  MAMMOTH_GATEWAY_MODEL_CONFIG,
-  MAMMOTH_MODEL_OPTIONS,
+  SIXTUS_DEFAULT_MODEL,
+  SIXTUS_GATEWAY_MODEL_CONFIG,
+  SIXTUS_MODEL_OPTIONS,
 } from "./schema.ts";
 export type {
-  MammothGatewayModel,
-  MammothModelPickerOption,
-  MammothRequest,
+  SixtusGatewayModel,
+  SixtusModelPickerOption,
+  SixtusRequest,
 } from "./schema.ts";
 export type {
-  MammothDataTypes,
-  MammothToolInvocation,
-  MammothToolName,
-  MammothToolPartType,
-  MammothToolState,
-  MammothUIMessage,
-  MammothUITools,
+  SixtusDataTypes,
+  SixtusToolInvocation,
+  SixtusToolName,
+  SixtusToolPartType,
+  SixtusToolState,
+  SixtusUIMessage,
+  SixtusUITools,
 } from "./types.ts";
 
 const MAX_TOOL_STEPS = 15;
 const REPAIR_TOOL_CALL_MODEL = "openai/gpt-5.6-sol";
 
-export async function streamMammoth(
+export async function streamSixtus(
   { messages, tutor_instructions, student_profile, memory, model: modelId }:
-    MammothRequest,
+    SixtusRequest,
 ) {
   const apiKey = Deno.env.get("AI_GATEWAY_API_KEY");
   if (!apiKey) {
-    throw new Error("AI_GATEWAY_API_KEY is required to run Mammoth.");
+    throw new Error("AI_GATEWAY_API_KEY is required to run Sixtus.");
   }
 
   const gateway = createGateway({ apiKey });
   const model = gateway(modelId);
   const currentObjective = getLatestActiveObjective(messages);
 
-  const systemPrompt = createMammothSystemPrompt(
+  const systemPrompt = createSixtusSystemPrompt(
     tutor_instructions,
     student_profile,
     memory,
@@ -73,13 +73,13 @@ export async function streamMammoth(
 
   return streamText({
     model: model,
-    reasoning: MAMMOTH_GATEWAY_MODEL_CONFIG[modelId].reasoning,
+    reasoning: SIXTUS_GATEWAY_MODEL_CONFIG[modelId].reasoning,
     system: systemPrompt,
     messages: await convertToModelMessages(transformedMessages),
-    tools: mammothTools,
+    tools: sixtusTools,
     experimental_repairToolCall: createToolCallRepair({
       model: gateway(REPAIR_TOOL_CALL_MODEL),
-      tools: mammothTools,
+      tools: sixtusTools,
     }),
     stopWhen: [
       hasToolCall("promptSuggestions"),
@@ -90,17 +90,17 @@ export async function streamMammoth(
   });
 }
 
-export function createMammothUIMessageStream(
-  request: MammothRequest,
+export function createSixtusUIMessageStream(
+  request: SixtusRequest,
   {
     onError,
   }: {
     onError?: (error: unknown) => string;
   } = {},
 ) {
-  return createUIMessageStream<MammothUIMessage>({
+  return createUIMessageStream<SixtusUIMessage>({
     execute: async ({ writer }) => {
-      const result = await streamMammoth(request);
+      const result = await streamSixtus(request);
       writer.merge(result.toUIMessageStream());
     },
     onError,

@@ -1,5 +1,5 @@
 interface SVG_MOTION_GENERATOR_INSTRUCTIONS_OPTIONS {
-  style?: "default" | "mammoth";
+  style?: "default" | "sixtus";
 }
 
 export function SVG_MOTION_GENERATOR_INSTRUCTIONS(

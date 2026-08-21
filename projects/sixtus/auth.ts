@@ -3,13 +3,13 @@ import "@std/dotenv/load";
 import { createRemoteJWKSet, errors, jwtVerify } from "@jose";
 import type { MiddlewareHandler } from "@hono/hono";
 
-export type MammothUser = {
+export type SixtusUser = {
   id: string;
 };
 
-export type MammothEnv = {
+export type SixtusEnv = {
   Variables: {
-    mammothUser: MammothUser;
+    sixtusUser: SixtusUser;
   };
 };
 
@@ -22,11 +22,11 @@ const projectJWKS = createRemoteJWKSet(
   new URL(`${issuer}/.well-known/jwks.json`),
 );
 
-type AccessTokenVerifier = (token: string) => Promise<MammothUser>;
+type AccessTokenVerifier = (token: string) => Promise<SixtusUser>;
 
-export function createMammothAuthMiddleware(
+export function createSixtusAuthMiddleware(
   verifyAccessToken: AccessTokenVerifier = verifySupabaseAccessToken,
-): MiddlewareHandler<MammothEnv> {
+): MiddlewareHandler<SixtusEnv> {
   return async (c, next) => {
     const token = bearerToken(c.req.header("Authorization"));
     if (!token) {
@@ -42,7 +42,7 @@ export function createMammothAuthMiddleware(
       );
     }
 
-    let user: MammothUser;
+    let user: SixtusUser;
     try {
       user = await verifyAccessToken(token);
     } catch (error) {
@@ -62,14 +62,14 @@ export function createMammothAuthMiddleware(
       );
     }
 
-    c.set("mammothUser", user);
+    c.set("sixtusUser", user);
     await next();
   };
 }
 
-export const mammothAuthMiddleware = createMammothAuthMiddleware();
+export const sixtusAuthMiddleware = createSixtusAuthMiddleware();
 
-async function verifySupabaseAccessToken(token: string): Promise<MammothUser> {
+async function verifySupabaseAccessToken(token: string): Promise<SixtusUser> {
   const { payload } = await jwtVerify(token, projectJWKS, {
     issuer,
     audience: "authenticated",

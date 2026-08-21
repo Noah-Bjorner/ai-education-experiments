@@ -2,10 +2,10 @@ import {
   objectiveSchema,
   type ObjectiveToolOutput,
 } from "./tools/objective/index.ts";
-import type { MammothUIMessage } from "./types.ts";
+import type { SixtusUIMessage } from "./types.ts";
 
 export function getLatestActiveObjective(
-  messages: MammothUIMessage[],
+  messages: SixtusUIMessage[],
 ): ObjectiveToolOutput | undefined {
   for (
     let messageIndex = messages.length - 1;

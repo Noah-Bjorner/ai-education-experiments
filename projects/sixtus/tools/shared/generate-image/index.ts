@@ -100,7 +100,7 @@ async function uploadGeneratedImage(
   const url = await uploadImage(
     blob,
     fileName,
-    { temporary: true, prefix: "mammoth/generated-images", name },
+    { temporary: true, prefix: "sixtus/generated-images", name },
   );
 
   return {

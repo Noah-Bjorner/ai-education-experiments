@@ -1,8 +1,8 @@
 import { Hono } from "@hono/hono";
 
 import type { LibraryItem, LibraryItemType } from "../database/index.ts";
-import type { MammothEnv } from "../auth.ts";
-import { mammothSubscriptionMiddleware } from "../subscription.ts";
+import type { SixtusEnv } from "../auth.ts";
+import { sixtusSubscriptionMiddleware } from "../subscription.ts";
 import type { LibraryUploadInput } from "./upload.ts";
 import type { LibrarySearchResult } from "./search.ts";
 
@@ -34,7 +34,7 @@ export type LibraryRouteDeps = {
 
 export function createLibraryRoutes(
   deps: LibraryRouteDeps,
-): Hono<MammothEnv> {
+): Hono<SixtusEnv> {
   const {
     listLibraryItems: listItems,
     searchLibrary: searchItems,
@@ -42,10 +42,10 @@ export function createLibraryRoutes(
     deleteLibraryItem: deleteItem,
   } = deps;
 
-  const routes = new Hono<MammothEnv>();
+  const routes = new Hono<SixtusEnv>();
 
   routes.get("/", async (c) => {
-    const user = c.get("mammothUser");
+    const user = c.get("sixtusUser");
     const rawType = c.req.query("type") ?? "all";
 
     if (rawType !== "all" && !isLibraryItemType(rawType)) {
@@ -87,8 +87,8 @@ export function createLibraryRoutes(
     }
   });
 
-  routes.get("/search", mammothSubscriptionMiddleware, async (c) => {
-    const user = c.get("mammothUser");
+  routes.get("/search", sixtusSubscriptionMiddleware, async (c) => {
+    const user = c.get("sixtusUser");
     const query = (c.req.query("q") ?? "").trim();
 
     if (!query) {
@@ -129,8 +129,8 @@ export function createLibraryRoutes(
     }
   });
 
-  routes.post("/upload", mammothSubscriptionMiddleware, async (c) => {
-    const user = c.get("mammothUser");
+  routes.post("/upload", sixtusSubscriptionMiddleware, async (c) => {
+    const user = c.get("sixtusUser");
 
     let form: Awaited<ReturnType<typeof c.req.parseBody>>;
     try {
@@ -237,7 +237,7 @@ export function createLibraryRoutes(
   });
 
   routes.delete("/:id", async (c) => {
-    const user = c.get("mammothUser");
+    const user = c.get("sixtusUser");
     const rawId = c.req.param("id");
     const libraryId = Number(rawId);
 

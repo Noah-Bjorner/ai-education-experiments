@@ -2,7 +2,7 @@ import { Hono } from "@hono/hono";
 import { cors } from "@hono/hono/cors";
 
 import { examToolkitRoutes } from "./projects/exam-toolkit/routes.ts";
-import { mammothRoutes } from "./projects/mammoth/route.ts";
+import { sixtusRoutes } from "./projects/sixtus/route.ts";
 
 const app = new Hono();
 
@@ -80,7 +80,7 @@ app.get("/demo", (c) =>
 
   
 app.route("/exam-toolkit", examToolkitRoutes);
-app.route("/mammoth", mammothRoutes);
+app.route("/sixtus", sixtusRoutes);
 
 
 

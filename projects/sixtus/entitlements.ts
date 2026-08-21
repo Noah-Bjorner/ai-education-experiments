@@ -12,7 +12,7 @@ const supabaseURL = requiredEnvironmentVariable("SUPABASE_URL").replace(
 const supabaseSecretKey = requiredEnvironmentVariable("SUPABASE_SECRET_KEY");
 
 export function subscriptionEnforcementEnabled(): boolean {
-  return Deno.env.get("MAMMOTH_REQUIRE_ACTIVE_SUBSCRIPTION")?.trim()
+  return Deno.env.get("SIXTUS_REQUIRE_ACTIVE_SUBSCRIPTION")?.trim()
     .toLowerCase() === "true";
 }
 

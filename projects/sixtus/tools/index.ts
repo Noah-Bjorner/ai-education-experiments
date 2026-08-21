@@ -8,7 +8,7 @@ import { promptSuggestionsTool } from "./prompt-suggestions/index.ts";
 import { questionTool } from "./question/index.ts";
 import { userActionTool } from "./user-action/index.ts";
 
-export const mammothTools = {
+export const sixtusTools = {
   objective: objectiveTool,
   question: questionTool,
   assessment: assessmentTool,
@@ -18,4 +18,4 @@ export const mammothTools = {
   userAction: userActionTool,
 } satisfies ToolSet;
 
-export type MammothToolName = keyof typeof mammothTools;
+export type SixtusToolName = keyof typeof sixtusTools;

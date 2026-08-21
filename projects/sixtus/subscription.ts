@@ -1,13 +1,13 @@
 import type { MiddlewareHandler } from "@hono/hono";
 
-import type { MammothEnv } from "./auth.ts";
+import type { SixtusEnv } from "./auth.ts";
 import {
   hasActiveSubscription,
   subscriptionEnforcementEnabled,
 } from "./entitlements.ts";
 
-export function createMammothSubscriptionMiddleware(): MiddlewareHandler<
-  MammothEnv
+export function createSixtusSubscriptionMiddleware(): MiddlewareHandler<
+  SixtusEnv
 > {
   return async (c, next) => {
     if (!subscriptionEnforcementEnabled()) {
@@ -15,7 +15,7 @@ export function createMammothSubscriptionMiddleware(): MiddlewareHandler<
       return;
     }
 
-    const user = c.get("mammothUser");
+    const user = c.get("sixtusUser");
     if (!(await hasActiveSubscription(user.id))) {
       return c.json(
         {
@@ -33,5 +33,5 @@ export function createMammothSubscriptionMiddleware(): MiddlewareHandler<
   };
 }
 
-export const mammothSubscriptionMiddleware =
-  createMammothSubscriptionMiddleware();
+export const sixtusSubscriptionMiddleware =
+  createSixtusSubscriptionMiddleware();

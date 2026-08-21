@@ -24,7 +24,7 @@ function formatCurrentObjective(objective: ObjectiveToolOutput): string {
   ].join("\n");
 }
 
-export function createMammothSystemPrompt(
+export function createSixtusSystemPrompt(
   tutor_instructions: string,
   student_profile: string,
   memory?: string,

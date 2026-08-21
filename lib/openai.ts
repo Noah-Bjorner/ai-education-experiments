@@ -212,7 +212,7 @@ export type RealtimeClientSecret = {
 
 const DEFAULT_REALTIME_MODEL = "gpt-realtime-2.1";
 
-const MAMMOTH_DICTATION_PROMPT =
+const SIXTUS_DICTATION_PROMPT =
   "Faithfully transcribe the user's speech for an educational chat composer. Preserve the speaker's language, wording, punctuation, and intent.";
 
 export async function createRealtimeClientSecret(
@@ -259,7 +259,7 @@ export async function createRealtimeClientSecret(
           input: {
             transcription: {
               model: "gpt-live-transcribe",
-              prompt: MAMMOTH_DICTATION_PROMPT,
+              prompt: SIXTUS_DICTATION_PROMPT,
               delay: "minimal",
             },
             turn_detection: null,

@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { Hono } from "@hono/hono";
 
-import type { MammothEnv } from "../auth.ts";
+import type { SixtusEnv } from "../auth.ts";
 import type { LibraryItem, LibraryItemType } from "../database/index.ts";
 import type { LibraryUploadInput } from "./upload.ts";
 import type { LibrarySearchResult } from "./search.ts";
@@ -52,9 +52,9 @@ function unusedDeps(): LibraryRouteDeps {
 }
 
 function createTestApp(deps: Partial<LibraryRouteDeps>) {
-  const app = new Hono<MammothEnv>();
+  const app = new Hono<SixtusEnv>();
   app.use("*", async (c, next) => {
-    c.set("mammothUser", { id: TEST_USER_ID });
+    c.set("sixtusUser", { id: TEST_USER_ID });
     await next();
   });
   app.route("/", createLibraryRoutes({ ...unusedDeps(), ...deps }));

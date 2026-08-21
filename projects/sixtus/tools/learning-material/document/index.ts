@@ -38,7 +38,7 @@ export const documentTypeSchema = z.enum(DOCUMENT_TYPES);
 const DOCUMENT_GENERATOR_MODEL = "openai/gpt-5.6-sol" as const;
 const DOCUMENT_GENERATOR_REASONING = "medium" as const;
 const MAX_DOCUMENT_GENERATION_STEPS = 12;
-const DOCUMENT_UPLOAD_PREFIX = "mammoth/learning-material/documents";
+const DOCUMENT_UPLOAD_PREFIX = "sixtus/learning-material/documents";
 
 const documentAgentOutputSchema = z.object({
   title: z.string().min(1).describe("Concise learner-facing title for the document."),

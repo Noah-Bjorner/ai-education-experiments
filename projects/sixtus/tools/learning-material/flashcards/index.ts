@@ -36,7 +36,7 @@ const MAX_FLASHCARDS_PLAN_STEPS = 8;
 const MAX_FLASHCARDS_GENERATION_STEPS = 4;
 const MIN_FLASHCARDS = 4;
 const MAX_FLASHCARDS = 40;
-const FLASHCARDS_UPLOAD_PREFIX = "mammoth/learning-material/flashcards";
+const FLASHCARDS_UPLOAD_PREFIX = "sixtus/learning-material/flashcards";
 
 const mediaInputSchema = z.object({
   description: z.string().min(1).describe(

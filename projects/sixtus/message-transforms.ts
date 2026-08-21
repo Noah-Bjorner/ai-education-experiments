@@ -4,7 +4,7 @@ import {
   ASSESSMENT_TYPES,
   type AssessmentType,
 } from "./tools/assessment/index.ts";
-import type { MammothUIMessage } from "./types.ts";
+import type { SixtusUIMessage } from "./types.ts";
 
 export const USER_TURN_TYPES = [
   "assessment_submission",
@@ -37,15 +37,15 @@ export const questionAnswerDataSchema = z.object({
 
 export type QuestionAnswerData = z.infer<typeof questionAnswerDataSchema>;
 
-type MessagePart = MammothUIMessage["parts"][number];
+type MessagePart = SixtusUIMessage["parts"][number];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function getLatestUserMessage(
-  messages: MammothUIMessage[],
-): MammothUIMessage | undefined {
+  messages: SixtusUIMessage[],
+): SixtusUIMessage | undefined {
   for (let index = messages.length - 1; index >= 0; index--) {
     const message = messages[index];
     if (message.role === "user") {
@@ -57,7 +57,7 @@ function getLatestUserMessage(
 }
 
 function getAssessmentSubmissionData(
-  message: MammothUIMessage,
+  message: SixtusUIMessage,
 ): AssessmentSubmissionData | undefined {
   for (const part of message.parts) {
     if (!isRecord(part) || part.type !== "data-assessmentSubmission") {
@@ -74,7 +74,7 @@ function getAssessmentSubmissionData(
 }
 
 function getQuestionAnswerData(
-  message: MammothUIMessage,
+  message: SixtusUIMessage,
 ): QuestionAnswerData | undefined {
   for (const part of message.parts) {
     if (!isRecord(part) || part.type !== "data-questionAnswer") {
@@ -90,7 +90,7 @@ function getQuestionAnswerData(
   return undefined;
 }
 
-function getUserTurnType(message: MammothUIMessage): UserTurnType {
+function getUserTurnType(message: SixtusUIMessage): UserTurnType {
   if (getAssessmentSubmissionData(message)) {
     return "assessment_submission";
   }
@@ -102,7 +102,7 @@ function getUserTurnType(message: MammothUIMessage): UserTurnType {
   return "default";
 }
 
-function getMessageText(message: MammothUIMessage): string {
+function getMessageText(message: SixtusUIMessage): string {
   return message.parts
     .filter((part): part is Extract<MessagePart, { type: "text" }> =>
       isRecord(part) && part.type === "text" && typeof part.text === "string"
@@ -113,9 +113,9 @@ function getMessageText(message: MammothUIMessage): string {
 }
 
 function rewriteLatestUserMessage(
-  messages: MammothUIMessage[],
-  rewrite: (message: MammothUIMessage) => string,
-): MammothUIMessage[] {
+  messages: SixtusUIMessage[],
+  rewrite: (message: SixtusUIMessage) => string,
+): SixtusUIMessage[] {
   const latest = getLatestUserMessage(messages);
   if (!latest) {
     return messages;
@@ -127,7 +127,7 @@ function rewriteLatestUserMessage(
   }
 
   const wrappedText = rewrite(latest);
-  const nextMessage: MammothUIMessage = {
+  const nextMessage: SixtusUIMessage = {
     ...latest,
     parts: [{ type: "text", text: wrappedText }],
   };
@@ -191,7 +191,7 @@ const ASSESSMENT_RESPONSE_GUIDANCE = {
   ].join("\n"),
 } as const satisfies Record<AssessmentType, string>;
 
-function formatAssessmentSubmission(message: MammothUIMessage): string {
+function formatAssessmentSubmission(message: SixtusUIMessage): string {
   const data = getAssessmentSubmissionData(message);
   if (!data) {
     return getMessageText(message) ||
@@ -219,7 +219,7 @@ const QUESTION_RESPONSE_GUIDANCE = [
   "Be clear and concise. Do not over-score or write a long rubric-style review.",
 ].join("\n");
 
-function formatQuestionAnswer(message: MammothUIMessage): string {
+function formatQuestionAnswer(message: SixtusUIMessage): string {
   const data = getQuestionAnswerData(message);
   if (!data) {
     return getMessageText(message) ||
@@ -246,7 +246,7 @@ function formatQuestionAnswer(message: MammothUIMessage): string {
   return sections.join("\n");
 }
 
-export function transformMessages(messages: MammothUIMessage[]): MammothUIMessage[] {
+export function transformMessages(messages: SixtusUIMessage[]): SixtusUIMessage[] {
   const latest = getLatestUserMessage(messages);
   if (!latest) {
     return messages;

@@ -1,8 +1,8 @@
-# Mammoth 
+# Sixtus 
 
 This is a personal research project exploring ways to build AI tutor agents that incorporate pedagogical best practices and help students develop durable knowledge they can apply independently.
 
-📌 **Demo Website:** [tutorchat.noahbjorner.com](https://tutorchat.noahbjorner.com) – Try it for free.
+📌 **Demo Website:** [sixtus.noahbjorner.com](https://tutorchat.noahbjorner.com) – Try it for free.
 
 ✍️ **Related Writing:** [Rethinking ChatGPT for Learning](https://edu.noahbjorner.com/blog/rethinking-chatgpt-for-learning) – Context for the ideas behind this project.
 
@@ -21,7 +21,7 @@ The next step is to define a more complete initial toolset, structure the agent 
 
 ## Authentication
 
-Mammoth routes require a Supabase access token in the
+Sixtus routes require a Supabase access token in the
 `Authorization: Bearer <token>` header. The server verifies ES256 tokens against
 the project's public JWKS and uses the verified `sub` claim as the user ID.
 
@@ -32,20 +32,20 @@ Required backend environment variables:
 - `SUPABASE_SECRET_KEY` (server only; never expose it to the iOS app)
 - `SUPABASE_DB_URL` (migration tooling only)
 
-Apply the migrations in `supabase/migrations` before serving Mammoth requests.
+Apply the migrations in `supabase/migrations` before serving Sixtus requests.
 They create the `users` table, subscription entitlements, ownership policies,
 and the Auth user sync trigger. Each Auth user's email is copied into
 `public.users`; the Supabase Auth UUID remains the stable user identifier.
 
 Subscription enforcement is prepared but disabled by default. Set
-`MAMMOTH_REQUIRE_ACTIVE_SUBSCRIPTION=true` only after the StoreKit entitlement
+`SIXTUS_REQUIRE_ACTIVE_SUBSCRIPTION=true` only after the StoreKit entitlement
 sync writes trusted rows to `subscription_entitlements`.
 
 ## Tool Architecture
 
 ```mermaid
 graph TD
-  Agent[Mammoth Agent]
+  Agent[Sixtus Agent]
 
   Agent --> Objective
   Agent --> LearningMaterial

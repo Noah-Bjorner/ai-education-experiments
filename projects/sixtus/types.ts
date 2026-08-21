@@ -6,12 +6,12 @@ import type { ObjectiveToolInvocation } from "./tools/objective/index.ts";
 import type { PromptSuggestionsToolInvocation } from "./tools/prompt-suggestions/index.ts";
 import type { QuestionToolInvocation } from "./tools/question/index.ts";
 import type { UserActionToolInvocation } from "./tools/user-action/index.ts";
-import type { MammothToolName, mammothTools } from "./tools/index.ts";
+import type { SixtusToolName, sixtusTools } from "./tools/index.ts";
 
-export type { MammothToolName } from "./tools/index.ts";
+export type { SixtusToolName } from "./tools/index.ts";
 
-export type MammothUITools = InferUITools<typeof mammothTools>;
-export type MammothToolInvocation =
+export type SixtusUITools = InferUITools<typeof sixtusTools>;
+export type SixtusToolInvocation =
   | AssessmentToolInvocation
   | LearningMaterialToolInvocation
   | ObjectiveToolInvocation
@@ -19,15 +19,15 @@ export type MammothToolInvocation =
   | QuestionToolInvocation
   | GatherContextToolInvocation
   | UserActionToolInvocation;
-export type MammothToolPartType = `tool-${MammothToolName}`;
-export type MammothDataTypes = Record<string, never>;
-export type MammothUIMessage = UIMessage<
+export type SixtusToolPartType = `tool-${SixtusToolName}`;
+export type SixtusDataTypes = Record<string, never>;
+export type SixtusUIMessage = UIMessage<
   unknown,
-  MammothDataTypes,
-  MammothUITools
+  SixtusDataTypes,
+  SixtusUITools
 >;
 
-export const MAMMOTH_TOOL_PART_TYPES = [
+export const SIXTUS_TOOL_PART_TYPES = [
   "tool-assessment",
   "tool-learningMaterial",
   "tool-objective",
@@ -35,9 +35,9 @@ export const MAMMOTH_TOOL_PART_TYPES = [
   "tool-question",
   "tool-gatherContext",
   "tool-userAction",
-] as const satisfies readonly MammothToolPartType[];
+] as const satisfies readonly SixtusToolPartType[];
 
-export const MAMMOTH_TOOL_LABELS = {
+export const SIXTUS_TOOL_LABELS = {
   "tool-assessment": "Creating an assessment...",
   "tool-learningMaterial": "Creating learning material...",
   "tool-objective": "Updating the learning objective...",
@@ -45,18 +45,18 @@ export const MAMMOTH_TOOL_LABELS = {
   "tool-question": "Creating a question...",
   "tool-gatherContext": "Gathering context...",
   "tool-userAction": "Requesting a user action...",
-} as const satisfies Record<MammothToolPartType, string>;
+} as const satisfies Record<SixtusToolPartType, string>;
 
-export const MAMMOTH_TOOL_STATES = [
+export const SIXTUS_TOOL_STATES = [
   "input-streaming",
   "input-available",
   "output-available",
   "output-error",
 ] as const;
 
-export type MammothToolState = typeof MAMMOTH_TOOL_STATES[number];
+export type SixtusToolState = typeof SIXTUS_TOOL_STATES[number];
 
-export const MAMMOTH_ACTIVE_TOOL_STATES = [
+export const SIXTUS_ACTIVE_TOOL_STATES = [
   "input-streaming",
   "input-available",
-] as const satisfies readonly MammothToolState[];
+] as const satisfies readonly SixtusToolState[];

@@ -4,7 +4,7 @@ import {
   STUDENT_PROFILE_DEFAULT,
   TUTOR_INSTRUCTIONS_DEFAULT,
 } from "./prompt.ts";
-import type { MammothUIMessage } from "./types.ts";
+import type { SixtusUIMessage } from "./types.ts";
 
 const messageRoleSchema = z.enum(["system", "user", "assistant"]);
 
@@ -12,7 +12,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isUIMessage(value: unknown): value is MammothUIMessage {
+function isUIMessage(value: unknown): value is SixtusUIMessage {
   if (!isRecord(value)) {
     return false;
   }
@@ -25,7 +25,7 @@ function isUIMessage(value: unknown): value is MammothUIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
-export const MAMMOTH_GATEWAY_MODEL_CONFIG = {
+export const SIXTUS_GATEWAY_MODEL_CONFIG = {
   "openai/gpt-5.6-luna": { reasoning: "high" },
   "openai/gpt-5.6-terra": { reasoning: "high" },
   "openai/gpt-5.6-sol": { reasoning: "medium" },
@@ -42,33 +42,33 @@ export const MAMMOTH_GATEWAY_MODEL_CONFIG = {
   "alibaba/qwen3.7-max": { reasoning: "high" },
 } as const;
 
-export type MammothGatewayModel = keyof typeof MAMMOTH_GATEWAY_MODEL_CONFIG;
+export type SixtusGatewayModel = keyof typeof SIXTUS_GATEWAY_MODEL_CONFIG;
 
-export const MAMMOTH_DEFAULT_MODEL =
-  "google/gemini-3.7-flash" as const satisfies MammothGatewayModel;
+export const SIXTUS_DEFAULT_MODEL =
+  "google/gemini-3.7-flash" as const satisfies SixtusGatewayModel;
 
-const MAMMOTH_GATEWAY_MODELS = Object.keys(
-  MAMMOTH_GATEWAY_MODEL_CONFIG,
-) as [MammothGatewayModel, ...MammothGatewayModel[]];
+const SIXTUS_GATEWAY_MODELS = Object.keys(
+  SIXTUS_GATEWAY_MODEL_CONFIG,
+) as [SixtusGatewayModel, ...SixtusGatewayModel[]];
 
-export const MAMMOTH_MODEL_OPTIONS = [
+export const SIXTUS_MODEL_OPTIONS = [
   "auto",
-  ...MAMMOTH_GATEWAY_MODELS,
+  ...SIXTUS_GATEWAY_MODELS,
 ] as const;
 
-export type MammothModelPickerOption =
-  typeof MAMMOTH_MODEL_OPTIONS[number];
+export type SixtusModelPickerOption =
+  typeof SIXTUS_MODEL_OPTIONS[number];
 
-const mammothModelSchema = z
-  .enum(MAMMOTH_MODEL_OPTIONS)
+const sixtusModelSchema = z
+  .enum(SIXTUS_MODEL_OPTIONS)
   .default("auto")
-  .transform((value): MammothGatewayModel =>
-    value === "auto" ? MAMMOTH_DEFAULT_MODEL : value
+  .transform((value): SixtusGatewayModel =>
+    value === "auto" ? SIXTUS_DEFAULT_MODEL : value
   );
 
-export const mammothRequestSchema = z.object({
+export const sixtusRequestSchema = z.object({
   messages: z.array(
-    z.custom<MammothUIMessage>(
+    z.custom<SixtusUIMessage>(
       isUIMessage,
       "Expected an AI SDK UIMessage with id, role, and parts.",
     ),
@@ -86,7 +86,7 @@ export const mammothRequestSchema = z.object({
   memory: z.string().trim().max(10000, {
     error: "memory must be at most 10,000 characters.",
   }).optional(),
-  model: mammothModelSchema,
+  model: sixtusModelSchema,
   space_id: z.string().trim().max(500, {
     error: "space_id must be at most 500 characters.",
   }).optional(),
@@ -95,7 +95,7 @@ export const mammothRequestSchema = z.object({
   }).optional(),
 });
 
-export type MammothRequest = z.infer<typeof mammothRequestSchema>;
+export type SixtusRequest = z.infer<typeof sixtusRequestSchema>;
 
 export const realtimeCallModelSchema = z.enum([
   "gpt-realtime-2.1",

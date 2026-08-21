@@ -3,19 +3,19 @@ import { createUIMessageStreamResponse } from "@ai";
 
 import { createZodJsonBodyMiddleware } from "../../helper/hono.ts";
 import { createRealtimeClientSecret } from "../../lib/openai.ts";
-import { mammothAuthMiddleware, type MammothEnv } from "./auth.ts";
-import { createMammothUIMessageStream } from "./chat.ts";
+import { sixtusAuthMiddleware, type SixtusEnv } from "./auth.ts";
+import { createSixtusUIMessageStream } from "./chat.ts";
 import { deleteLibraryItem, listLibraryItems } from "./database/index.ts";
 import { createLibraryRoutes } from "./library/routes.ts";
 import { searchLibrary } from "./library/search.ts";
 import { handleLibraryUpload } from "./library/upload.ts";
 import {
-  type MammothRequest,
+  type SixtusRequest,
   type RealtimeClientSecretRequest,
-  mammothRequestSchema,
+  sixtusRequestSchema,
   realtimeClientSecretRequestSchema,
 } from "./schema.ts";
-import { mammothSubscriptionMiddleware } from "./subscription.ts";
+import { sixtusSubscriptionMiddleware } from "./subscription.ts";
 
 const libraryRoutes = createLibraryRoutes({
   listLibraryItems,
@@ -24,38 +24,38 @@ const libraryRoutes = createLibraryRoutes({
   deleteLibraryItem,
 });
 
-type MammothChatEnv = {
-  Variables: MammothEnv["Variables"] & {
-    parsedBody: MammothRequest;
+type SixtusChatEnv = {
+  Variables: SixtusEnv["Variables"] & {
+    parsedBody: SixtusRequest;
   };
 };
 
-export const mammothRoutes = new Hono<MammothEnv>();
+export const sixtusRoutes = new Hono<SixtusEnv>();
 
-mammothRoutes.use("*", mammothAuthMiddleware);
+sixtusRoutes.use("*", sixtusAuthMiddleware);
 
-mammothRoutes.post("/test", (c) => {
-  const user = c.get("mammothUser");
+sixtusRoutes.post("/test", (c) => {
+  const user = c.get("sixtusUser");
   return c.json({ ok: true, data: { user_id: user.id } });
 });
 
-const parseMammothChatBody = createZodJsonBodyMiddleware(mammothRequestSchema, {
+const parseSixtusChatBody = createZodJsonBodyMiddleware(sixtusRequestSchema, {
   code: "INVALID_CHAT_REQUEST",
   message:
     "Expected a JSON body with messages, optional tutor_instructions/student_profile/memory, and optional model.",
 });
 
-mammothRoutes.post(
+sixtusRoutes.post(
   "/chat",
-  mammothSubscriptionMiddleware,
-  parseMammothChatBody,
-  (c: Context<MammothChatEnv>) => {
+  sixtusSubscriptionMiddleware,
+  parseSixtusChatBody,
+  (c: Context<SixtusChatEnv>) => {
     const request = c.get("parsedBody");
 
-    const stream = createMammothUIMessageStream(request, {
+    const stream = createSixtusUIMessageStream(request, {
       onError: (error) => {
-        console.error("Mammoth stream failed", error);
-        return "Mammoth hit an error while generating the response. Please try again.";
+        console.error("Sixtus stream failed", error);
+        return "Sixtus hit an error while generating the response. Please try again.";
       },
     });
 
@@ -63,12 +63,12 @@ mammothRoutes.post(
   },
 );
 
-mammothRoutes.route("/library", libraryRoutes);
+sixtusRoutes.route("/library", libraryRoutes);
 
-mammothRoutes.post(
+sixtusRoutes.post(
   "/realtime/client-secret",
   async (c) => {
-    const user = c.get("mammothUser");
+    const user = c.get("sixtusUser");
 
     let rawBody: unknown = {};
     const contentType = c.req.header("content-type") ?? "";
