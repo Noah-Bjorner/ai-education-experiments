@@ -1,6 +1,6 @@
 # Sixtus 
 
-This is a personal research project exploring ways to build AI tutor agents that incorporate pedagogical best practices and help students develop durable knowledge they can apply independently.
+This is a personal research project exploring ways to build AI tutor agents that incorporate pedagogical best practices and help users develop durable knowledge they can apply independently.
 
 📌 **Demo Website:** [sixtus.noahbjorner.com](https://tutorchat.noahbjorner.com) – Try it for free.
 
@@ -13,7 +13,7 @@ This is a personal research project exploring ways to build AI tutor agents that
 ![Hono](https://img.shields.io/badge/Hono-E36002?logo=hono&logoColor=white)
 ![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK-000000?logo=vercel&logoColor=white)
 
-## Status
+## ⚠️ Status 
 
 This project is still in an early experimental stage and is not production-ready. The current code includes a few initial tools, but the agent architecture and overall code quality still need significant work.
 
@@ -42,6 +42,8 @@ Subscription enforcement is prepared but disabled by default. Set
 sync writes trusted rows to `subscription_entitlements`.
 
 ## Tool Architecture
+
+> Last updated: June 25, 2026. This diagram may be out of date.
 
 ```mermaid
 graph TD
