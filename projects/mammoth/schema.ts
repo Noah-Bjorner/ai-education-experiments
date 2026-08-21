@@ -32,7 +32,9 @@ export const MAMMOTH_GATEWAY_MODEL_CONFIG = {
   "anthropic/claude-sonnet-5": { reasoning: "high" },
   "anthropic/claude-opus-5": { reasoning: "medium" },
   "xai/grok-4.5": { reasoning: "high" },
+  "xai/grok-4.6": { reasoning: "high" },
   "google/gemini-3.6-flash": { reasoning: "high" },
+  "google/gemini-3.7-flash": { reasoning: "high" },
   "meta/muse-spark-1.1": { reasoning: "high" },
   "zai/glm-5.2": { reasoning: "high" },
   "zai/glm-5.2-fast": { reasoning: "high" },
@@ -43,7 +45,7 @@ export const MAMMOTH_GATEWAY_MODEL_CONFIG = {
 export type MammothGatewayModel = keyof typeof MAMMOTH_GATEWAY_MODEL_CONFIG;
 
 export const MAMMOTH_DEFAULT_MODEL =
-  "xai/grok-4.5" as const satisfies MammothGatewayModel;
+  "google/gemini-3.7-flash" as const satisfies MammothGatewayModel;
 
 const MAMMOTH_GATEWAY_MODELS = Object.keys(
   MAMMOTH_GATEWAY_MODEL_CONFIG,
