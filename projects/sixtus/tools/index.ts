@@ -6,7 +6,6 @@ import { learningMaterialTool } from "./learning-material/index.ts";
 import { objectiveTool } from "./objective/index.ts";
 import { promptSuggestionsTool } from "./prompt-suggestions/index.ts";
 import { questionTool } from "./question/index.ts";
-import { createSearchLibraryContextTool } from "./search-library-context/index.ts";
 import { userActionTool } from "./user-action/index.ts";
 
 export type SixtusToolRuntime = {
@@ -21,7 +20,6 @@ export function createSixtusTools(runtime: SixtusToolRuntime) {
     learningMaterial: learningMaterialTool,
     promptSuggestions: promptSuggestionsTool,
     gatherContext: gatherContextTool,
-    searchLibraryContext: createSearchLibraryContextTool(runtime),
     userAction: userActionTool,
   } satisfies ToolSet;
 }
