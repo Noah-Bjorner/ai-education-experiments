@@ -37,12 +37,6 @@ export const sixtusRequestSchema = z.object({
   tutor_style: z.number().int().min(TUTOR_STYLE_MIN).max(TUTOR_STYLE_MAX)
     .default(TUTOR_STYLE_DEFAULT),
   model: sixtusModelSchema,
-  space_id: z.string().trim().max(500, {
-    error: "space_id must be at most 500 characters.",
-  }).optional(),
-  course_id: z.string().trim().max(500, {
-    error: "course_id must be at most 500 characters.",
-  }).optional(),
 });
 
 export type SixtusRequest = z.infer<typeof sixtusRequestSchema>;
