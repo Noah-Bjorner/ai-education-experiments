@@ -10,6 +10,8 @@ import {
 import { z } from "@zod";
 
 import { uploadDocument } from "../../../../../lib/cloudflare.ts";
+import { formatGroundedContextForModel } from "../../../citations/format.ts";
+import { parseGroundedContext } from "../../../citations/extract.ts";
 import { gatherContextTool } from "../../gather-context/index.ts";
 
 //maybe replace with visual static instead of 
@@ -133,6 +135,8 @@ export const flashcardsInputSchema = z.object({
   ),
 });
 
+export type CreateFlashcardsOptions = z.infer<typeof flashcardsInputSchema>;
+
 export const flashcardsOutputSchema = z.object({
   title: z.string().min(1).describe("Learner-facing title for the set."),
   description: z.string().min(1).describe(
@@ -144,7 +148,18 @@ export const flashcardsOutputSchema = z.object({
   url: z.string().min(1).describe("Public URL of the uploaded JSON file."),
 });
 
-export type CreateFlashcardsOptions = z.infer<typeof flashcardsInputSchema>;
+function formatVerifiedFacts(
+  results: ReadonlyArray<{ toolName: string; output: unknown }>,
+): string | undefined {
+  const blocks = results
+    .filter((result) => result.toolName === "gatherContext")
+    .map((result) => parseGroundedContext(result.output))
+    .filter((context): context is NonNullable<typeof context> => context != null)
+    .map(formatGroundedContextForModel);
+
+  if (blocks.length === 0) return undefined;
+  return blocks.join("\n\n");
+}
 export type FlashcardsDeck = z.infer<typeof flashcardsDeckSchema>;
 export type FlashcardsToolOutput = z.infer<typeof flashcardsOutputSchema>;
 type FlashcardInput = z.infer<typeof flashcardInputSchema>;
@@ -287,8 +302,8 @@ function dedupeFlashcards(cards: ResolvedFlashcard[]): ResolvedFlashcard[] {
 
 async function createFlashcardsPlan(
   instruction: string,
-): Promise<FlashcardsPlan> {
-  const { output } = await generateText({
+): Promise<{ plan: FlashcardsPlan; verifiedFacts?: string }> {
+  const result = await generateText({
     model: FLASHCARDS_PLAN_MODEL,
     reasoning: "medium",
     system: FLASHCARDS_PLAN_SYSTEM_PROMPT,
@@ -302,16 +317,20 @@ async function createFlashcardsPlan(
     }),
   });
 
-  if (!output) {
+  if (!result.output) {
     throw new Error("Flashcard planning produced no structured output.");
   }
 
-  return output;
+  return {
+    plan: result.output,
+    verifiedFacts: formatVerifiedFacts(result.staticToolResults),
+  };
 }
 
 async function createFlashcardCards(
   plan: FlashcardsPlan,
   instruction: string,
+  verifiedFacts?: string,
 ): Promise<ResolvedFlashcard[]> {
   const result = await generateText({
     model: FLASHCARDS_GENERATOR_MODEL,
@@ -319,6 +338,7 @@ async function createFlashcardCards(
     prompt: buildFlashcardsGenerationPrompt({
       ...plan,
       instruction,
+      verifiedFacts,
     }),
     prepareStep: ({ stepNumber }) =>
       stepNumber === 0 ? { toolChoice: "required" } : {},
@@ -367,8 +387,8 @@ async function uploadFlashcardsJson(
 export async function createFlashcards(
   options: CreateFlashcardsOptions,
 ): Promise<FlashcardsToolOutput> {
-  const plan = await createFlashcardsPlan(options.instruction);
-  const cards = await createFlashcardCards(plan, options.instruction);
+  const { plan, verifiedFacts } = await createFlashcardsPlan(options.instruction);
+  const cards = await createFlashcardCards(plan, options.instruction, verifiedFacts);
   const deck = flashcardsDeckSchema.parse({
     title: plan.title,
     description: plan.description,

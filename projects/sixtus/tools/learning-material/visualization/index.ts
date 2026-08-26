@@ -36,7 +36,7 @@ const createVisualizationInputSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("interactive"),
     instruction: z.string().min(1).describe(
-      "A self-contained plan for the interactive widget: what concept to show, what appears on screen, what the student can manipulate, and how the visualization responds.",
+      "A self-contained plan for the interactive widget: what concept to show, what appears on screen, what the learner can manipulate, and how the visualization responds.",
     ),
   }),
 ]);
@@ -83,7 +83,7 @@ export async function createVisualization(
 
 export const visualizationTool = tool({
   description:
-    "Create a visualization of one idea to teach the student visually. Shown alongside a written response, it carries the visual part of the explanation. Choose the type that best fits the concept: 'static' for structure or relationships, 'animation' for change over time and processes, 'interactive' for concepts best understood by manipulating parameters.",
+    "Create a visualization of one idea to teach the learner visually. Shown alongside a written response, it carries the visual part of the explanation. Choose the type that best fits the concept: 'static' for structure or relationships, 'animation' for change over time and processes, 'interactive' for concepts best understood by manipulating parameters.",
   inputSchema: createVisualizationInputSchema,
   outputSchema: visualizationOutputSchema,
   execute: createVisualization,

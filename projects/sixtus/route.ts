@@ -5,15 +5,17 @@ import { createZodJsonBodyMiddleware } from "../../helper/hono.ts";
 import { createRealtimeClientSecret } from "../../lib/openai.ts";
 import { sixtusAuthMiddleware, type SixtusEnv } from "./auth.ts";
 import { createSixtusUIMessageStream } from "./chat.ts";
+import { contextLookupRoutes } from "./context-lookup/route.ts";
 import { deleteLibraryItem, listLibraryItems } from "./database/index.ts";
 import { createLibraryRoutes } from "./library/routes.ts";
 import { searchLibrary } from "./library/search.ts";
 import { handleLibraryUpload } from "./library/upload.ts";
+import { sixtusModelRoutes } from "./models/route.ts";
 import {
-  type SixtusRequest,
   type RealtimeClientSecretRequest,
-  sixtusRequestSchema,
   realtimeClientSecretRequestSchema,
+  type SixtusRequest,
+  sixtusRequestSchema,
 } from "./schema.ts";
 import { sixtusSubscriptionMiddleware } from "./subscription.ts";
 
@@ -42,7 +44,7 @@ sixtusRoutes.post("/test", (c) => {
 const parseSixtusChatBody = createZodJsonBodyMiddleware(sixtusRequestSchema, {
   code: "INVALID_CHAT_REQUEST",
   message:
-    "Expected a JSON body with messages, optional tutor_instructions/student_profile/memory, and optional model.",
+    "Expected a JSON body with messages, optional tutor_instructions/learner_profile/memory, and optional model.",
 });
 
 sixtusRoutes.post(
@@ -52,7 +54,9 @@ sixtusRoutes.post(
   (c: Context<SixtusChatEnv>) => {
     const request = c.get("parsedBody");
 
+    const user = c.get("sixtusUser");
     const stream = createSixtusUIMessageStream(request, {
+      userId: user.id,
       onError: (error) => {
         console.error("Sixtus stream failed", error);
         return "Sixtus hit an error while generating the response. Please try again.";
@@ -63,7 +67,9 @@ sixtusRoutes.post(
   },
 );
 
+sixtusRoutes.route("/context-lookup", contextLookupRoutes);
 sixtusRoutes.route("/library", libraryRoutes);
+sixtusRoutes.route("/models", sixtusModelRoutes);
 
 sixtusRoutes.post(
   "/realtime/client-secret",

@@ -8,6 +8,27 @@ const parallel = new Parallel({
   apiKey: Deno.env.get('PARALLEL_API_KEY'),
 });
 
+export type WebSearchMode = 'turbo' | 'fast' | 'basic' | 'advanced';
+
+export async function searchWeb(
+  params: {
+    search_queries: string[];
+    objective?: string | null;
+    mode?: WebSearchMode;
+    max_results?: number;
+  },
+  options?: { signal?: AbortSignal },
+) {
+  return await parallel.search(
+    {
+      search_queries: params.search_queries,
+      objective: params.objective,
+      mode: params.mode ?? 'turbo',
+      advanced_settings: { max_results: params.max_results ?? 10 },
+    },
+    { signal: options?.signal },
+  );
+}
 
 export const webSearch = tool({
   description: 'Search the web for information.',
@@ -15,19 +36,16 @@ export const webSearch = tool({
     search_queries: z.array(z.string()).min(1).describe('Keyword search queries'),
     objective: z.string().nullable().optional().describe("The user's question"),
     mode: z
-      .enum(['turbo', 'basic', 'advanced'])
+      .enum(['turbo', 'fast', 'basic', 'advanced'])
       .optional()
       .default('turbo')
-      .describe('Use turbo for simple lookups, basic for typical research, advanced for multi-hop or deep queries; defaults to turbo.'),
+      .describe(
+        'Use turbo for simple lookups, fast for typical agent search, basic for extended snippets, advanced for multi-hop or deep queries; defaults to turbo.',
+      ),
   }),
   execute: async ({ search_queries, objective, mode }, { abortSignal }) => {
-    return await parallel.search(
-      {
-        search_queries,
-        objective,
-        mode,
-        advanced_settings: { max_results: 10 },
-      },
+    return await searchWeb(
+      { search_queries, objective, mode },
       { signal: abortSignal },
     );
   },

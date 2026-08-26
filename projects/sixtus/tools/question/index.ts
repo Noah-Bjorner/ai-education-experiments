@@ -2,19 +2,19 @@ import { tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 import { imageSearchSelector } from "../shared/image-search-selector/index.ts";
 
-export const QUESTION_TOOL_DESCRIPTION = "Create a question for the student to answer, to practice or quickly check their understanding.";
+export const QUESTION_TOOL_DESCRIPTION = "Create a question for the learner to answer, to practice or quickly check their understanding.";
 export const QUESTION_TYPE_GUIDANCE = [
   "  - multiple_choice_text: default for quick conceptual checks or choosing among short text options.",
   "  - multiple_choice_image: when choices are best shown as pictures (identify the animal, artwork, diagram, flag). Provide a specific imageDescription per option; real image URLs are found automatically.",
-  "  - true_false: when the student should decide if a statement is true or false.",
-  "  - text_response: when the student should explain, define, or reflect in their own words.",
+  "  - true_false: when the learner should decide if a statement is true or false.",
+  "  - text_response: when the learner should explain, define, or reflect in their own words.",
   "  - math_response: when the answer is numeric, an equation, an expression, or unit-based.",
   "  - write_in_the_blank: when recalling vocabulary, formulas, steps, or sentence completions by typing. Use {{blankId}} markers.",
   "  - drag_and_drop_in_the_blank: like write_in_the_blank, but provide a pool of candidate options the learner drags into blanks. Use {{blankId}} markers.",
   "  - matching: when pairing related items, such as terms and definitions or examples and categories.",
 ].join("\n");
 export const QUESTION_SYSTEM_PROMPT_DESCRIPTION = [
-  "Use when you want the student to actively think, practice, or check understanding. Always use this tool for questions you want the learner to answer, not Markdown/plain text. Prefer the simplest questionType that matches the learning task:",
+  "Use when you want the learner to actively think, practice, or check understanding. Always use this tool for questions you want the learner to answer, not Markdown/plain text. Prefer the simplest questionType that matches the learning task:",
   QUESTION_TYPE_GUIDANCE,
 ].join("\n");
 

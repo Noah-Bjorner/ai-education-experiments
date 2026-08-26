@@ -74,7 +74,7 @@ const examInputSchema = baseAssessmentSchema.extend({
     "Required. Not shown to the learner. Private brief for the nested question generator. Include target question count, topics or skills to cover, preferred question types or mix when relevant, difficulty, what to emphasize, and what to avoid. Distill relevant chat context into this plan if relevant.",
   ),
   sourceMaterial: z.string().min(1).optional().describe(
-    "Optional. Not shown to the learner. Factual grounding for the nested question generator: key facts, definitions, or short excerpts from chat or files. Use when questions must stay accurate to specific taught content. Prefer a concise fact brief over a transcript dump. Use questionPlan for structure and focus; use sourceMaterial for the facts themselves.",
+    "Optional. Not shown to the learner. Factual grounding for the nested question generator: key facts, definitions, or short excerpts from gatherContext content/sources. Use when questions must stay accurate to specific taught content. Prefer a concise fact brief over a transcript dump. Use questionPlan for structure and focus; use sourceMaterial for the facts themselves.",
   ),
 });
 

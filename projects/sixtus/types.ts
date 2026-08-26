@@ -5,12 +5,13 @@ import type { LearningMaterialToolInvocation } from "./tools/learning-material/i
 import type { ObjectiveToolInvocation } from "./tools/objective/index.ts";
 import type { PromptSuggestionsToolInvocation } from "./tools/prompt-suggestions/index.ts";
 import type { QuestionToolInvocation } from "./tools/question/index.ts";
+import type { SearchLibraryContextToolInvocation } from "./tools/search-library-context/index.ts";
 import type { UserActionToolInvocation } from "./tools/user-action/index.ts";
-import type { SixtusToolName, sixtusTools } from "./tools/index.ts";
+import type { createSixtusTools, SixtusToolName } from "./tools/index.ts";
 
 export type { SixtusToolName } from "./tools/index.ts";
 
-export type SixtusUITools = InferUITools<typeof sixtusTools>;
+export type SixtusUITools = InferUITools<ReturnType<typeof createSixtusTools>>;
 export type SixtusToolInvocation =
   | AssessmentToolInvocation
   | LearningMaterialToolInvocation
@@ -18,6 +19,7 @@ export type SixtusToolInvocation =
   | PromptSuggestionsToolInvocation
   | QuestionToolInvocation
   | GatherContextToolInvocation
+  | SearchLibraryContextToolInvocation
   | UserActionToolInvocation;
 export type SixtusToolPartType = `tool-${SixtusToolName}`;
 export type SixtusDataTypes = Record<string, never>;
@@ -34,6 +36,7 @@ export const SIXTUS_TOOL_PART_TYPES = [
   "tool-promptSuggestions",
   "tool-question",
   "tool-gatherContext",
+  "tool-searchLibraryContext",
   "tool-userAction",
 ] as const satisfies readonly SixtusToolPartType[];
 
@@ -44,6 +47,7 @@ export const SIXTUS_TOOL_LABELS = {
   "tool-promptSuggestions": "Creating prompt suggestions...",
   "tool-question": "Creating a question...",
   "tool-gatherContext": "Gathering context...",
+  "tool-searchLibraryContext": "Searching the library...",
   "tool-userAction": "Requesting a user action...",
 } as const satisfies Record<SixtusToolPartType, string>;
 

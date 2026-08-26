@@ -1,14 +1,14 @@
 import { gatherContext } from "./index.ts";
 
 if (import.meta.main) {
-  const { text, durationSeconds, trace } = await gatherContext(
+  const { context, durationSeconds, trace } = await gatherContext(
     "What's the latest model from OpenAI?",
   );
-  console.log("text:", text);
+  console.log("content:", context.content);
+  console.log("sources:", context.sources);
   console.log("trace:", trace);
   console.log(`Time taken: ${durationSeconds.toFixed(2)} seconds`);
 }
-
 
 //"What's the latest model from Anthropic?"
 //"What day is it today?"

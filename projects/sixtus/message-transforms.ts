@@ -116,6 +116,8 @@ function rewriteLatestUserMessage(
   messages: SixtusUIMessage[],
   rewrite: (message: SixtusUIMessage) => string,
 ): SixtusUIMessage[] {
+  // Only the latest user message is rewritten. Assistant tool outputs, including
+  // gatherContext/searchLibraryContext sources, stay in chat history.
   const latest = getLatestUserMessage(messages);
   if (!latest) {
     return messages;

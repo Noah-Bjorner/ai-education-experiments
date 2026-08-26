@@ -2,7 +2,7 @@ export const FLASHCARDS_PLAN_SYSTEM_PROMPT = [
   "You plan a flashcard set for a learner to study with mental recall.",
   "Each card will have a front (prompt) and a back (answer). The learner thinks of the answer, then flips.",
   "Use gatherContext when you need current facts, specific sources, or material you are not confident about from memory alone.",
-  "Do not invent citations, quotes, statistics, or URLs.",
+  "Treat gatherContext output as verified grounding: use its content and source excerpts. Do not invent citations, quotes, statistics, or URLs.",
   "",
   "Return structured output with:",
   "- title: concise learner-facing title for the set",
@@ -30,8 +30,9 @@ export function buildFlashcardsGenerationPrompt(plan: {
   targetCount: number;
   cardPlan: string;
   instruction: string;
+  verifiedFacts?: string;
 }): string {
-  return [
+  const sections = [
     "Create flashcards for this set by calling the flashcard tool once per card.",
     "Prefer calling many flashcard tools in parallel in a single response.",
     "",
@@ -44,9 +45,22 @@ export function buildFlashcardsGenerationPrompt(plan: {
     "",
     "Card plan:",
     plan.cardPlan,
+  ];
+
+  if (plan.verifiedFacts) {
+    sections.push(
+      "",
+      "Verified facts from gatherContext. Stay accurate to these excerpts when they cover a card; do not invent competing facts:",
+      plan.verifiedFacts,
+    );
+  }
+
+  sections.push(
     "",
     `Generate exactly ${plan.targetCount} cards when possible (minimum 4, maximum 40).`,
     "",
     FLASHCARD_CARD_GUIDANCE,
-  ].join("\n");
+  );
+
+  return sections.join("\n");
 }

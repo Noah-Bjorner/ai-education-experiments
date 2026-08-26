@@ -1,9 +1,10 @@
 import { z } from "@zod";
 
 import {
-  STUDENT_PROFILE_DEFAULT,
+  LEARNER_PROFILE_DEFAULT,
   TUTOR_INSTRUCTIONS_DEFAULT,
 } from "./prompt.ts";
+import { sixtusModelSchema } from "./models/index.ts";
 import type { SixtusUIMessage } from "./types.ts";
 
 const messageRoleSchema = z.enum(["system", "user", "assistant"]);
@@ -25,47 +26,6 @@ function isUIMessage(value: unknown): value is SixtusUIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
-export const SIXTUS_GATEWAY_MODEL_CONFIG = {
-  "openai/gpt-5.6-luna": { reasoning: "high" },
-  "openai/gpt-5.6-terra": { reasoning: "high" },
-  "openai/gpt-5.6-sol": { reasoning: "medium" },
-  "anthropic/claude-sonnet-5": { reasoning: "high" },
-  "anthropic/claude-opus-5": { reasoning: "medium" },
-  "xai/grok-4.5": { reasoning: "high" },
-  "xai/grok-4.6": { reasoning: "high" },
-  "google/gemini-3.6-flash": { reasoning: "high" },
-  "google/gemini-3.7-flash": { reasoning: "high" },
-  "meta/muse-spark-1.1": { reasoning: "high" },
-  "zai/glm-5.2": { reasoning: "high" },
-  "zai/glm-5.2-fast": { reasoning: "high" },
-  "minimax/minimax-m3": { reasoning: "high" },
-  "alibaba/qwen3.7-max": { reasoning: "high" },
-} as const;
-
-export type SixtusGatewayModel = keyof typeof SIXTUS_GATEWAY_MODEL_CONFIG;
-
-export const SIXTUS_DEFAULT_MODEL =
-  "google/gemini-3.7-flash" as const satisfies SixtusGatewayModel;
-
-const SIXTUS_GATEWAY_MODELS = Object.keys(
-  SIXTUS_GATEWAY_MODEL_CONFIG,
-) as [SixtusGatewayModel, ...SixtusGatewayModel[]];
-
-export const SIXTUS_MODEL_OPTIONS = [
-  "auto",
-  ...SIXTUS_GATEWAY_MODELS,
-] as const;
-
-export type SixtusModelPickerOption =
-  typeof SIXTUS_MODEL_OPTIONS[number];
-
-const sixtusModelSchema = z
-  .enum(SIXTUS_MODEL_OPTIONS)
-  .default("auto")
-  .transform((value): SixtusGatewayModel =>
-    value === "auto" ? SIXTUS_DEFAULT_MODEL : value
-  );
-
 export const sixtusRequestSchema = z.object({
   messages: z.array(
     z.custom<SixtusUIMessage>(
@@ -74,15 +34,15 @@ export const sixtusRequestSchema = z.object({
     ),
   ),
   tutor_instructions: z.string().trim().max(10000, {
-      error: "tutor_instructions must be at most 10,000 characters.",
-    })
+    error: "tutor_instructions must be at most 10,000 characters.",
+  })
     .optional()
     .transform((value) => value || TUTOR_INSTRUCTIONS_DEFAULT),
-  student_profile: z.string().trim().max(10000, {
-      error: "student_profile must be at most 10,000 characters.",
-    })
+  learner_profile: z.string().trim().max(10000, {
+    error: "learner_profile must be at most 10,000 characters.",
+  })
     .optional()
-    .transform((value) => value || STUDENT_PROFILE_DEFAULT),
+    .transform((value) => value || LEARNER_PROFILE_DEFAULT),
   memory: z.string().trim().max(10000, {
     error: "memory must be at most 10,000 characters.",
   }).optional(),

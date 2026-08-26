@@ -15,6 +15,8 @@ This is a personal research project exploring ways to build AI tutor agents that
 
 ## ⚠️ Status 
 
+> Last updated: June 25, 2026.
+
 This project is still in an early experimental stage and is not production-ready. The current code includes a few initial tools, but the agent architecture and overall code quality still need significant work.
 
 The next step is to define a more complete initial toolset, structure the agent around it, and clean up the implementation into a usable first version. Once that foundation is in place, I plan to organize the project more clearly and document the main engineering decisions behind it.
@@ -41,9 +43,22 @@ Subscription enforcement is prepared but disabled by default. Set
 `SIXTUS_REQUIRE_ACTIVE_SUBSCRIPTION=true` only after the StoreKit entitlement
 sync writes trusted rows to `subscription_entitlements`.
 
+## Citations
+
+Sixtus stores citations in the chat transcript. There is no citation database and no server-side chat store.
+
+1. Source-producing tools (`gatherContext`, `searchLibraryContext`) return `{ content, sources[] }`.
+2. Each source has a server-generated `id` such as `src_callabc_1`, plus title, URL, and excerpt taken from the retrieval provider — not from the model.
+3. AI SDK stores that object on the assistant message as a `tool-*` part. The client resends the same `UIMessage` history on later turns.
+4. Learner-facing text cites with `<citation ref="SOURCE_ID" />`. The client should resolve a tag by scanning source-producing tool outputs in the same assistant message, then earlier messages.
+
+Deleting a chat deletes its citations. This is reliable for normal app use. It is not tamper-proof: a client that edits old tool outputs can change stored source records. Server-authoritative citations would require persistence later.
+
+Downloadable documents keep citations self-contained: valid `<citation>` tags are rewritten to `[1]` markers and a generated `## Sources` footer before upload.
+
 ## Tool Architecture
 
-> Last updated: June 25, 2026. This diagram may be out of date.
+> Last updated: August 26, 2026. This diagram may be out of date.
 
 ```mermaid
 graph TD
@@ -54,6 +69,7 @@ graph TD
   Agent --> Question
   Agent --> Assessment
   Agent --> GatherContext
+  Agent --> SearchLibraryContext
   Agent --> PromptSuggestions
 
   Objective
@@ -81,6 +97,8 @@ graph TD
 
   GatherContext --> WebSearch[WebSearch]
   GatherContext --> URLReading[URLReading]
+  GatherContext --> Transcript[VideoTranscript]
+  SearchLibraryContext --> LibrarySearch[LibrarySearch]
 ```
 
 ## Author

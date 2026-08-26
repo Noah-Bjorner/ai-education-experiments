@@ -8,6 +8,8 @@ import {
 } from "@ai";
 import { z } from "@zod";
 
+import { collectCitationSourcesFromToolResults } from "../../../citations/extract.ts";
+import { rewriteDocumentCitations } from "../../../citations/format.ts";
 import { uploadDocument } from "../../../../../lib/cloudflare.ts";
 import { gatherContextTool } from "../../gather-context/index.ts";
 import { visualizationTool } from "../visualization/index.ts";
@@ -87,7 +89,7 @@ function buildDocumentFileName(title: string): string {
 async function generateDocumentContent(
   options: CreateDocumentOptions,
 ): Promise<z.infer<typeof documentAgentOutputSchema>> {
-  const { output } = await generateText({
+  const result = await generateText({
     model: DOCUMENT_GENERATOR_MODEL,
     reasoning: DOCUMENT_GENERATOR_REASONING,
     system: buildDocumentSystemPrompt(options.type),
@@ -105,11 +107,15 @@ async function generateDocumentContent(
     }),
   });
 
-  if (!output) {
+  if (!result.output) {
     throw new Error("Document generation produced no structured output.");
   }
 
-  return output;
+  const sources = collectCitationSourcesFromToolResults(result.staticToolResults);
+  return {
+    ...result.output,
+    markdown: rewriteDocumentCitations(result.output.markdown, sources),
+  };
 }
 
 async function uploadMarkdownDocument(

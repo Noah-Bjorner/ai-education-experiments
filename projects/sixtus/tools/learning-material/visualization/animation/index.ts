@@ -66,7 +66,7 @@ export async function createDemonstration(
 
 export const demonstrationTool = tool({
   description:
-    "Create a short motion-graphic visualization of one idea to teach the student visually. Shown alongside a written response, it carries the visual part of the explanation.",
+    "Create a short motion-graphic visualization of one idea to teach the learner visually. Shown alongside a written response, it carries the visual part of the explanation.",
   inputSchema: createDemonstrationInputSchema,
   outputSchema: demonstrationOutputSchema,
   execute: createDemonstration,

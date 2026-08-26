@@ -2,7 +2,7 @@ import { tool, type UIToolInvocation } from "@ai";
 import { z } from "@zod";
 
 export const OBJECTIVE_TOOL_DESCRIPTION = "Create or update the current learning objective and checkpoint statuses.";
-export const OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION = "Use when setting or updating the current learning objective. Follow the objective + checkpoints framework, and keep checkpoint statuses current. If the learner drops an objective or switches topics, mark it abandoned before starting a new one.";
+export const OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION = "Use when setting or updating the current learning objective. Follow the objective + checkpoints framework, and keep checkpoint statuses current. Give the objective and each checkpoint a short title. Use demonstrates for what the learner must be able to do. If the learner drops an objective or switches topics, mark it abandoned before starting a new one.";
 
 const checkpointStatusSchema = z.enum([
   "not_started",
@@ -19,7 +19,7 @@ const objectiveStatusSchema = z.enum([
 
 const checkpointSchema = z.object({
   id: z.string().min(1).describe("Stable checkpoint id."),
-  title: z.string().min(1).describe("Short learner-facing checkpoint title."),
+  title: z.string().min(1).describe("Short title for this checkpoint."),
   status: checkpointStatusSchema.describe(
     "Current progress toward this checkpoint.",
   ),
@@ -29,9 +29,7 @@ const checkpointSchema = z.object({
 });
 
 export const objectiveSchema = z.object({
-  objective: z.string().min(1).describe(
-    "What the learner should understand or be able to do.",
-  ),
+  objective: z.string().min(1).describe("Short title for the learning goal."),
   status: objectiveStatusSchema.describe(
     "Current status of the overall objective. Use completed only when the learner has demonstrated all checkpoints; use abandoned when the learner drops the objective or switches topics before finishing.",
   ),

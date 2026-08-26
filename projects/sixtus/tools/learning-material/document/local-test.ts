@@ -19,10 +19,10 @@ if (import.meta.main) {
 EXAMPLES
 
 - cheatSheet -> write a cheat sheet for the new testaments
-- cheatSheet -> student wants to learn about the odyssey
-- deepResearch -> student wants to learn the causes that lead to the ideology of the nazis
-- primer -> student wants to learn about the odyssey
-- studyGuide -> student wants to learn the causes that lead to the ideology of the nazis
+- cheatSheet -> learner wants to learn about the odyssey
+- deepResearch -> learner wants to learn the causes that lead to the ideology of the nazis
+- primer -> learner wants to learn about the odyssey
+- studyGuide -> learner wants to learn the causes that lead to the ideology of the nazis
 - studyGuide -> learn about the new testament
 
 
