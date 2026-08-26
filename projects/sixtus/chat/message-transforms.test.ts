@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 
+import type { SixtusUIMessage } from "../types.ts";
 import { transformMessages } from "./message-transforms.ts";
-import type { SixtusUIMessage } from "./types.ts";
 
 Deno.test("transformMessages rewrites only the latest user message and keeps assistant tool sources", () => {
   const gatherPart = {

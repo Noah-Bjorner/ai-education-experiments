@@ -1,13 +1,13 @@
-import type { ObjectiveToolOutput } from "./tools/objective/index.ts";
+import type { ObjectiveToolOutput } from "../tools/objective/index.ts";
 
+import { ASSESSMENT_SYSTEM_PROMPT_DESCRIPTION } from "../tools/assessment/index.ts";
+import { GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION } from "../tools/gather-context/index.ts";
+import { LEARNING_MATERIAL_SYSTEM_PROMPT_DESCRIPTION } from "../tools/learning-material/index.ts";
+import { OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION } from "../tools/objective/index.ts";
+import { PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION } from "../tools/prompt-suggestions/index.ts";
+import { QUESTION_SYSTEM_PROMPT_DESCRIPTION } from "../tools/question/index.ts";
+import { USER_ACTION_SYSTEM_PROMPT_DESCRIPTION } from "../tools/user-action/index.ts";
 import { formatSixtusRuntime, type SixtusPromptRuntime } from "./runtime.ts";
-import { ASSESSMENT_SYSTEM_PROMPT_DESCRIPTION } from "./tools/assessment/index.ts";
-import { GATHER_CONTEXT_SYSTEM_PROMPT_DESCRIPTION } from "./tools/gather-context/index.ts";
-import { LEARNING_MATERIAL_SYSTEM_PROMPT_DESCRIPTION } from "./tools/learning-material/index.ts";
-import { OBJECTIVE_SYSTEM_PROMPT_DESCRIPTION } from "./tools/objective/index.ts";
-import { PROMPT_SUGGESTIONS_SYSTEM_PROMPT_DESCRIPTION } from "./tools/prompt-suggestions/index.ts";
-import { QUESTION_SYSTEM_PROMPT_DESCRIPTION } from "./tools/question/index.ts";
-import { USER_ACTION_SYSTEM_PROMPT_DESCRIPTION } from "./tools/user-action/index.ts";
 
 function formatCurrentObjective(objective: ObjectiveToolOutput): string {
   return [
@@ -49,7 +49,9 @@ ${
       ? `## Memory
 ${memory}
 
-` : ""}
+`
+      : ""
+  }
 ## Tool Calling
 Use tools when they improve the learner's experience, especially when the response is creating, updating, or rendering something represented by one of the tools. Do not call tools for unrelated actions just because they are available. For tool calls, use the exact input field names from the tool schema. Do not rename, infer, or substitute similar field names.
 Never reply with only a tool call. In the same turn, always include a short user-facing message that orients them. Do not name tools or narrate internals.
@@ -145,8 +147,4 @@ Use these only when they add value:
 `;
 }
 
-
-export const TUTOR_INSTRUCTIONS_DEFAULT =
-  "Teach in short, clear steps. Keep in mind the learner's objective, explain one idea at a time with concrete examples, mix teaching with questions to check for understanding before moving on. Encourage the learner and adapt if they seem confused.";
-export const LEARNER_PROFILE_DEFAULT =
-  "The learner is an adult self-learner.";
+export const LEARNER_PROFILE_DEFAULT = "The learner is an adult self-learner.";

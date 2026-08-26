@@ -1,10 +1,11 @@
 import { z } from "@zod";
 
-import {
-  LEARNER_PROFILE_DEFAULT,
-  TUTOR_INSTRUCTIONS_DEFAULT,
-} from "./prompt.ts";
 import { sixtusModelSchema } from "./models/index.ts";
+import {
+  TUTOR_STYLE_DEFAULT,
+  TUTOR_STYLE_MAX,
+  TUTOR_STYLE_MIN,
+} from "./chat/tutor-style.ts";
 import type { SixtusUIMessage } from "./types.ts";
 
 const messageRoleSchema = z.enum(["system", "user", "assistant"]);
@@ -33,19 +34,8 @@ export const sixtusRequestSchema = z.object({
       "Expected an AI SDK UIMessage with id, role, and parts.",
     ),
   ),
-  tutor_instructions: z.string().trim().max(10000, {
-    error: "tutor_instructions must be at most 10,000 characters.",
-  })
-    .optional()
-    .transform((value) => value || TUTOR_INSTRUCTIONS_DEFAULT),
-  learner_profile: z.string().trim().max(10000, {
-    error: "learner_profile must be at most 10,000 characters.",
-  })
-    .optional()
-    .transform((value) => value || LEARNER_PROFILE_DEFAULT),
-  memory: z.string().trim().max(10000, {
-    error: "memory must be at most 10,000 characters.",
-  }).optional(),
+  tutor_style: z.number().int().min(TUTOR_STYLE_MIN).max(TUTOR_STYLE_MAX)
+    .default(TUTOR_STYLE_DEFAULT),
   model: sixtusModelSchema,
   space_id: z.string().trim().max(500, {
     error: "space_id must be at most 500 characters.",

@@ -3,8 +3,8 @@ import { z } from "@zod";
 import {
   ASSESSMENT_TYPES,
   type AssessmentType,
-} from "./tools/assessment/index.ts";
-import type { SixtusUIMessage } from "./types.ts";
+} from "../tools/assessment/index.ts";
+import type { SixtusUIMessage } from "../types.ts";
 
 export const USER_TURN_TYPES = [
   "assessment_submission",
@@ -248,7 +248,9 @@ function formatQuestionAnswer(message: SixtusUIMessage): string {
   return sections.join("\n");
 }
 
-export function transformMessages(messages: SixtusUIMessage[]): SixtusUIMessage[] {
+export function transformMessages(
+  messages: SixtusUIMessage[],
+): SixtusUIMessage[] {
   const latest = getLatestUserMessage(messages);
   if (!latest) {
     return messages;

@@ -27,7 +27,7 @@ import { formatGroundedContextForModel, rewriteDocumentCitations } from "./forma
 import { citationEvalCases } from "./eval-cases.ts";
 import { runCitationEval } from "./eval.ts";
 import { createSixtusTools } from "../tools/index.ts";
-import { createSixtusSystemPrompt } from "../prompt.ts";
+import { createSixtusSystemPrompt } from "../chat/prompt.ts";
 
 Deno.test("createCitationId sanitizes toolCallId and stays unique per index", () => {
   assertEquals(createCitationId("call_abc", 1), "src_call_abc_1");

@@ -4,7 +4,7 @@ import { createUIMessageStreamResponse } from "@ai";
 import { createZodJsonBodyMiddleware } from "../../helper/hono.ts";
 import { createRealtimeClientSecret } from "../../lib/openai.ts";
 import { sixtusAuthMiddleware, type SixtusEnv } from "./auth.ts";
-import { createSixtusUIMessageStream } from "./chat.ts";
+import { createSixtusUIMessageStream } from "./chat/index.ts";
 import { contextLookupRoutes } from "./context-lookup/route.ts";
 import { deleteLibraryItem, listLibraryItems } from "./database/index.ts";
 import { createLibraryRoutes } from "./library/routes.ts";
@@ -44,7 +44,7 @@ sixtusRoutes.post("/test", (c) => {
 const parseSixtusChatBody = createZodJsonBodyMiddleware(sixtusRequestSchema, {
   code: "INVALID_CHAT_REQUEST",
   message:
-    "Expected a JSON body with messages, optional tutor_instructions/learner_profile/memory, and optional model.",
+    "Expected a JSON body with messages, optional tutor_style, and optional model.",
 });
 
 sixtusRoutes.post(
