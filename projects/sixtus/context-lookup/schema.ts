@@ -22,6 +22,7 @@ export const contextLookupResultSchema = z.object({
   term: z.string().min(1),
   explanation: z.string(),
   sources: z.array(contextLookupSourceSchema),
+  images: z.array(z.string().url()),
 });
 
 export type ContextLookupRequest = z.infer<typeof contextLookupRequestSchema>;

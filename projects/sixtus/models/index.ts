@@ -117,6 +117,14 @@ export const SIXTUS_MODELS = {
     tps: 205,
     reasoningEffort: "high",
   },
+  "zai/glm-5.3-flash": {
+    id: "zai/glm-5.3-flash",
+    name: "GLM-5.3 Flash",
+    releaseDate: "2026-08-27",
+    intelligence: 57,
+    tps: 150,
+    reasoningEffort: "high",
+  },
 } as const satisfies Record<string, SixtusModel>;
 
 export type SixtusGatewayModel = keyof typeof SIXTUS_MODELS;

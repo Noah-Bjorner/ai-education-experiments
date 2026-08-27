@@ -3,15 +3,18 @@ import { generateText } from "@ai";
 import { detect } from "tinyld";
 
 import { searchWeb } from "../../../lib/parallel.ts";
+import { imageSearch } from "../../../lib/serper.ts";
 import {
-  normalizeWebSearchResult,
   type CitationSourceDraft,
+  normalizeWebSearchResult,
 } from "../citations/normalize.ts";
 import type { ContextLookupRequest, ContextLookupResult } from "./schema.ts";
 
 const MAX_LOOKUP_SOURCES = 5;
 
-const languageDisplayNames = new Intl.DisplayNames(["en"], { type: "language" });
+const languageDisplayNames = new Intl.DisplayNames(["en"], {
+  type: "language",
+});
 
 function detectResponseLanguage(text: string): string {
   const code = detect(text);
@@ -53,19 +56,23 @@ export async function generateContextLookup(
     throw new Error("AI_GATEWAY_API_KEY is required to run Sixtus.");
   }
   const language = detectResponseLanguage(context_message);
-    // -> use term + language for potential cached result later if needed
+  // -> use term + language for potential cached result later if needed
 
-  const search = await searchWeb({
-    search_queries: [term, `${term} definition`],
-    objective:
-      `Extract a concise encyclopedic definition of "${term}": what it is, its primary sense, and 1-2 distinguishing facts. Prefer encyclopedia entries, textbooks, and official reference pages. Ignore navigation, ads, footers, and forum or Q&A threads asking what the word means.`,
-    mode: "fast",
-    max_results: MAX_LOOKUP_SOURCES,
-  });
+  const [search, imageResults] = await Promise.all([
+    searchWeb({
+      search_queries: [term, `${term} definition`],
+      objective:
+        `Extract a concise encyclopedic definition of "${term}": what it is, its primary sense, and 1-2 distinguishing facts. Prefer encyclopedia entries, textbooks, and official reference pages. Ignore navigation, ads, footers, and forum or Q&A threads asking what the word means.`,
+      mode: "fast",
+      max_results: MAX_LOOKUP_SOURCES,
+    }),
+    imageSearch({ q: term, num: 3 }),
+  ]);
   const drafts = normalizeWebSearchResult(search).slice(0, MAX_LOOKUP_SOURCES);
   const sources = drafts.flatMap((draft) =>
     draft.url ? [{ title: draft.title, url: draft.url }] : []
   );
+  const images = imageResults.map((image) => image.url);
 
   const system = contextLookupSystemPrompt(language);
   const prompt = [
@@ -84,12 +91,13 @@ export async function generateContextLookup(
       gateway: {
         only: ["cerebras"],
       },
-    },  
+    },
   });
 
   return {
     term,
     explanation: text.trim(),
     sources,
+    images,
   };
 }
