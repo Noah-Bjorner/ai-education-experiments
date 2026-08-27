@@ -66,7 +66,7 @@ export async function generateContextLookup(
       mode: "fast",
       max_results: MAX_LOOKUP_SOURCES,
     }),
-    imageSearch({ q: term, num: 3 }),
+    imageSearch({ q: term, num: 5, download: false }),
   ]);
   const drafts = normalizeWebSearchResult(search).slice(0, MAX_LOOKUP_SOURCES);
   const sources = drafts.flatMap((draft) =>

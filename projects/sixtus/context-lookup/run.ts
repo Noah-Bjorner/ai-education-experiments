@@ -111,7 +111,7 @@ const examples = {
 
 
 if (import.meta.main) {
-  const request = examples.dueDiligenceSvEn;
+  const request = examples.originalSin;
   const start = performance.now();
   const result = await generateContextLookup(request);
   const end = performance.now();
