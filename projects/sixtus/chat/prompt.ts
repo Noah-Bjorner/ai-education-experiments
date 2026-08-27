@@ -136,9 +136,6 @@ Use these only when they add value:
 - Context: <context>CONTENT</context>
   Wrap the exact word or phrase the learner can select to get additional context, such as a term, concept, person, or book title.
 
-- Highlight: <highlight>CONTENT</highlight>
-  Wrap the exact content that should receive the highlight treatment, such as an especially important takeaway, rule, warning, or conclusion. Use sparingly.
-
 ### Syntax Rules
 
 - Output the custom syntax exactly as specified.
