@@ -16,6 +16,7 @@
     "npm:@google/genai@*": "1.41.0",
     "npm:@neondatabase/serverless@1.0.2": "1.0.2",
     "npm:@trigger.dev/sdk@4.4.6": "4.4.6_ai@7.0.3__zod@4.4.3_zod@4.4.3",
+    "npm:@upstash/redis@*": "1.38.3",
     "npm:ai@*": "7.0.3_zod@4.4.3",
     "npm:ai@7": "7.0.3_zod@4.4.3",
     "npm:ai@7.0.3": "7.0.3_zod@4.4.3",
@@ -1586,6 +1587,12 @@
         "pg-types"
       ]
     },
+    "@upstash/redis@1.38.3": {
+      "integrity": "sha512-vtS0BonQHU6kDSWvHTISh+LOuLIEk+jeMXebv20CDJ/aHGOG085SGa8OpI+I+Ow8WgPFhqH23XG8kQ2LXXRnag==",
+      "dependencies": [
+        "uncrypto"
+      ]
+    },
     "@vercel/oidc@3.2.0": {
       "integrity": "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug=="
     },
@@ -2447,6 +2454,7 @@
       "npm:@google/genai@*",
       "npm:@neondatabase/serverless@1.0.2",
       "npm:@trigger.dev/sdk@4.4.6",
+      "npm:@upstash/redis@*",
       "npm:ai@7",
       "npm:esbuild@~0.28.1",
       "npm:groq-sdk@*",

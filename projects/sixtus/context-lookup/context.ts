@@ -5,10 +5,18 @@ import { detect } from "tinyld";
 import { searchWeb } from "../../../lib/parallel.ts";
 import { imageSearch } from "../../../lib/serper.ts";
 import {
+  getSixtusRedisCache,
+  setSixtusRedisCache,
+} from "../../../lib/upstash.ts";
+import {
   type CitationSourceDraft,
   normalizeWebSearchResult,
 } from "../citations/normalize.ts";
-import type { ContextLookupRequest, ContextLookupResult } from "./schema.ts";
+import {
+  type ContextLookupRequest,
+  type ContextLookupResult,
+  contextLookupResultSchema,
+} from "./schema.ts";
 
 const MAX_LOOKUP_SOURCES = 5;
 
@@ -22,6 +30,38 @@ function detectResponseLanguage(text: string): string {
   return languageDisplayNames.of(code) ?? "English";
 }
 
+function contextLookupCacheKey(term: string, language: string): string {
+  const normalizedLanguage = language.trim().toLowerCase();
+  const normalizedTerm = term.trim().toLowerCase().replace(/\s+/g, " ");
+  return `sixtus:context-lookup:${normalizedLanguage}:${normalizedTerm}`;
+}
+
+async function readContextLookupCache(
+  cacheKey: string,
+): Promise<ContextLookupResult | null> {
+  try {
+    const cached = await getSixtusRedisCache<ContextLookupResult>(cacheKey);
+    if (!cached) return null;
+    const parsed = contextLookupResultSchema.safeParse(cached);
+    return parsed.success ? parsed.data : null;
+  } catch (error) {
+    console.error("Sixtus context lookup cache read failed", error);
+    return null;
+  }
+}
+
+async function writeContextLookupCache(
+  cacheKey: string,
+  result: ContextLookupResult,
+): Promise<void> {
+  try {
+    const ninetyDaysInSeconds = 60 * 60 * 24 * 90;
+    await setSixtusRedisCache(cacheKey, result, { ex: ninetyDaysInSeconds });
+  } catch (error) {
+    console.error("Sixtus context lookup cache write failed", error);
+  }
+}
+
 function contextLookupSystemPrompt(language: string): string {
   return `You write a short standalone card that answers "What does this term mean?"
 
@@ -30,7 +70,7 @@ function contextLookupSystemPrompt(language: string): string {
 - Explain the primary meaning from the search results. Mention other common meanings only when they would confuse a learner, in one clause.
 - If search results are missing or thin, say so briefly and only then use prior knowledge, marking uncertainty.
 - Write 2-5 sentences. Respond in ${language}.
-- Respond only in markdown: paragraphs, italics, and bold. No headings, tables, questions, citations, URLs, or a Sources section.`;
+- Respond only in plain text.`;
 }
 
 function formatSourcesForPrompt(sources: CitationSourceDraft[]): string {
@@ -56,7 +96,11 @@ export async function generateContextLookup(
     throw new Error("AI_GATEWAY_API_KEY is required to run Sixtus.");
   }
   const language = detectResponseLanguage(context_message);
-  // -> use term + language for potential cached result later if needed
+  const cacheKey = contextLookupCacheKey(term, language);
+  const cached = await readContextLookupCache(cacheKey);
+  if (cached) {
+    return { ...cached, term };
+  }
 
   const [search, imageResults] = await Promise.all([
     searchWeb({
@@ -94,10 +138,12 @@ export async function generateContextLookup(
     },
   });
 
-  return {
+  const result: ContextLookupResult = {
     term,
     explanation: text.trim(),
     sources,
     images,
   };
+  await writeContextLookupCache(cacheKey, result);
+  return result;
 }
