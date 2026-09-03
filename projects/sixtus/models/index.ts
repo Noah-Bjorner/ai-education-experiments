@@ -125,6 +125,22 @@ export const SIXTUS_MODELS = {
     tps: 150,
     reasoningEffort: "high",
   },
+  "google/gemini-3.8-flash": {
+    id: "google/gemini-3.8-flash",
+    name: "Gemini 3.8 Flash",
+    releaseDate: "2026-09-03",
+    intelligence: 59,
+    tps: 350,
+    reasoningEffort: "high",
+  },
+  "zai/glm-5.3-fast": {
+    id: "zai/glm-5.3-fast",
+    name: "GLM-5.3 Fast",
+    releaseDate: "2026-09-03",
+    intelligence: 60,
+    tps: 180,
+    reasoningEffort: "high",
+  },
 } as const satisfies Record<string, SixtusModel>;
 
 export type SixtusGatewayModel = keyof typeof SIXTUS_MODELS;
@@ -144,8 +160,8 @@ export function searchModelsByName(query: string): readonly SixtusModel[] {
 
 export const featuredModelIds = [
   "xai/grok-4.6",
-  "google/gemini-3.7-flash",
-  "openai/gpt-5.6-luna",
+  "google/gemini-3.8-flash",
+  "zai/glm-5.3-fast",
 ] as const satisfies readonly SixtusGatewayModel[];
 
 export const featuredInApp = Object.freeze(
@@ -160,8 +176,7 @@ const gatewayModelIds = all.map((model) => model.id) as [
 ];
 
 const AUTO_ID = "auto";
-export const SIXTUS_AUTO_MODEL =
-  "google/gemini-3.7-flash" as const satisfies SixtusGatewayModel;
+export const SIXTUS_AUTO_MODEL = "google/gemini-3.8-flash" as const satisfies SixtusGatewayModel;
 
 export const SIXTUS_MODEL_OPTIONS = [
   AUTO_ID,
