@@ -7,10 +7,12 @@ import { sixtusAuthMiddleware, type SixtusEnv } from "./auth.ts";
 import { createSixtusUIMessageStream } from "./chat/index.ts";
 import { contextLookupRoutes } from "./context-lookup/route.ts";
 import { deleteLibraryItem, listLibraryItems } from "./database/index.ts";
+import { glossaryRoutes } from "./glossary/route.ts";
 import { createLibraryRoutes } from "./library/routes.ts";
 import { searchLibrary } from "./library/search.ts";
 import { handleLibraryUpload } from "./library/upload.ts";
 import { sixtusModelRoutes } from "./models/route.ts";
+import { tangentRoutes } from "./tangent/route.ts";
 import {
   type RealtimeClientSecretRequest,
   realtimeClientSecretRequestSchema,
@@ -68,8 +70,10 @@ sixtusRoutes.post(
 );
 
 sixtusRoutes.route("/context-lookup", contextLookupRoutes);
+sixtusRoutes.route("/glossary", glossaryRoutes);
 sixtusRoutes.route("/library", libraryRoutes);
 sixtusRoutes.route("/models", sixtusModelRoutes);
+sixtusRoutes.route("/tangent", tangentRoutes);
 
 sixtusRoutes.post(
   "/realtime/client-secret",

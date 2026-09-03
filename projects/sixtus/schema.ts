@@ -27,13 +27,13 @@ function isUIMessage(value: unknown): value is SixtusUIMessage {
     parts.every((part) => isRecord(part) && typeof part.type === "string");
 }
 
+export const sixtusUIMessageSchema = z.custom<SixtusUIMessage>(
+  isUIMessage,
+  "Expected an AI SDK UIMessage with id, role, and parts.",
+);
+
 export const sixtusRequestSchema = z.object({
-  messages: z.array(
-    z.custom<SixtusUIMessage>(
-      isUIMessage,
-      "Expected an AI SDK UIMessage with id, role, and parts.",
-    ),
-  ),
+  messages: z.array(sixtusUIMessageSchema),
   tutor_style: z.number().int().min(TUTOR_STYLE_MIN).max(TUTOR_STYLE_MAX)
     .default(TUTOR_STYLE_DEFAULT),
   model: sixtusModelSchema,
