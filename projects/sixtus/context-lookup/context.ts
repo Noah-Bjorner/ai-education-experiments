@@ -129,6 +129,7 @@ export async function generateContextLookup(
 
   const { text } = await generateText({
     model: "google/gemma-4-31b-it", //update to qwen3.8-27b when it's available sep 3
+    reasoning: "medium",
     system,
     prompt,
     providerOptions: {
