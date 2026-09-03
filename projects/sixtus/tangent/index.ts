@@ -7,16 +7,10 @@ import {
 } from "@ai";
 
 import { formatSixtusRuntime } from "../chat/runtime.ts";
-import {
-  SIXTUS_MODELS,
-  type SixtusGatewayModel,
-  type SixtusModel,
-} from "../models/index.ts";
 import type { SixtusUIMessage } from "../types.ts";
 import { TANGENT_SYSTEM_PROMPT } from "./prompt.ts";
 import type { TangentRequest } from "./schema.ts";
 
-const TANGENT_MODEL: SixtusGatewayModel = "google/gemini-3.8-flash";
 
 const KEPT_PART_TYPES = new Set(["text", "file", "reasoning"]);
 
@@ -42,24 +36,19 @@ export async function streamTangent({ messages }: TangentRequest) {
   }
 
   const gateway = createGateway({ apiKey });
-  const model = gateway(TANGENT_MODEL);
-  const modelConfig: SixtusModel = SIXTUS_MODELS[TANGENT_MODEL];
+  const model = gateway("google/gemma-4-31b-it");
   const modelMessages = await convertToModelMessages(
     stripToolAndDataParts(messages),
-  );
-
+  )
+  
   return streamText({
     model,
-    reasoning: modelConfig.reasoningEffort,
-    ...(modelConfig.provider
-      ? {
-        providerOptions: {
-          gateway: {
-            only: [modelConfig.provider],
-          },
-        },
-      }
-      : {}),
+    reasoning: "low",
+    providerOptions: {
+      gateway: {
+        only: ["cerebras"],
+      },
+    },
     system: [TANGENT_SYSTEM_PROMPT, formatSixtusRuntime()].join("\n\n"),
     messages: modelMessages,
   });
