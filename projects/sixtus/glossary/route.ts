@@ -2,7 +2,6 @@ import { type Context, Hono } from "@hono/hono";
 
 import { createZodJsonBodyMiddleware } from "../../../helper/hono.ts";
 import type { SixtusEnv } from "../auth.ts";
-import { sixtusSubscriptionMiddleware } from "../subscription.ts";
 import { generateGlossary } from "./index.ts";
 import { type GlossaryRequest, glossaryRequestSchema } from "./schema.ts";
 
@@ -21,7 +20,6 @@ const parseGlossaryBody = createZodJsonBodyMiddleware(glossaryRequestSchema, {
 
 glossaryRoutes.post(
   "/",
-  sixtusSubscriptionMiddleware,
   parseGlossaryBody,
   async (c: Context<GlossaryEnv>) => {
     const request = c.get("parsedBody");

@@ -2,7 +2,6 @@ import { type Context, Hono } from "@hono/hono";
 
 import { createZodJsonBodyMiddleware } from "../../../helper/hono.ts";
 import type { SixtusEnv } from "../auth.ts";
-import { sixtusSubscriptionMiddleware } from "../subscription.ts";
 import { generateContextLookup } from "./context.ts";
 import {
   type ContextLookupRequest,
@@ -27,7 +26,6 @@ const parseContextLookupBody = createZodJsonBodyMiddleware(
 
 contextLookupRoutes.post(
   "/",
-  sixtusSubscriptionMiddleware,
   parseContextLookupBody,
   async (c: Context<ContextLookupEnv>) => {
     const request = c.get("parsedBody");
