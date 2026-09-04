@@ -1,6 +1,7 @@
 import "@std/dotenv/load";
 import { generateText } from "@ai";
 import { detect } from "tinyld";
+import { cerebras } from "../../../lib/cerebras.ts";
 
 import { searchWeb } from "../../../lib/parallel.ts";
 import { imageSearch } from "../../../lib/serper.ts";
@@ -128,15 +129,12 @@ export async function generateContextLookup(
   ].join("\n");
 
   const { text } = await generateText({
-    model: "google/gemma-4-31b-it", //update to qwen3.8-27b when it's available sep 3
-    reasoning: "medium",
+    model: cerebras("qwen-3.8-27b"),
     system,
     prompt,
     providerOptions: {
-      gateway: {
-        only: ["cerebras"],
-      },
-    },
+      cerebras: { reasoningEffort: "medium" },
+    },  
   });
 
   const result: ContextLookupResult = {

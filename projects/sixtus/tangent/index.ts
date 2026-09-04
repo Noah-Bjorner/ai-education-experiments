@@ -1,11 +1,10 @@
 import "@std/dotenv/load";
 import {
   convertToModelMessages,
-  createGateway,
   createUIMessageStream,
   streamText,
 } from "@ai";
-
+import { cerebras } from "../../../lib/cerebras.ts";
 import { formatSixtusRuntime } from "../chat/runtime.ts";
 import type { SixtusUIMessage } from "../types.ts";
 import { TANGENT_SYSTEM_PROMPT } from "./prompt.ts";
@@ -35,20 +34,15 @@ export async function streamTangent({ messages }: TangentRequest) {
     throw new Error("AI_GATEWAY_API_KEY is required to run Sixtus.");
   }
 
-  const gateway = createGateway({ apiKey });
-  const model = gateway("google/gemma-4-31b-it");
   const modelMessages = await convertToModelMessages(
     stripToolAndDataParts(messages),
   )
-  
+
   return streamText({
-    model,
-    reasoning: "low",
+    model: cerebras("qwen-3.8-27b"),
     providerOptions: {
-      gateway: {
-        only: ["cerebras"],
-      },
-    },
+      cerebras: { reasoningEffort: "medium" },
+    },  
     system: [TANGENT_SYSTEM_PROMPT, formatSixtusRuntime()].join("\n\n"),
     messages: modelMessages,
   });

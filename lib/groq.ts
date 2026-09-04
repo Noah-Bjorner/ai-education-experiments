@@ -1,6 +1,5 @@
 import "@std/dotenv/load";
 import Groq, { toFile } from "@groq";
-import { fileFromUrl } from "../helper/file.ts";
 
 const groq = new Groq({
   apiKey: Deno.env.get("GROQ_API_KEY"),

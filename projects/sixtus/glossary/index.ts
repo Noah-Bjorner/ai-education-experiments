@@ -5,6 +5,8 @@ import type { SixtusUIMessage } from "../types.ts";
 import { GLOSSARY_SYSTEM_PROMPT } from "./prompt.ts";
 import type { GlossaryRequest } from "./schema.ts";
 
+import { cerebras } from "../../../lib/cerebras.ts";
+
 type MessagePart = SixtusUIMessage["parts"][number];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -34,15 +36,12 @@ export async function generateGlossary(
   }
 
   const { text } = await generateText({
-    model: "google/gemma-4-31b-it", //update to qwen3.8-27b when it's available sep 3
-    reasoning: "low",
+    model: cerebras("qwen-3.8-27b"),
     system: GLOSSARY_SYSTEM_PROMPT,
     prompt: lessonText,
     providerOptions: {
-      gateway: {
-        only: ["cerebras"],
-      },
-    },
+      cerebras: { reasoningEffort: "low" },
+    },  
   });
 
   return { glossary: text.trim() };

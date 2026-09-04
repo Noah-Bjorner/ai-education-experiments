@@ -8,9 +8,10 @@
     "jsr:@std/assert@^1.0.13": "1.0.19",
     "jsr:@std/dotenv@~0.225.5": "0.225.6",
     "jsr:@std/internal@^1.0.12": "1.0.12",
+    "npm:@ai-sdk/cerebras@^3.0.35": "3.0.43_zod@4.4.3",
     "npm:@ai-sdk/gateway@4.0.3": "4.0.3_zod@4.4.3",
     "npm:@ai-sdk/openai@*": "4.0.1_zod@4.4.3",
-    "npm:@ai-sdk/provider-utils@*": "5.0.0_zod@4.4.3",
+    "npm:@ai-sdk/provider-utils@*": "5.0.36_zod@4.4.3",
     "npm:@aws-sdk/client-s3@3.948.0": "3.948.0",
     "npm:@firecrawl/anydoc@~0.1.3": "0.1.3",
     "npm:@google/genai@*": "1.41.0",
@@ -62,35 +63,69 @@
     }
   },
   "npm": {
+    "@ai-sdk/cerebras@3.0.43_zod@4.4.3": {
+      "integrity": "sha512-YvD61w4zEbtVL4vibkKCEKqYn6ntOULiYLchboUvUdDP/2UDbk0oOzbKSSCtzk6omA1deG+yZ0grGI46NDnDbA==",
+      "dependencies": [
+        "@ai-sdk/openai-compatible",
+        "@ai-sdk/provider@4.0.10",
+        "@ai-sdk/provider-utils@5.0.36_zod@4.4.3",
+        "zod@4.4.3"
+      ]
+    },
     "@ai-sdk/gateway@4.0.3_zod@4.4.3": {
       "integrity": "sha512-V8p0skqA9I5ZvZ4JDrvdh+TrZ0OVvkoP4CPEMxy777yBcVO5febhtLUJ+t0V0ROvSIkWIm5R9nvyOsyZRtO9sQ==",
       "dependencies": [
-        "@ai-sdk/provider",
-        "@ai-sdk/provider-utils",
+        "@ai-sdk/provider@4.0.0",
+        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
         "@vercel/oidc",
+        "zod@4.4.3"
+      ]
+    },
+    "@ai-sdk/openai-compatible@3.0.43_zod@4.4.3": {
+      "integrity": "sha512-QurboftQF0jGshbNM5KHNNpttp7huKSV7rN+C7ylcT5XsLZPud1eCMqyX0zlYFxm6pE4MEc/1PgFX12tm85yqg==",
+      "dependencies": [
+        "@ai-sdk/provider@4.0.10",
+        "@ai-sdk/provider-utils@5.0.36_zod@4.4.3",
         "zod@4.4.3"
       ]
     },
     "@ai-sdk/openai@4.0.1_zod@4.4.3": {
       "integrity": "sha512-SZ036CbBdQcf8Q8EoGKU7kYBJpX+KPChGXUO8IPXDKMYvo/CDjBpPLWOm4DMa++s9skxuxTZtmNLqTeaY2GjTg==",
       "dependencies": [
-        "@ai-sdk/provider",
-        "@ai-sdk/provider-utils",
+        "@ai-sdk/provider@4.0.0",
+        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
         "zod@4.4.3"
       ]
     },
     "@ai-sdk/provider-utils@5.0.0_zod@4.4.3": {
       "integrity": "sha512-zj66M02jc6ASYwIgWZowsooDUwaVngeNZQ3H10GwcPMZ+KR6gHMhcUuKl6tkai+JPXTKDyHY1pnszuxRtw2D4A==",
       "dependencies": [
-        "@ai-sdk/provider",
+        "@ai-sdk/provider@4.0.0",
         "@standard-schema/spec",
         "@workflow/serde",
         "eventsource-parser",
         "zod@4.4.3"
       ]
     },
+    "@ai-sdk/provider-utils@5.0.36_zod@4.4.3": {
+      "integrity": "sha512-MFXBn6XDyf37PNQAge/HTatPJE8Vmg/g/w4WPtjSV53jq8FKAzoaN5+43hsdQa9bqgN+/13jxug9ChvsG+godQ==",
+      "dependencies": [
+        "@ai-sdk/provider@4.0.10",
+        "@standard-schema/spec",
+        "@workflow/serde",
+        "eventsource-parser",
+        "undici",
+        "zod@4.4.3"
+      ]
+    },
     "@ai-sdk/provider@4.0.0": {
       "integrity": "sha512-fr9Gs89prDWiuox/T+kCA+i2cJkHpxU5S+tr4megjTzRC27ZsvFhwjU/+XrqqMbvBUlfmXxTOYWy8ng45dsjIg==",
+      "dependencies": [
+        "json-schema"
+      ]
+    },
+    "@ai-sdk/provider@4.0.10": {
+      "integrity": "sha512-fX2ENAc7iDpZ+Wp4+Rk06Usn/Ys7dI9uAkGv0jlF6XVrW13NkRWx5Ou+U6lIM2E1fTLkCs16GGrUAaVvroag7A==",
       "dependencies": [
         "json-schema"
       ]
@@ -1629,8 +1664,8 @@
       "integrity": "sha512-ze2nTtoNW1hYhkjAVUVoLQGC/vDmNv+nIo3n8aCv2QQS8WCuC8o3CF6ywnUlui/i7lfGU4V8aPClVRH62WUHeA==",
       "dependencies": [
         "@ai-sdk/gateway",
-        "@ai-sdk/provider",
-        "@ai-sdk/provider-utils",
+        "@ai-sdk/provider@4.0.0",
+        "@ai-sdk/provider-utils@5.0.0_zod@4.4.3",
         "zod@4.4.3"
       ]
     },
@@ -2379,6 +2414,9 @@
     "undici-types@6.21.0": {
       "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="
     },
+    "undici@7.29.0": {
+      "integrity": "sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw=="
+    },
     "unpdf@1.6.2": {
       "integrity": "sha512-zQ80ySoPuPHOsvIoRp/nJyQt8TOUoTh1+WBCGcBvlddQNgKDLRwm0AY3x8Q35I7+kIiRSgqMx+Ma2pl9McIp7A=="
     },
@@ -2448,6 +2486,7 @@
       "jsr:@openai/openai@6.10.0",
       "jsr:@std/assert@^1.0.13",
       "jsr:@std/dotenv@~0.225.5",
+      "npm:@ai-sdk/cerebras@^3.0.35",
       "npm:@ai-sdk/openai@*",
       "npm:@aws-sdk/client-s3@3.948.0",
       "npm:@firecrawl/anydoc@~0.1.3",
