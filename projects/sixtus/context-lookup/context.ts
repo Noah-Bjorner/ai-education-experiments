@@ -133,7 +133,7 @@ export async function generateContextLookup(
     system,
     prompt,
     providerOptions: {
-      cerebras: { reasoningEffort: "medium" },
+      cerebras: { reasoningEffort: "low" },
     },  
   });
 

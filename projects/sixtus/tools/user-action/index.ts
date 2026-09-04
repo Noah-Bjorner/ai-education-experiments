@@ -5,7 +5,7 @@ export const USER_ACTION_TOOL_DESCRIPTION =
   "Request a structured user action when you need feedback, confirmation, evidence, or an in-app next step from the learner. Make sure to use the exact schema field names.";
 export const USER_ACTION_SYSTEM_PROMPT_DESCRIPTION = [
   "Use when you need structured UI for the learner to act or give feedback before you continue. Always use this tool instead of asking for these interactions in plain text. Prefer the simplest actionType that matches the need:",
-  "  - real_world_task: when the learner should do something outside the app (practice, read, experiment, habit) and confirm they completed it before you advance.",
+  "  - real_world_task: when the learner should do something outside the app (practice, read, experiment, habit) and confirm they completed it before you advance. Set confirmLabel to one word that fits the task (e.g. Completed, Read, Practiced). Never restate the task. Skip is provided by the UI.",
   "  - approve_action: when you need explicit approval or decline for something consequential or time-consuming (a course plan, spaced-repetition notifications).",
   "  - check_in_scale: when the learner should self-assess on a numeric scale (confidence, difficulty, readiness).",
   "  - evidence_upload: when the learner should upload or share proof of work made outside the app (photo, document, link, or short text).",
@@ -33,8 +33,8 @@ const realWorldTaskSchema = baseActionSchema.extend({
   tasks: z.array(taskItemSchema).min(1).describe(
     "Checklist of real-world tasks the learner should complete before confirming.",
   ),
-  confirmLabel: z.string().min(1).optional().describe(
-    'Label for the confirm button. Defaults to "I\'ve done this" in the UI if omitted.',
+  confirmLabel: z.string().min(1).max(20).regex(/^\S+$/).describe(
+    'One-word confirm button that fits the task (e.g. "Completed", "Read", "Practiced"). Never a sentence or restatement of the task. Skip is provided by the UI; do not generate it.',
   ),
 });
 
