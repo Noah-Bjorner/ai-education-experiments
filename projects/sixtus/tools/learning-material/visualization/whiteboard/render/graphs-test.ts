@@ -32,7 +32,7 @@ export const examples: Graph[] = [
 if (import.meta.main) {
   for (const [index, chart] of examples.entries()) {
     const startedAt = performance.now();
-    const { svg } = renderGraphSvg(chart, {
+    const { svg, width, height } = renderGraphSvg(chart, {
       id: `graph-${index}`,
       width: 800,
       height: 520,
@@ -46,13 +46,26 @@ if (import.meta.main) {
     );
     await Deno.writeTextFile(output, svg);
     const elapsedMs = performance.now() - startedAt;
-    console.log(`Wrote ${output.pathname} in ${elapsedMs.toFixed(1)}ms`);
+    console.log(
+      `Wrote ${output.pathname} (${width} × ${height}) in ${
+        elapsedMs.toFixed(1)
+      }ms`,
+    );
   }
 }
 
 // Small behavior checks; the SVG files above are the visual examples.
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
+}
+
+// Inspect geometry attributes, not text or embedded font bytes: base64 can
+// legitimately contain the substring "NaN".
+function hasFiniteGeometry(svg: string): boolean {
+  const coordinates = svg.matchAll(
+    /\b(?:d|x|y|x1|x2|y1|y2|cx|cy|r|width|height|viewBox|transform)="([^"]*)"/g,
+  );
+  return [...coordinates].every((match) => !/NaN|Infinity/.test(match[1]));
 }
 
 Deno.test("France chart preserves the provided data and renders reproducibly", () => {
@@ -77,7 +90,7 @@ Deno.test("France chart preserves the provided data and renders reproducibly", (
   ) {
     assert(a.includes(label), `Missing ${label}`);
   }
-  assert(!/NaN|Infinity/.test(a), "Coordinates must be finite");
+  assert(hasFiniteGeometry(a), "Coordinates must be finite");
 });
 
 Deno.test("line charts handle single points, flat data, negative values, and sorting", () => {
@@ -92,7 +105,7 @@ Deno.test("line charts handle single points, flat data, negative values, and sor
     };
     const before = JSON.stringify(chart);
     const { svg } = renderGraphSvg(chart, { id: "edge" });
-    assert(!/NaN|Infinity/.test(svg), "Coordinates must be finite");
+    assert(hasFiniteGeometry(svg), "Coordinates must be finite");
     assert(
       JSON.stringify(chart) === before,
       "Sorting must not change the input",
@@ -193,7 +206,8 @@ Deno.test("each standalone SVG carries one WOFF2 font and its license", () => {
       atob(fonts[0][1]).startsWith("wOF2"),
       "Embedded bytes must be a WOFF2 font",
     );
-    assert(svg.includes("Patrick Hand"), "Graph text must use Patrick Hand");
+    assert(svg.includes("Shantell Sans"), "Graph text must use Shantell Sans");
+    assert(svg.includes("font-weight:500"), "Use the uploaded Medium weight");
     assert(
       svg.includes("SIL OPEN FONT LICENSE"),
       "Export must retain the font license",
@@ -203,6 +217,28 @@ Deno.test("each standalone SVG carries one WOFF2 font and its license", () => {
       "Font must work without an external request",
     );
   }
+});
+
+Deno.test("pie slices use separate hatch geometry with translucent fill layers", () => {
+  const { svg } = renderGraphSvg(examples[1], { id: "fills" });
+  const paths = [
+    ...svg.matchAll(
+      /<path d="([^"]+)" clip-path="url\(#fills-slice-\d+-clip\)"[^>]+/g,
+    ),
+  ];
+  assert(paths.length === 3, "Each slice needs its own hatch path");
+  assert(
+    new Set(paths.map((p) => p[1])).size === 3,
+    "Hatch lines must not continue unchanged across slice boundaries",
+  );
+  assert(
+    paths.every((p) => p[0].includes('stroke-opacity="0.5"')),
+    "Hatch strokes use 50% opacity",
+  );
+  assert(
+    (svg.match(/fill-opacity="0.05"/g) ?? []).length === 6,
+    "Each slice and legend swatch needs a 5% color wash",
+  );
 });
 
 Deno.test("font metrics distinguish wide letters and preserve Swedish text", () => {

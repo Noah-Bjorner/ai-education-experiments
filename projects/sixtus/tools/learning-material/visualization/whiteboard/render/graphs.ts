@@ -1,7 +1,19 @@
 import type { WhiteboardSpec } from "../schema.ts";
 import { escapeXml } from "../../static/shared/svg.ts";
-import { handwritten } from "./handwritten.ts";
-import { fitGraphText, GRAPH_FONT_DEFS, GRAPH_FONT_STYLE } from "./font.ts";
+import { handwritten, renderHandwritten } from "./handwritten.ts";
+import {
+  fitGraphText,
+  GRAPH_FONT_DEFS,
+  GRAPH_FONT_STYLE,
+  graphTextBounds,
+} from "./font.ts";
+import {
+  type Drawing,
+  exportBounds,
+  rotateLabel,
+  unionBounds,
+} from "./bounds.ts";
+import { COLORS, SERIES_COLORS as GRAPH_COLORS } from "./theme.ts";
 
 export type XyChart = Extract<
   WhiteboardSpec["children"][number],
@@ -13,22 +25,15 @@ export type PieChart = Extract<
 >;
 export type Graph = XyChart | PieChart;
 
-/** Colors are assigned in series/slice order. */
-export const GRAPH_COLORS = [
-  "#477bbb",
-  "#b7754a",
-  "#56896b",
-  "#9170aa",
-  "#bc6478",
-  "#89843f",
-];
-const INK = "#263449";
-const MUTED = "#677184";
-const BACKGROUND = "#fffdf9";
+/** Keep the existing public name; the palette is maintained in theme.ts. */
+export { GRAPH_COLORS };
+const INK = COLORS.ink;
+const MUTED = COLORS.textMuted;
 
 export type GraphOptions = {
   /** Must be unique when several graph groups share one SVG. */
   id: string;
+  /** Internal layout allocation. Final exports shrink to painted content. */
   width?: number;
   height?: number;
   roughness?: number;
@@ -73,19 +78,38 @@ function text(
   y: number,
   size = 14,
   anchor = "start",
-  color = INK,
+  color: string = INK,
   maxWidth = Infinity,
-): string {
+): Drawing {
   const visible = fitGraphText(value, size, maxWidth);
-  return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" fill="${color}"><title>${
-    escapeXml(value)
-  }</title>${escapeXml(visible)}</text>`;
+  const markup =
+    `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" fill="${color}"><title>${
+      escapeXml(value)
+    }</title>${escapeXml(visible)}</text>`;
+  return { markup, bounds: graphTextBounds(visible, size, x, y, anchor) };
 }
 
-function group(title: string, body: string): string {
-  return `<g style="${GRAPH_FONT_STYLE}" role="img" aria-label="${
+function group(title: string, parts: Drawing[], width: number): Drawing {
+  const bodyBounds = unionBounds(parts.map((p) => p.bounds));
+  if (!bodyBounds) throw new Error("A graph needs visible content.");
+  // Center over the actual chart and legend, not the unused allocation.
+  parts.unshift(
+    text(
+      title,
+      bodyBounds.x + bodyBounds.width / 2,
+      40,
+      25,
+      "middle",
+      INK,
+      width - 60,
+    ),
+  );
+  const markup = `<g style="${GRAPH_FONT_STYLE}" role="img" aria-label="${
     escapeXml(title)
-  }"><title>${escapeXml(title)}</title>${body}</g>`;
+  }"><title>${escapeXml(title)}</title>${
+    parts.map((p) => p.markup).join("\n")
+  }</g>`;
+  return { markup, bounds: unionBounds(parts.map((p) => p.bounds)) };
 }
 
 /** Round axis limits to readable steps such as 5, 10, or 20 million. */
@@ -133,6 +157,14 @@ function numberLabel(value: number, compact = false): string {
 
 /** Numeric line charts only for now. Returns a group in local coordinates. */
 export function renderXyGraph(chart: XyChart, options: GraphOptions): string {
+  return renderXyGraphDrawing(chart, options).markup;
+}
+
+/** Measured version for standalone export or future board composition. */
+export function renderXyGraphDrawing(
+  chart: XyChart,
+  options: GraphOptions,
+): Drawing {
   const c = settings(options);
   if (chart.chartStyle !== "line") {
     throw new Error(
@@ -182,24 +214,30 @@ export function renderXyGraph(chart: XyChart, options: GraphOptions): string {
     y1: number,
     x2: number,
     y2: number,
-    stroke = INK,
+    stroke: string = INK,
     strokeWidth = 1.6,
   ) =>
-    handwritten({ type: "line", x1, y1, x2, y2 }, {
+    renderHandwritten({ type: "line", x1, y1, x2, y2 }, {
       id: `${c.id}-line-${sequence}`,
       seed: c.seed + sequence++,
       roughness: c.roughness,
       stroke,
       strokeWidth,
     });
-  const parts = [
-    text(chart.title, c.width / 2, 40, 25, "middle", INK, c.width - 60),
-  ];
+  const parts: Drawing[] = [];
   for (const tick of yAxis.ticks) {
     parts.push(
-      `<path d="M ${plot.left} ${
-        y(tick)
-      } H ${plot.right}" fill="none" stroke="#e0e4e9"/>`,
+      {
+        markup: `<path d="M ${plot.left} ${
+          y(tick)
+        } H ${plot.right}" fill="none" stroke="${COLORS.grid}" stroke-width="1"/>`,
+        bounds: {
+          x: plot.left,
+          y: y(tick) - 0.5,
+          width: plot.right - plot.left,
+          height: 1,
+        },
+      },
     );
     parts.push(
       text(
@@ -232,9 +270,11 @@ export function renderXyGraph(chart: XyChart, options: GraphOptions): string {
     ),
   );
   parts.push(
-    `<g transform="translate(25 ${(plot.top + plot.bottom) / 2}) rotate(-90)">${
-      text(chart.yLabel, 0, 0, 16, "middle", INK, plot.bottom - plot.top)
-    }</g>`,
+    rotateLabel(
+      text(chart.yLabel, 0, 0, 16, "middle", INK, plot.bottom - plot.top),
+      25,
+      (plot.top + plot.bottom) / 2,
+    ),
   );
 
   series.forEach((s, i) => {
@@ -250,11 +290,14 @@ export function renderXyGraph(chart: XyChart, options: GraphOptions): string {
     // Exact point markers preserve the data position despite the line wobble.
     for (const p of s.points) {
       parts.push(
-        `<circle cx="${x(p.x)}" cy="${
-          y(p.y)
-        }" r="4.5" fill="${color}" stroke="${BACKGROUND}" stroke-width="2"><title>${
-          escapeXml(`${s.name}: ${p.x}, ${p.y.toLocaleString("en-US")}`)
-        }</title></circle>`,
+        {
+          markup: `<circle cx="${x(p.x)}" cy="${
+            y(p.y)
+          }" r="4.5" fill="${color}"><title>${
+            escapeXml(`${s.name}: ${p.x}, ${p.y.toLocaleString("en-US")}`)
+          }</title></circle>`,
+          bounds: { x: x(p.x) - 4.5, y: y(p.y) - 4.5, width: 9, height: 9 },
+        },
       );
     }
     const lx = 92 + (i % legendColumns) * 200;
@@ -263,11 +306,18 @@ export function renderXyGraph(chart: XyChart, options: GraphOptions): string {
     parts.push(line(lx, ly - 5, lx + 23, ly - 5, color, 2.7));
     parts.push(text(s.name, lx + 33, ly, 13, "start", INK, 155));
   });
-  return group(chart.title, parts.join("\n"));
+  return group(chart.title, parts, c.width);
 }
 
 /** Pie angles stay exact; the pen effect is applied to fills and borders. */
 export function renderPieGraph(chart: PieChart, options: GraphOptions): string {
+  return renderPieGraphDrawing(chart, options).markup;
+}
+
+export function renderPieGraphDrawing(
+  chart: PieChart,
+  options: GraphOptions,
+): Drawing {
   const c = settings(options);
   if (
     chart.slices.length < 2 ||
@@ -288,11 +338,9 @@ export function renderPieGraph(chart: PieChart, options: GraphOptions): string {
   const cy = (c.height + 65) / 2;
   const r = Math.min(c.width * 0.22, (c.height - 155) / 2);
   const circle = { type: "circle", cx, cy, r } as const;
-  const parts = [
-    text(chart.title, c.width / 2, 40, 25, "middle", INK, c.width - 60),
-  ];
-  const borders: string[] = [];
-  const percentages: string[] = [];
+  const parts: Drawing[] = [];
+  const borders: Drawing[] = [];
+  const percentages: Drawing[] = [];
   let angle = -Math.PI / 2; // Begin at 12 o'clock, then move clockwise.
   const point = (a: number) => ({
     x: cx + Math.cos(a) * r,
@@ -305,29 +353,45 @@ export function renderPieGraph(chart: PieChart, options: GraphOptions): string {
     const end = point(endAngle);
     const color = GRAPH_COLORS[i % GRAPH_COLORS.length];
     const id = `${c.id}-slice-${i}`;
-    // A sector clips a hatched circle, so hatch generation stays in handwritten.ts.
+    // Generate strokes only inside this sector. Keep the SVG clip as a guard
+    // for bent strokes and for the shared circle-shaped background wash.
     const sector = `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${
       fraction > 0.5 ? 1 : 0
     } 1 ${end.x} ${end.y} Z`;
     parts.push(
-      `<defs><clipPath id="${id}-sector" clipPathUnits="userSpaceOnUse"><path d="${sector}"/></clipPath></defs>`,
+      {
+        markup:
+          `<defs><clipPath id="${id}-sector" clipPathUnits="userSpaceOnUse"><path d="${sector}"/></clipPath></defs>`,
+        bounds: null,
+      },
     );
     parts.push(
-      `<g clip-path="url(#${id}-sector)"><title>${
-        escapeXml(`${slice.label}: ${slice.value}`)
-      }</title>${
-        handwritten(circle, {
-          id,
-          seed: c.seed,
-          roughness: c.roughness,
-          hatchGap: c.hatchGap,
-          fill: color,
-          stroke: "none",
-        })
-      }</g>`,
+      {
+        markup: `<g clip-path="url(#${id}-sector)"><title>${
+          escapeXml(`${slice.label}: ${slice.value}`)
+        }</title>${
+          handwritten(circle, {
+            id,
+            seed: c.seed,
+            fillSeed: c.seed + i,
+            hatchSector: { startAngle: angle, endAngle },
+            roughness: c.roughness,
+            hatchGap: c.hatchGap,
+            fill: color,
+            stroke: "none",
+          })
+        }</g>`,
+        bounds: null,
+      }, // Fill is contained by the measured outer circle below.
     );
     borders.push(
-      handwritten({ type: "line", x1: cx, y1: cy, x2: start.x, y2: start.y }, {
+      renderHandwritten({
+        type: "line",
+        x1: cx,
+        y1: cy,
+        x2: start.x,
+        y2: start.y,
+      }, {
         id: `${id}-border`,
         seed: c.seed + i,
         roughness: c.roughness,
@@ -340,21 +404,19 @@ export function renderPieGraph(chart: PieChart, options: GraphOptions): string {
     if (fraction >= 0.08) {
       const mid = (angle + endAngle) / 2;
       percentages.push(
-        `<g stroke="${BACKGROUND}" stroke-width="5" paint-order="stroke" stroke-linejoin="round">${
-          text(
-            percent,
-            cx + Math.cos(mid) * r * 0.66,
-            cy + Math.sin(mid) * r * 0.66 + 5,
-            16,
-            "middle",
-          )
-        }</g>`,
+        text(
+          percent,
+          cx + Math.cos(mid) * r * 0.66,
+          cy + Math.sin(mid) * r * 0.66 + 5,
+          16,
+          "middle",
+        ),
       );
     }
     const lx = c.width * 0.6;
     const ly = cy - chart.slices.length * 24 + i * 48 + 12;
     parts.push(
-      handwritten({
+      renderHandwritten({
         type: "rectangle",
         x: lx,
         y: ly - 13,
@@ -388,27 +450,28 @@ export function renderPieGraph(chart: PieChart, options: GraphOptions): string {
   });
   parts.push(
     ...borders,
-    handwritten(circle, {
+    renderHandwritten(circle, {
       id: `${c.id}-outline`,
       seed: c.seed,
       roughness: c.roughness,
     }),
     ...percentages,
   );
-  return group(chart.title, parts.join("\n"));
+  return group(chart.title, parts, c.width);
 }
 
 /** Standalone export helper for demos; group renderers also work in a board. */
 export function renderGraphSvg(chart: Graph, options: GraphOptions) {
   const c = settings(options);
-  const body = chart.type === "xy_chart"
-    ? renderXyGraph(chart, c)
-    : renderPieGraph(chart, c);
+  const drawing = chart.type === "xy_chart"
+    ? renderXyGraphDrawing(chart, c)
+    : renderPieGraphDrawing(chart, c);
+  const bounds = exportBounds(drawing.bounds);
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${c.width}" height="${c.height}" viewBox="0 0 ${c.width} ${c.height}" role="img" aria-label="${
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}" role="img" aria-label="${
       escapeXml(chart.title)
     }"><title>${
       escapeXml(chart.title)
-    }</title>${GRAPH_FONT_DEFS}${body}</svg>`;
-  return { svg, width: c.width, height: c.height };
+    }</title>${GRAPH_FONT_DEFS}${drawing.markup}</svg>`;
+  return { svg, width: bounds.width, height: bounds.height };
 }

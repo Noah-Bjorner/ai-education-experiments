@@ -1,17 +1,30 @@
 import { escapeXml } from "../../static/shared/svg.ts";
 import type { Shape } from "./shapes.ts";
+import { type FillSector, hatchStrokes } from "./hatching.ts";
+import { COLORS, FILL_STYLE } from "./theme.ts";
+import {
+  type Bounds,
+  cubicBounds,
+  type Drawing,
+  expandBounds,
+  unionBounds,
+} from "./bounds.ts";
 
 export type HandwrittenOptions = {
   /** Unique within the containing SVG, so hatch clipping stays local. */
   id: string;
   seed?: number;
+  /** Vary the fill independently while preserving the outline and clip shape. */
+  fillSeed?: number;
   /** Maximum coordinate displacement in SVG units. Zero gives a clean outline. */
   roughness?: number;
   /** Distance between diagonal fill strokes. */
   hatchGap?: number;
+  /** Limit hatch geometry to a circle sector; caller must also clip the fill. */
+  hatchSector?: FillSector;
   stroke?: string;
   strokeWidth?: number;
-  /** Hatch color; "none" leaves the shape empty. */
+  /** Color for the faint background and hatch strokes; "none" leaves it empty. */
   fill?: string;
 };
 
@@ -20,12 +33,21 @@ const point = (p: Point) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
 
 /** Convert primitive geometry to SVG paths; no browser or SVG parsing needed. */
 export function handwritten(shape: Shape, options: HandwrittenOptions): string {
+  return renderHandwritten(shape, options).markup;
+}
+
+/** The same drawing with measured bounds for tightly wrapped exports. */
+export function renderHandwritten(
+  shape: Shape,
+  options: HandwrittenOptions,
+): Drawing {
   const {
     id,
     seed = 1,
+    fillSeed = seed,
     roughness = 1.5,
     hatchGap = 9,
-    stroke = "#263449",
+    stroke = COLORS.ink,
     strokeWidth = 2,
     fill = "none",
   } = options;
@@ -33,7 +55,9 @@ export function handwritten(shape: Shape, options: HandwrittenOptions): string {
     throw new Error("Use a simple, unique SVG id.");
   }
   if (
-    ![roughness, hatchGap, strokeWidth, seed].every(Number.isFinite) ||
+    ![roughness, hatchGap, strokeWidth, seed, fillSeed].every(
+      Number.isFinite,
+    ) ||
     roughness < 0 || hatchGap < 2 || strokeWidth <= 0
   ) {
     throw new Error(
@@ -51,22 +75,34 @@ export function handwritten(shape: Shape, options: HandwrittenOptions): string {
 
   // A tiny seeded random generator: the same input always draws the same way.
   let state = seed >>> 0;
-  const offset = () => {
+  const random = () => {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return (state / 4294967296 * 2 - 1) * roughness;
+    return state / 4294967296;
   };
+  const offset = () => (random() * 2 - 1) * roughness;
   const jitter = (p: Point): Point => ({
     x: p.x + offset(),
     y: p.y + offset(),
   });
 
+  let curves: Bounds[] = [];
+  const includeCurve = (...points: [Point, Point, Point, Point]) => {
+    // Measure the actual two-decimal coordinates emitted in the SVG path.
+    const rounded = points.map((p) => ({
+      x: Number(p.x.toFixed(2)),
+      y: Number(p.y.toFixed(2)),
+    }));
+    curves.push(cubicBounds(rounded[0], rounded[1], rounded[2], rounded[3]));
+  };
+
   // Bend a straight segment by moving its two cubic Bezier control points.
-  const bentSegment = (a: Point, b: Point) => {
+  const bentSegment = (a: Point, b: Point, measure = true) => {
     const c1 = jitter({ x: a.x + (b.x - a.x) / 3, y: a.y + (b.y - a.y) / 3 });
     const c2 = jitter({
       x: a.x + (b.x - a.x) * 2 / 3,
       y: a.y + (b.y - a.y) * 2 / 3,
     });
+    if (measure) includeCurve(a, c1, c2, b);
     return `C ${point(c1)} ${point(c2)} ${point(b)}`;
   };
 
@@ -106,49 +142,60 @@ export function handwritten(shape: Shape, options: HandwrittenOptions): string {
         x: b.x - tangents[next].x,
         y: b.y - tangents[next].y,
       });
+      includeCurve(a, c1, c2, b);
       return `C ${point(c1)} ${point(c2)} ${point(b)}`;
     }).join(" ") + " Z";
   };
 
   // Draw two slightly different passes, like tracing over a pen stroke.
   const border = outline();
+  const firstBounds = unionBounds(curves);
+  curves = [];
   const secondBorder = roughness > 0 ? outline() : "";
+  const secondBounds = unionBounds(curves);
   let hatching = "";
   if (fill !== "none" && shape.type !== "line") {
-    const bounds = shape.type === "circle"
-      ? {
-        x: shape.cx - shape.r,
-        y: shape.cy - shape.r,
-        width: shape.r * 2,
-        height: shape.r * 2,
-      }
-      : shape;
-    const margin = roughness * 3 + strokeWidth;
-    const x = bounds.x - margin;
-    const y = bounds.y - margin;
-    const width = bounds.width + margin * 2;
-    const height = bounds.height + margin * 2;
-    const strokes: string[] = [];
-    // Draw 45-degree lines over the bounding box; the outline clips the excess.
-    for (let start = -height; start <= width; start += hatchGap * Math.SQRT2) {
-      const a = { x: x + start, y: y + height };
-      const b = { x: x + start + height, y };
-      strokes.push(`M ${point(a)} ${bentSegment(a, b)}`);
+    // Restart randomness for this region. Neither its identity nor its color
+    // changes the shared border geometry (especially useful for pie slices).
+    state = fillSeed >>> 0;
+    for (const character of `${id}:${fill}`) {
+      state = (Math.imul(state, 31) + character.charCodeAt(0)) >>> 0;
     }
+    const strokes = hatchStrokes(
+      shape,
+      roughness,
+      hatchGap,
+      random,
+      options.hatchSector,
+    )
+      .map(({ start, c1, c2, end }) =>
+        `M ${point(start)} C ${point(c1)} ${point(c2)} ${point(end)}`
+      );
     hatching =
       `<defs><clipPath id="${id}-clip" clipPathUnits="userSpaceOnUse"><path d="${border}"/></clipPath></defs>
+      <path d="${border}" fill="${
+        escapeXml(fill)
+      }" fill-opacity="${FILL_STYLE.backgroundOpacity}" stroke="none"/>
       <path d="${
         strokes.join(" ")
       }" clip-path="url(#${id}-clip)" fill="none" stroke="${
         escapeXml(fill)
-      }" stroke-width="${strokeWidth * 0.65}"/>`;
+      }" stroke-opacity="${FILL_STYLE.hatchOpacity}" stroke-width="${
+        strokeWidth * 0.65
+      }"/>`;
   }
 
-  return `<g stroke-linecap="round" stroke-linejoin="round">
+  const markup = `<g stroke-linecap="round" stroke-linejoin="round">
     ${hatching}
     <g fill="none" stroke="${escapeXml(stroke)}" stroke-width="${strokeWidth}">
       <path d="${border}"/>
       ${secondBorder ? `<path d="${secondBorder}" opacity="0.45"/>` : ""}
     </g>
   </g>`;
+  const bounds = stroke !== "none"
+    ? expandBounds(unionBounds([firstBounds, secondBounds]), strokeWidth / 2)
+    : fill !== "none" && shape.type !== "line"
+    ? firstBounds
+    : null;
+  return { markup, bounds };
 }

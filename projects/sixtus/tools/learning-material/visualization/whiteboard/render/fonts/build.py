@@ -1,4 +1,4 @@
-"""One-time asset preparation: python build.py /path/to/PatrickHand-Regular.ttf.
+"""One-time asset preparation: python build.py /path/to/ShantellSans-Medium-no-cyrillic.woff2.
 
 Requires fonttools[woff]. Not used by the application or chart rendering.
 """
@@ -6,24 +6,47 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+import shutil
 
 from fontTools.ttLib import TTFont
+from fontTools.pens.boundsPen import BoundsPen
 
 source = Path(sys.argv[1])
 destination = Path(__file__).parent
 font = TTFont(source)
 cmap = font.getBestCmap()
+glyphs = font.getGlyphSet()
+
+def glyph_bounds(name):
+    pen = BoundsPen(glyphs)
+    glyphs[name].draw(pen)
+    return pen.bounds  # Font coordinates: y increases upward; spaces return None.
+
 metrics = {
     "sourceSha256": hashlib.sha256(source.read_bytes()).hexdigest(),
     "unitsPerEm": font["head"].unitsPerEm,
     "fallbackAdvance": font["hmtx"].metrics[".notdef"][0],
     "advances": {str(code): font["hmtx"].metrics[glyph][0]
                  for code, glyph in sorted(cmap.items())},
+    "glyphBounds": {str(code): glyph_bounds(glyph)
+                    for code, glyph in sorted(cmap.items())},
 }
-(destination / "patrick-hand-metrics.json").write_text(
+(destination / "shantell-sans-metrics.json").write_text(
     json.dumps(metrics, indent=2) + "\n"
 )
-# Preserve all glyphs, naming, and license metadata. Only compress the container.
-font.flavor = "woff2"
-font.save(destination / "PatrickHand-Regular.woff2")
-print("Wrote WOFF2 and character advances to", destination)
+# Preserve the uploaded WOFF2 byte-for-byte; only convert if given a TTF/OTF.
+output = destination / "ShantellSans-Medium.woff2"
+if source.suffix.lower() == ".woff2":
+    if source.resolve() != output.resolve():
+        shutil.copyfile(source, output)
+else:
+    font.flavor = "woff2"
+    font.save(output)
+# Keep the font's own copyright with the standard SIL license text.
+license_path = destination / "OFL.txt"
+license_text = license_path.read_text()
+copyright = font["name"].getDebugName(0)
+if not copyright:
+    raise ValueError("Font must have a copyright notice")
+license_path.write_text(copyright + "\n\n" + license_text.split("\n\n", 1)[1])
+print("Wrote WOFF2, character advances, glyph bounds, and copyright to", destination)

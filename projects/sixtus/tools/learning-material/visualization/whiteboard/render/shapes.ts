@@ -1,4 +1,5 @@
 import { escapeXml } from "../../static/shared/svg.ts";
+import { COLORS } from "./theme.ts";
 
 /** The same geometry feeds the regular and handwritten renderers. */
 export type Shape =
@@ -9,7 +10,7 @@ export type Shape =
 export function renderShape(
   shape: Shape,
   fill = "none",
-  stroke = "#263449",
+  stroke: string = COLORS.ink,
 ): string {
   const style = `fill="${escapeXml(fill)}" stroke="${
     escapeXml(stroke)

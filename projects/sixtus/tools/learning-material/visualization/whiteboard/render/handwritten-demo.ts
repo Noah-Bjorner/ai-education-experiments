@@ -1,5 +1,6 @@
 import { handwritten } from "./handwritten.ts";
 import { renderShape, type Shape } from "./shapes.ts";
+import { COLORS, SERIES_COLORS } from "./theme.ts";
 
 // Edit these shapes or the column settings, then rerun this file.
 const shapes: Shape[] = [
@@ -12,7 +13,7 @@ const columns = [
   { label: "Light pen", roughness: 1.8, hatchGap: 9 },
   { label: "Loose sketch", roughness: 4, hatchGap: 12 },
 ];
-const colors = ["#477bbb", "#b7754a", "#477bbb"];
+const colors = [SERIES_COLORS[0], SERIES_COLORS[1], SERIES_COLORS[0]];
 const cells = columns.map((column, col) => {
   const examples = shapes.map((shape, row) => {
     const markup = col === 0
@@ -37,11 +38,11 @@ const svg =
   <title id="title">Hand-drawn shapes experiment</title>
   <desc id="description">The same circle, rectangle, and line drawn regularly, with a light pen effect, and with a loose sketch effect. Hand-drawn shapes have diagonal hatch fills.</desc>
   <rect width="940" height="745" fill="#fffdf9"/>
-  <g font-family="system-ui, sans-serif" fill="#263449">
+  <g font-family="system-ui, sans-serif" fill="${COLORS.ink}">
     <text x="40" y="48" font-size="25" font-weight="600">One shape, three treatments</text>
-    <text x="40" y="76" font-size="14" fill="#677184">Same geometry · seeded border wobble · clipped diagonal fill</text>
+    <text x="40" y="76" font-size="14" fill="${COLORS.textMuted}">Same geometry · seeded border wobble · clipped diagonal fill</text>
     ${cells}
-    <text x="40" y="715" font-size="13" fill="#677184">Change roughness, hatchGap, fill, or seed in handwritten-demo.ts and rerun.</text>
+    <text x="40" y="715" font-size="13" fill="${COLORS.textMuted}">Change roughness, hatchGap, fill, or seed in handwritten-demo.ts and rerun.</text>
   </g>
 </svg>`;
 
