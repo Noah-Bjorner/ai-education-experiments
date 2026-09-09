@@ -13,7 +13,7 @@ const goal =
 
 if (import.meta.main) {
   const start = performance.now();
-  const result = await executeWhiteboard({ goal, category: "charts" });
+  const result = await executeWhiteboard({ goal });
   const end = performance.now();
 
   console.log(JSON.stringify(result, null, 2));

@@ -13,9 +13,8 @@ const child = mathExpressions.example.output;
 
 Deno.test("math child is registered in input, output and generation instructions", () => {
   assertEquals(
-    whiteboardInputSchema.parse({ goal: "Solve an equation", category: "math" })
-      .category,
-    "math",
+    whiteboardInputSchema.parse({ goal: "Solve an equation" }).goal,
+    "Solve an equation",
   );
   assertEquals(
     WhiteboardOutput.parse({ layout: "single", children: [child] }).children[0],

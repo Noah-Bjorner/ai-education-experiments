@@ -18,7 +18,7 @@ const parseWhiteboardBody = createZodJsonBodyMiddleware(
   {
     code: "INVALID_WHITEBOARD_REQUEST",
     message:
-      "Expected a JSON body with either { goal, category } or { layout, children }.",
+      "Expected a JSON body with either { goal } or { layout, children }.",
   },
 );
 
