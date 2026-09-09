@@ -18,7 +18,10 @@ system-font defaults into new whiteboard types.
 - `hatching.ts`: stroke intersections, sector geometry, and fill variation.
 - `bounds.ts`: shared painted bounds, curve extrema, and export sizing.
 - `graphs.ts`: working XY line and pie examples, not a universal layout engine.
-- `index.ts` and `layout.ts`: planned board composition; currently scaffolds.
+- `index.ts`: shared staged board renderer, base SVG and emphasis snapshots.
+- `layout.ts`: single, split, and stack child allocations.
+- `targets.ts`: semantic SVG IDs and measured child-local annotation targets.
+- `annotations.ts`: emphasis rendering and explicit deferred callout reporting.
 
 Keep the code small and direct. Shared values belong in code; explanations,
 visual priorities, and rules belong here. Do not create a large token framework
@@ -158,7 +161,7 @@ units from the left and 90 from the top, with 42 on the right and reserved
 bottom space for axes and legend. Those larger insets serve chart labels; they
 are not general-purpose padding tokens.
 
-Planned board layouts:
+Board layouts:
 
 - `single`: one child with its content bounds becoming the board bounds.
 - `split`: two children side by side with a consistent gap.
@@ -184,9 +187,9 @@ Separate two steps:
 
 Implement this through shared bounds helpers used by every renderer, rather than
 per-chart hardcoded crop values. `renderXyGraphDrawing()` and
-`renderPieGraphDrawing()` return `{ markup, bounds: { x, y, width, height } }`;
+`renderPieGraphDrawing()` return `{ markup, bounds: { x, y, width, height }, targets }`;
 nonpainting fragments use `bounds: null`. Existing `renderXyGraph()` and
-`renderPieGraph()` retain their string return values. The future compositor
+`renderPieGraph()` retain their string return values. The board compositor
 applies each group's transform to its bounds, unions the results, and sets the
 root viewBox to `"minX minY width height"`. Set the root width and height to
 those same dimensions so its intrinsic aspect ratio matches the content. A
@@ -334,7 +337,28 @@ wobble for every new visualization type.
   tight export bounds for the current graph geometry. No browser is required to
   calculate those bounds. Future primitives must supply their own painted
   bounds.
-- Planned: board composition, content-driven internal layout sizing, wrapping
+- Implemented board processing: `renderWhiteboardSvg(spec, options)` first
+  renders base child groups with target geometry, then appends emphasis groups,
+  then exports the complete SVG. It returns `svg`, dimensions, and bounds, plus
+  `stages.base` and `stages.emphasis` snapshots. The current final SVG is the
+  emphasis snapshot. The renderer does not write files; `../local-test.ts` saves
+  base and final SVG files under `output-ex/` and logs deferred annotations.
+- Emphasis supports circle, box, underline, strikethrough, and number. Circles
+  enclose the target's bounds, boxes add a small gap, text strokes follow the
+  label orientation, and numbers sit just above/right of the target. All use
+  the shared ink color. Number placement is deterministic; collision avoidance
+  and repositioning around other annotations are not implemented.
+- Base targets use the IDs documented in the child schemas. Geometry remains
+  local to the child; base and emphasis share its board translation. XY point
+  IDs survive sorting. Missing targets (including omitted tiny-slice percentage
+  labels), duplicate content IDs, and invalid text targets fail explicitly.
+- Arrow, line, and bracket annotations are validated for target existence but
+  are not drawn. They are returned in `deferredAnnotations` with their child,
+  original annotation, and reason. Future callout and asset stages belong after
+  emphasis. Do not imply deferred annotations are visible in the export.
+- `index-test.ts` runs the supplied book example and an XY emphasis demo
+  without an LLM call; run it with font read and output-ex write permissions.
+- Planned: content-driven internal layout sizing, wrapping
   labels, robust collision avoidance, category color mapping across views, and
   dark themes.
 - `handwritten-demo.ts` predates these export rules. Its cream presentation

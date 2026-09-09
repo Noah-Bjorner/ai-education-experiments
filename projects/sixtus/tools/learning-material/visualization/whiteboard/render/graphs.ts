@@ -8,12 +8,19 @@ import {
   graphTextBounds,
 } from "./font.ts";
 import {
+  type Bounds,
   type Drawing,
   exportBounds,
   rotateLabel,
   unionBounds,
 } from "./bounds.ts";
 import { COLORS, SERIES_COLORS as GRAPH_COLORS } from "./theme.ts";
+import {
+  registerTarget,
+  type RenderTarget,
+  type ScenePart,
+  type TargetedDrawing,
+} from "./targets.ts";
 
 export type XyChart = Extract<
   WhiteboardSpec["children"][number],
@@ -80,28 +87,45 @@ function text(
   anchor = "start",
   color: string = INK,
   maxWidth = Infinity,
-): Drawing {
+): ScenePart {
   const visible = fitGraphText(value, size, maxWidth);
   const markup =
     `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" fill="${color}"><title>${
       escapeXml(value)
     }</title>${escapeXml(visible)}</text>`;
-  return { markup, bounds: graphTextBounds(visible, size, x, y, anchor) };
+  const bounds = graphTextBounds(visible, size, x, y, anchor);
+  return {
+    markup,
+    bounds,
+    obstacles: bounds ? [{ bounds, kind: "text" }] : [],
+  };
 }
 
-function group(title: string, parts: Drawing[], width: number): Drawing {
+function group(
+  title: string,
+  parts: ScenePart[],
+  width: number,
+  namespace: string,
+  targets: Map<string, RenderTarget>,
+  focusBounds: Bounds,
+): TargetedDrawing {
   const bodyBounds = unionBounds(parts.map((p) => p.bounds));
   if (!bodyBounds) throw new Error("A graph needs visible content.");
   // Center over the actual chart and legend, not the unused allocation.
   parts.unshift(
-    text(
-      title,
-      bodyBounds.x + bodyBounds.width / 2,
-      40,
-      25,
-      "middle",
-      INK,
-      width - 60,
+    registerTarget(
+      targets,
+      `${namespace}.title`,
+      text(
+        title,
+        bodyBounds.x + bodyBounds.width / 2,
+        40,
+        25,
+        "middle",
+        INK,
+        width - 60,
+      ),
+      "text",
     ),
   );
   const markup = `<g style="${GRAPH_FONT_STYLE}" role="img" aria-label="${
@@ -109,7 +133,16 @@ function group(title: string, parts: Drawing[], width: number): Drawing {
   }"><title>${escapeXml(title)}</title>${
     parts.map((p) => p.markup).join("\n")
   }</g>`;
-  return { markup, bounds: unionBounds(parts.map((p) => p.bounds)) };
+  return {
+    markup,
+    bounds: unionBounds(parts.map((p) => p.bounds)),
+    targets,
+    focusBounds,
+    obstacles: parts.flatMap((p) =>
+      p.obstacles ??
+        (p.bounds ? [{ bounds: p.bounds, kind: "shape" as const }] : [])
+    ),
+  };
 }
 
 /** Round axis limits to readable steps such as 5, 10, or 20 million. */
@@ -164,8 +197,10 @@ export function renderXyGraph(chart: XyChart, options: GraphOptions): string {
 export function renderXyGraphDrawing(
   chart: XyChart,
   options: GraphOptions,
-): Drawing {
+): TargetedDrawing {
   const c = settings(options);
+  const namespace = chart.id ?? c.id;
+  const targets = new Map<string, RenderTarget>();
   if (chart.chartStyle !== "line") {
     throw new Error(
       `XY chart style '${chart.chartStyle}' is not implemented yet.`,
@@ -186,7 +221,7 @@ export function renderXyGraphDrawing(
       ) {
         throw new Error("Line charts require finite numeric X and Y values.");
       }
-      return { x: p.x, y: p.y };
+      return { ...p, x: p.x, y: p.y };
     }).sort((a, b) => a.x - b.x),
   }));
 
@@ -216,15 +251,26 @@ export function renderXyGraphDrawing(
     y2: number,
     stroke: string = INK,
     strokeWidth = 1.6,
-  ) =>
-    renderHandwritten({ type: "line", x1, y1, x2, y2 }, {
+  ): ScenePart => {
+    const drawing = renderHandwritten({ type: "line", x1, y1, x2, y2 }, {
       id: `${c.id}-line-${sequence}`,
       seed: c.seed + sequence++,
       roughness: c.roughness,
       stroke,
       strokeWidth,
     });
-  const parts: Drawing[] = [];
+    return {
+      ...drawing,
+      obstacles: drawing.bounds
+        ? [{
+          bounds: drawing.bounds,
+          kind: "stroke",
+          segment: { a: { x: x1, y: y1 }, b: { x: x2, y: y2 } },
+        }]
+        : [],
+    };
+  };
+  const parts: ScenePart[] = [];
   for (const tick of yAxis.ticks) {
     parts.push(
       {
@@ -237,6 +283,7 @@ export function renderXyGraphDrawing(
           width: plot.right - plot.left,
           height: 1,
         },
+        obstacles: [], // Grid lines do not reserve space for annotations.
       },
     );
     parts.push(
@@ -259,21 +306,32 @@ export function renderXyGraphDrawing(
   parts.push(line(plot.left, plot.top, plot.left, plot.bottom));
   parts.push(line(plot.left, plot.bottom, plot.right, plot.bottom));
   parts.push(
-    text(
-      chart.xLabel,
-      (plot.left + plot.right) / 2,
-      plot.bottom + 58,
-      16,
-      "middle",
-      INK,
-      c.width - 150,
+    registerTarget(
+      targets,
+      `${namespace}.x-label`,
+      text(
+        chart.xLabel,
+        (plot.left + plot.right) / 2,
+        plot.bottom + 58,
+        16,
+        "middle",
+        INK,
+        c.width - 150,
+      ),
+      "text",
     ),
   );
   parts.push(
-    rotateLabel(
-      text(chart.yLabel, 0, 0, 16, "middle", INK, plot.bottom - plot.top),
-      25,
-      (plot.top + plot.bottom) / 2,
+    registerTarget(
+      targets,
+      `${namespace}.y-label`,
+      rotateLabel(
+        text(chart.yLabel, 0, 0, 16, "middle", INK, plot.bottom - plot.top),
+        25,
+        (plot.top + plot.bottom) / 2,
+      ),
+      "text",
+      true,
     ),
   );
 
@@ -290,23 +348,40 @@ export function renderXyGraphDrawing(
     // Exact point markers preserve the data position despite the line wobble.
     for (const p of s.points) {
       parts.push(
-        {
-          markup: `<circle cx="${x(p.x)}" cy="${
-            y(p.y)
-          }" r="4.5" fill="${color}"><title>${
-            escapeXml(`${s.name}: ${p.x}, ${p.y.toLocaleString("en-US")}`)
-          }</title></circle>`,
-          bounds: { x: x(p.x) - 4.5, y: y(p.y) - 4.5, width: 9, height: 9 },
-        },
+        registerTarget(
+          targets,
+          p.id ? `${namespace}.${p.id}.mark` : undefined,
+          {
+            markup: `<circle cx="${x(p.x)}" cy="${
+              y(p.y)
+            }" r="4.5" fill="${color}"><title>${
+              escapeXml(`${s.name}: ${p.x}, ${p.y.toLocaleString("en-US")}`)
+            }</title></circle>`,
+            bounds: { x: x(p.x) - 4.5, y: y(p.y) - 4.5, width: 9, height: 9 },
+          },
+          "mark",
+        ),
       );
     }
     const lx = 92 + (i % legendColumns) * 200;
     const ly = c.height - 24 -
       (legendRows - 1 - Math.floor(i / legendColumns)) * 26;
     parts.push(line(lx, ly - 5, lx + 23, ly - 5, color, 2.7));
-    parts.push(text(s.name, lx + 33, ly, 13, "start", INK, 155));
+    parts.push(
+      registerTarget(
+        targets,
+        s.id ? `${namespace}.${s.id}.legend-label` : undefined,
+        text(s.name, lx + 33, ly, 13, "start", INK, 155),
+        "text",
+      ),
+    );
   });
-  return group(chart.title, parts, c.width);
+  return group(chart.title, parts, c.width, namespace, targets, {
+    x: plot.left,
+    y: plot.top,
+    width: plot.right - plot.left,
+    height: plot.bottom - plot.top,
+  });
 }
 
 /** Pie angles stay exact; the pen effect is applied to fills and borders. */
@@ -317,8 +392,10 @@ export function renderPieGraph(chart: PieChart, options: GraphOptions): string {
 export function renderPieGraphDrawing(
   chart: PieChart,
   options: GraphOptions,
-): Drawing {
+): TargetedDrawing {
   const c = settings(options);
+  const namespace = chart.id ?? c.id;
+  const targets = new Map<string, RenderTarget>();
   if (
     chart.slices.length < 2 ||
     chart.slices.some((s) => !Number.isFinite(s.value) || s.value <= 0)
@@ -338,7 +415,7 @@ export function renderPieGraphDrawing(
   const cy = (c.height + 65) / 2;
   const r = Math.min(c.width * 0.22, (c.height - 155) / 2);
   const circle = { type: "circle", cx, cy, r } as const;
-  const parts: Drawing[] = [];
+  const parts: ScenePart[] = [];
   const borders: Drawing[] = [];
   const percentages: Drawing[] = [];
   let angle = -Math.PI / 2; // Begin at 12 o'clock, then move clockwise.
@@ -351,6 +428,24 @@ export function renderPieGraphDrawing(
     const endAngle = angle + fraction * Math.PI * 2;
     const start = point(angle);
     const end = point(endAngle);
+    // Sector extrema, including cardinal directions on this arc. The outer
+    // circle still owns painted export bounds; this box identifies the wedge.
+    const extrema = [{ x: cx, y: cy }, start, end];
+    for (
+      let a = Math.ceil(angle / (Math.PI / 2)) * (Math.PI / 2);
+      a < endAngle;
+      a += Math.PI / 2
+    ) {
+      extrema.push(point(a));
+    }
+    const left = Math.min(...extrema.map((p) => p.x));
+    const top = Math.min(...extrema.map((p) => p.y));
+    const sectorBounds = {
+      x: left,
+      y: top,
+      width: Math.max(...extrema.map((p) => p.x)) - left,
+      height: Math.max(...extrema.map((p) => p.y)) - top,
+    };
     const color = GRAPH_COLORS[i % GRAPH_COLORS.length];
     const id = `${c.id}-slice-${i}`;
     // Generate strokes only inside this sector. Keep the SVG clip as a guard
@@ -366,24 +461,39 @@ export function renderPieGraphDrawing(
       },
     );
     parts.push(
-      {
-        markup: `<g clip-path="url(#${id}-sector)"><title>${
-          escapeXml(`${slice.label}: ${slice.value}`)
-        }</title>${
-          handwritten(circle, {
-            id,
-            seed: c.seed,
-            fillSeed: c.seed + i,
-            hatchSector: { startAngle: angle, endAngle },
-            roughness: c.roughness,
-            hatchGap: c.hatchGap,
-            fill: color,
-            stroke: "none",
-          })
-        }</g>`,
-        bounds: null,
-      }, // Fill is contained by the measured outer circle below.
+      registerTarget(
+        targets,
+        slice.id ? `${namespace}.${slice.id}.mark` : undefined,
+        {
+          markup: `<g clip-path="url(#${id}-sector)"><title>${
+            escapeXml(`${slice.label}: ${slice.value}`)
+          }</title>${
+            handwritten(circle, {
+              id,
+              seed: c.seed,
+              fillSeed: c.seed + i,
+              hatchSector: { startAngle: angle, endAngle },
+              roughness: c.roughness,
+              hatchGap: c.hatchGap,
+              fill: color,
+              stroke: "none",
+            })
+          }</g>`,
+          bounds: null,
+          obstacles: [], // The complete pie disk reserves the filled area below.
+        },
+        "mark",
+        false,
+        sectorBounds,
+      ), // Fill is contained by the measured outer circle below.
     );
+    if (slice.id) {
+      const mid = (angle + endAngle) / 2;
+      targets.get(`${namespace}.${slice.id}.mark`)!.anchor = {
+        point: point(mid),
+        direction: { x: Math.cos(mid), y: Math.sin(mid) },
+      };
+    }
     borders.push(
       renderHandwritten({
         type: "line",
@@ -404,12 +514,17 @@ export function renderPieGraphDrawing(
     if (fraction >= 0.08) {
       const mid = (angle + endAngle) / 2;
       percentages.push(
-        text(
-          percent,
-          cx + Math.cos(mid) * r * 0.66,
-          cy + Math.sin(mid) * r * 0.66 + 5,
-          16,
-          "middle",
+        registerTarget(
+          targets,
+          slice.id ? `${namespace}.${slice.id}.percentage` : undefined,
+          text(
+            percent,
+            cx + Math.cos(mid) * r * 0.66,
+            cy + Math.sin(mid) * r * 0.66 + 5,
+            16,
+            "middle",
+          ),
+          "text",
         ),
       );
     }
@@ -433,7 +548,12 @@ export function renderPieGraphDrawing(
       }),
     );
     parts.push(
-      text(slice.label, lx + 30, ly, 15, "start", INK, c.width - lx - 60),
+      registerTarget(
+        targets,
+        slice.id ? `${namespace}.${slice.id}.legend-label` : undefined,
+        text(slice.label, lx + 30, ly, 15, "start", INK, c.width - lx - 60),
+        "text",
+      ),
     );
     parts.push(
       text(
@@ -449,15 +569,27 @@ export function renderPieGraphDrawing(
     angle = endAngle;
   });
   parts.push(
-    ...borders,
-    renderHandwritten(circle, {
-      id: `${c.id}-outline`,
-      seed: c.seed,
-      roughness: c.roughness,
-    }),
+    ...borders.map((b) => ({ ...b, obstacles: [] })),
+    {
+      ...renderHandwritten(circle, {
+        id: `${c.id}-outline`,
+        seed: c.seed,
+        roughness: c.roughness,
+      }),
+      obstacles: [{
+        kind: "area",
+        bounds: { x: cx - r, y: cy - r, width: 2 * r, height: 2 * r },
+        circle: { cx, cy, r },
+      }],
+    },
     ...percentages,
   );
-  return group(chart.title, parts, c.width);
+  return group(chart.title, parts, c.width, namespace, targets, {
+    x: cx - r,
+    y: cy - r,
+    width: 2 * r,
+    height: 2 * r,
+  });
 }
 
 /** Standalone export helper for demos; group renderers also work in a board. */
