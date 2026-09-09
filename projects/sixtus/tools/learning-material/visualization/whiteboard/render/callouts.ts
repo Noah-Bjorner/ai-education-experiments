@@ -18,6 +18,7 @@ import {
   center,
   clearRoute,
   distance,
+  inflate,
   obstacleHitsBox,
   port,
   routeConnector,
@@ -379,8 +380,18 @@ export function renderCallouts(
                 y: target.anchor.point.y + target.anchor.direction.y * gap,
               }
               : port(emphasized, center(label), gap);
-            const start = port(label, end, 10);
-            const route = routeConnector(
+            // Exit the padded rectangle, not a fixed distance along a diagonal:
+            // a diagonal distance can still leave the start inside its padding.
+            const start = port(inflate(label, clearance + 3), end, 1);
+            const aim = target.anchor?.point ??
+              port(target.bounds, center(label), 0);
+            // A detached tip must not appear to point at an intervening tick or
+            // label. Data strokes incident on the target may meet it naturally.
+            const gapBarriers = barriers.filter((o) =>
+              o.kind !== "stroke" && o.kind !== "area"
+            );
+            if (!clearRoute([end, aim], gapBarriers, 1.5)) continue;
+            let route = routeConnector(
               start,
               end,
               barriers,
@@ -389,6 +400,32 @@ export function renderCallouts(
               detailed,
             );
             if (!route || route.length < 2) continue;
+            const toward = { x: aim.x - end.x, y: aim.y - end.y };
+            const incoming = {
+              x: end.x - route.at(-2)!.x,
+              y: end.y - route.at(-2)!.y,
+            };
+            const alignment = (toward.x * incoming.x + toward.y * incoming.y) /
+              (Math.hypot(toward.x, toward.y) *
+                  Math.hypot(incoming.x, incoming.y) || 1);
+            if (alignment < 0.95) {
+              const length = Math.hypot(toward.x, toward.y) || 1;
+              const approach = {
+                x: end.x - toward.x / length * 20,
+                y: end.y - toward.y / length * 20,
+              };
+              if (!clearRoute([approach, end], barriers, clearance)) continue;
+              const leading = routeConnector(
+                start,
+                approach,
+                barriers,
+                soft,
+                clearance,
+                detailed,
+              );
+              if (!leading) continue;
+              route = [...leading, end];
+            }
             const proposal = [
               route,
               ...(type === "arrow" ? arrowHead(route) : []),

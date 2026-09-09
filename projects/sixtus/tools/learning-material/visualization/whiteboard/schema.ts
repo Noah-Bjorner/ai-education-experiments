@@ -5,7 +5,7 @@ export const whiteboardInputSchema = z.object({
   goal: z.string().min(1).describe(
     "The educational or communication task the whiteboard should accomplish: what the audience should understand or take away. Include relevant audience context, supplied facts or data, and constraints so the goal is self-contained.",
   ),
-  category: z.enum(["charts", "diagrams", "maps"]),
+  category: z.enum(["charts", "diagrams", "maps", "math"]),
 });
 
 export type WhiteboardInput = z.infer<typeof whiteboardInputSchema>;

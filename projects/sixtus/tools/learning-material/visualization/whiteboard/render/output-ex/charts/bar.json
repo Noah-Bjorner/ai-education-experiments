@@ -1,0 +1,67 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "xy_chart",
+      "id": "bar",
+      "chartStyle": "bar",
+      "title": "Bar · Illustrative results",
+      "xLabel": "Quarter",
+      "yLabel": "Change",
+      "series": [
+        {
+          "id": "alpha",
+          "name": "Alpha",
+          "points": [
+            {
+              "id": "a-0",
+              "x": "Q1",
+              "y": 2
+            },
+            {
+              "id": "a-1",
+              "x": "Q2",
+              "y": 6
+            },
+            {
+              "id": "a-2",
+              "x": "Q3",
+              "y": -2
+            },
+            {
+              "id": "a-3",
+              "x": "Q4",
+              "y": 8
+            }
+          ]
+        },
+        {
+          "id": "beta",
+          "name": "Beta",
+          "points": [
+            {
+              "id": "b-0",
+              "x": "Q1",
+              "y": 4
+            },
+            {
+              "id": "b-1",
+              "x": "Q2",
+              "y": 3
+            },
+            {
+              "id": "b-2",
+              "x": "Q3",
+              "y": 5
+            },
+            {
+              "id": "b-3",
+              "x": "Q4",
+              "y": 6
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

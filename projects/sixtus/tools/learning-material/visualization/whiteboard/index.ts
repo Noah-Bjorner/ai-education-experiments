@@ -12,6 +12,10 @@ import {
 } from "./prompt.ts";
 import { generateText, NoObjectGeneratedError, Output } from "@ai";
 import { cerebras } from "../../../../../../lib/cerebras.ts";
+import { uploadImage } from "../../../../../../lib/cloudflare.ts";
+import { renderWhiteboardSvg } from "./render/index.ts";
+
+const WHITEBOARD_UPLOAD_PREFIX = "sixtus/whiteboards";
 
 export type {
   WhiteboardInput,
@@ -66,14 +70,31 @@ export const whiteboardSpec = async (
 
 export { whiteboardSpec as whiteboard };
 
-/** Render a whiteboard from a goal or an existing spec and return a public URL. */
-export const executeWhiteboard = (
-  _input: WhiteboardRequest,
+function resolveWhiteboardSpec(
+  input: WhiteboardRequest,
+): Promise<WhiteboardSpec> {
+  return "goal" in input ? whiteboardSpec(input) : Promise.resolve(input);
+}
+
+async function uploadWhiteboardSvg(svg: string): Promise<string> {
+  const name = crypto.randomUUID();
+  return await uploadImage(
+    new Blob([svg], { type: "image/svg+xml" }),
+    `${name}.svg`,
+    { prefix: WHITEBOARD_UPLOAD_PREFIX, name },
+  );
+}
+
+
+
+
+
+
+export const executeWhiteboard = async (
+  input: WhiteboardRequest,
 ): Promise<WhiteboardResult> => {
-  // const url = await renderAndUploadWhiteboard(_input);
-  // return { url };
-
-  const temporaryUrl = "https://static.noahbjorner.com/sixtus/whiteboard-final-v3-test.svg";
-
-  return Promise.resolve({ url: temporaryUrl });
+  const spec = await resolveWhiteboardSpec(input);
+  const { svg } = renderWhiteboardSvg(spec);
+  const url = await uploadWhiteboardSvg(svg);
+  return { url };
 };

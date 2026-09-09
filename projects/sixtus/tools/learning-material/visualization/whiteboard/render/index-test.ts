@@ -6,7 +6,7 @@
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import type { WhiteboardSpec } from "../schema.ts";
 import { renderWhiteboardSvg } from "./index.ts";
-import { renderPieGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
+import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
 
 const books = {
   type: "pie_chart",
@@ -246,7 +246,7 @@ Deno.test("tiny slices do not expose nonexistent percentage labels", () => {
     }],
     annotations: [],
   };
-  const base = renderPieGraphDrawing(child, { id: "test" });
+  const base = renderCircularGraphDrawing(child, { id: "test" });
   assert(base.targets.has("books.tiny.mark"));
   assert(!base.targets.has("books.tiny.percentage"));
   assertThrows(

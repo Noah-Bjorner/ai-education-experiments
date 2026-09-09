@@ -108,8 +108,8 @@ Keep messages concise, factual, and useful to the intended takeaway. The rendere
 
 ## Target IDs
 
-Assign every child, series, point, and slice an \`id\` in the generated spec. IDs start with a lowercase letter and contain only lowercase letters, digits, and hyphens.
-Child IDs must be unique across the board. Series and point IDs must be unique together within their XY child; slice IDs must be unique within their pie child. Preserve IDs when editing existing content.
+Assign every child, expression, series, point, and slice an \`id\` in the generated spec. IDs start with a lowercase letter and contain only lowercase letters, digits, and hyphens.
+Child IDs must be unique across the board. Series and point IDs must be unique together within their XY child; slice IDs must be unique within their pie child; expression IDs must be unique within their math child. Preserve IDs when editing existing content.
 Build visual target IDs using the exact naming rules in each child definition, such as \`books.fiction.legend-label\`. The suffix identifies the visual part of the element.
 Reference only IDs declared in this spec and visual parts supported by that child. Annotations belong to their own child; do not reference another child's targets.
 

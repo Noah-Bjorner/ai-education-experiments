@@ -6,21 +6,22 @@ import {
   type WhiteboardChildDefinition,
 } from "./shared.ts";
 
-const pieChartSchema = z.object({
+const circularChartSchema = z.object({
   type: z.literal("pie_chart"),
   id: elementIdField.optional(),
   title: childTitleField,
   annotations: childAnnotationsField.optional(),
+  chartStyle: z.enum(["pie", "donut"]).optional(),
   slices: z.array(z.object({
     id: elementIdField.optional(),
     label: z.string().min(1),
     value: z.number().positive(),
-  })).min(2),
+  })).min(1),
 });
 
-export const pieChart = {
-  type: pieChartSchema.shape.type.value,
-  schema: pieChartSchema,
+export const circularChart = {
+  type: circularChartSchema.shape.type.value,
+  schema: circularChartSchema,
   instructions: `### When to use it
 
 composition / parts of a whole
@@ -32,6 +33,7 @@ Use an XY bar chart instead when the values are independent comparisons.
 - \`type\`: always "pie_chart".
 - \`title\`: the chart's title.
 - \`id\` and \`annotations\`: follow the shared annotation rules.
+- \`chartStyle\`: "pie" (default) or "donut".
 - \`slices\`: an array of slices.
 
 Each slice contains:
@@ -40,6 +42,7 @@ Each slice contains:
 - \`value\`: a positive number representing its amount.
 
 ### Rules
+
 
 - All slices must refer to the same whole and use the same unit.
 - Categories must not overlap.
@@ -86,4 +89,4 @@ Each slice contains:
       ],
     },
   },
-} satisfies WhiteboardChildDefinition<typeof pieChartSchema>;
+} satisfies WhiteboardChildDefinition<typeof circularChartSchema>;

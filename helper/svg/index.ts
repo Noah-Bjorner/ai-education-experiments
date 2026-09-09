@@ -1,5 +1,5 @@
 import { flag } from "./flag.ts";
-import { map, mapOptionsSchema, regionSchema } from "./country-map.ts";
+import { map, mapOptionsSchema, regionSchema } from "./country/index.ts";
 
 //example: map?countries=us,ca&fidelity=high
 

@@ -233,8 +233,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 <g id="whiteboard-child-0-annotation-1" data-annotation-type="arrow" data-target-ids="motion.peak.mark"><g stroke-linecap="round" stroke-linejoin="round">
     
     <g fill="none" stroke="#111111" stroke-width="1.6">
-      <path d="M 443.50 90.00 C 441.51 90.65 440.68 89.59 438.50 90.00"/>
-      <path d="M 443.50 90.00 C 442.11 89.71 439.54 89.61 438.50 90.00" opacity="0.45"/>
+      <path d="M 442.20 90.00 C 440.64 90.65 440.24 89.59 438.50 90.00"/>
+      <path d="M 442.20 90.00 C 441.24 89.71 439.10 89.61 438.50 90.00" opacity="0.45"/>
     </g>
   </g>
 <g stroke-linecap="round" stroke-linejoin="round">

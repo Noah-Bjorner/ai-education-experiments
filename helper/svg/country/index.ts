@@ -42,12 +42,16 @@ export const regionSchema = z.enum([
   "west-europe",
 ]);
 
+const CONTEMPORARY_YEAR = 2024;
+
+const countrySelectorSchema = z.string().trim().min(1).describe(
+  "Country selector matched case-insensitively by ISO 3166-1 alpha-2 code, ISO 3166-1 alpha-3 code, or English name, for example 'SE', 'SWE', or 'Sweden'.",
+);
+
 const mapTargetSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("countries"),
-    countries: z.array(z.string().trim().min(1)).min(1).describe(
-      "Country selectors matched case-insensitively by ISO 3166-1 alpha-2 code, ISO 3166-1 alpha-3 code, or English name, for example 'SE', 'SWE', or 'Sweden'.",
-    ),
+    countries: z.array(countrySelectorSchema).min(1),
   }),
   z.object({
     type: z.literal("region"),
@@ -57,9 +61,33 @@ const mapTargetSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+const mapRouteSchema = z.object({
+  from: countrySelectorSchema.describe(
+    "Country where the route starts, using the same selectors as countries.",
+  ),
+  to: countrySelectorSchema.describe(
+    "Country where the route ends, using the same selectors as countries.",
+  ),
+  mode: z.enum(["land", "sea", "air"]).describe(
+    "How the route is drawn: overland, across water, or as an air corridor.",
+  ),
+});
+
 export const mapOptionsSchema = z.object({
   target: mapTargetSchema,
   fidelity: z.enum(["low", "medium", "high"]),
+  units: z.enum(["country", "subdivision"]).default("country").describe(
+    "Political units to draw. 'country' shows national borders only. 'subdivision' also draws states, regions, and similar within-country units.",
+  ),
+  year: z.number().int().default(CONTEMPORARY_YEAR).describe(
+    `Year whose borders to use. Omitted years default to ${CONTEMPORARY_YEAR}.`,
+  ),
+  focus: z.array(countrySelectorSchema).min(1).optional().describe(
+    "Countries to frame the view around and emphasize, using the same selectors as countries.",
+  ),
+  routes: z.array(mapRouteSchema).min(1).optional().describe(
+    "Paths connecting countries, drawn by land, sea, or air.",
+  ),
 });
 
 export type MapOptions = z.input<typeof mapOptionsSchema>;
@@ -149,12 +177,11 @@ const REGION_VIEW_BOUNDS = {
   "west-europe": { minLon: -6, minLat: 42, maxLon: 16, maxLat: 56 },
 } as const satisfies Record<Exclude<Region, "world">, Bounds>;
 
-const CONTEMPORARY_YEAR = 2024;
 const datasetCache = new Map<string, Promise<FeatureCollection>>();
 
 export async function map(input: MapOptions) {
   const options = mapOptionsSchema.parse(input);
-  const data = await getGiscoCountries(options.fidelity);
+  const data = await getGiscoCountries(options.fidelity, options.year);
   const features = selectFeatures(data.features, options.target);
 
   if (features.length === 0) {
@@ -163,7 +190,7 @@ export async function map(input: MapOptions) {
     );
   }
 
-  return renderSvg(features, options.target, options.fidelity);
+  return renderSvg(features, options);
 }
 
 function selectFeatures(features: CountryFeature[], target: MapTarget) {
@@ -206,14 +233,17 @@ function formatTarget(target: MapTarget) {
   }
 }
 
-function getGiscoCountries(fidelity: MapOptions["fidelity"]) {
-  const cacheKey = fidelity;
+function getGiscoCountries(
+  fidelity: MapOptions["fidelity"],
+  year: number,
+) {
+  const cacheKey = `${fidelity}:${year}`;
   const cached = datasetCache.get(cacheKey);
   if (cached) return cached;
 
   const resolution = GISCO_RESOLUTION[fidelity];
   const url =
-    `https://gisco-services.ec.europa.eu/distribution/v2/countries/geojson/CNTR_RG_${resolution}_${CONTEMPORARY_YEAR}_4326.geojson`;
+    `https://gisco-services.ec.europa.eu/distribution/v2/countries/geojson/CNTR_RG_${resolution}_${year}_4326.geojson`;
 
   const request = fetch(url).then(async (response) => {
     if (!response.ok) {
@@ -227,12 +257,13 @@ function getGiscoCountries(fidelity: MapOptions["fidelity"]) {
   return request;
 }
 
-function renderSvg(features: CountryFeature[], target: MapTarget, fidelity: "low" | "medium" | "high") {
+function renderSvg(features: CountryFeature[], options: ParsedMapOptions) {
   const width = 800;
   const height = 450;
   const padding = 16;
-  const bounds = getViewBounds(features, target);
-  const cropBounds = target.type === "region" && target.region !== "world"
+  const bounds = getViewBounds(features, options.target);
+  const cropBounds = options.target.type === "region" &&
+      options.target.region !== "world"
     ? bounds
     : undefined;
   const lonSpan = Math.max(bounds.maxLon - bounds.minLon, 1);
@@ -247,8 +278,12 @@ function renderSvg(features: CountryFeature[], target: MapTarget, fidelity: "low
   const project = ([lon, lat]: Position) => {
     const x = xOffset + (lon - bounds.minLon) * scale;
     const y = yOffset + (bounds.maxLat - lat) * scale;
-    return `${round(x, fidelity)} ${round(y, fidelity)}`;
+    return `${round(x, options.fidelity)} ${round(y, options.fidelity)}`;
   };
+
+  const focusSelectors = options.focus
+    ? new Set(options.focus.map(normalizeSelector))
+    : undefined;
 
   const paths = features.flatMap((feature) => {
     const polygons = getRenderablePolygons(feature, cropBounds);
@@ -258,12 +293,28 @@ function renderSvg(features: CountryFeature[], target: MapTarget, fidelity: "low
 
     if (d.length === 0) return [];
 
-    return `<path d="${d}" fill="#000000" stroke="#ffffff" stroke-width="1"><title>${
-      escapeXml(
-        feature.properties.NAME_ENGL ?? feature.properties.CNTR_NAME ?? "",
-      )
-    }</title></path>`;
-  }).join("");
+    const focused = focusSelectors === undefined
+      ? undefined
+      : countryMatches(feature, focusSelectors);
+    const countryId = feature.properties.CNTR_ID;
+    const idAttr = countryId ? ` id="${escapeXml(countryId)}"` : "";
+    const classAttr = focused === undefined
+      ? ""
+      : ` class="${focused ? "focus" : "unfocus"}"`;
+    const fill = focused === false ? "#b3b3b3" : "#000000";
+
+    return {
+      focused: focused === true,
+      markup:
+        `<path${idAttr}${classAttr} d="${d}" fill="${fill}" stroke="#ffffff" stroke-width="1"><title>${
+          escapeXml(
+            feature.properties.NAME_ENGL ?? feature.properties.CNTR_NAME ?? "",
+          )
+        }</title></path>`,
+    };
+  }).sort((a, b) => Number(a.focused) - Number(b.focused))
+    .map((path) => path.markup)
+    .join("");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" overflow="hidden" role="img">${paths}</svg>`;
 }

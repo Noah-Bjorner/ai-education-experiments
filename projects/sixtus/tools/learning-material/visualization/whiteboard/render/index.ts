@@ -9,12 +9,13 @@ import {
 import { GRAPH_FONT_DEFS } from "./font.ts";
 import {
   type GraphOptions,
-  renderPieGraphDrawing,
+  renderCircularGraphDrawing,
   renderXyGraphDrawing,
 } from "./graphs.ts";
 import { type LayoutOptions, layoutWhiteboard } from "./layout.ts";
 import { renderEmphasisAnnotations } from "./annotations.ts";
 import { type CalloutPlacement, renderCallouts } from "./callouts.ts";
+import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import type { TargetedDrawing } from "./targets.ts";
 
 export type WhiteboardRenderOptions = LayoutOptions & {
@@ -49,7 +50,9 @@ function renderBaseChild(child: Child, options: GraphOptions): TargetedDrawing {
     case "xy_chart":
       return renderXyGraphDrawing(child, options);
     case "pie_chart":
-      return renderPieGraphDrawing(child, options);
+      return renderCircularGraphDrawing(child, options);
+    case "math_expressions":
+      return renderMathExpressionsDrawing(child, options);
     default:
       throw new Error("Unsupported whiteboard child type.");
   }
@@ -112,7 +115,9 @@ export function renderWhiteboardSvg(
     }
     const content = child.type === "pie_chart"
       ? child.slices
-      : child.series.flatMap((s) => [s, ...s.points]);
+      : child.type === "xy_chart"
+      ? child.series.flatMap((s) => [s, ...s.points])
+      : child.expressions;
     const ids = content.flatMap((element) => element.id ? [element.id] : []);
     if (new Set(ids).size !== ids.length) {
       throw new Error(

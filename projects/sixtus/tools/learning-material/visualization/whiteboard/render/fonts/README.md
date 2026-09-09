@@ -40,7 +40,7 @@ deploying or bundling the Deno application; Deno needs read permission for this
 directory. The existing synchronous graph rendering API is unchanged.
 
 `renderGraphSvg()` includes `GRAPH_FONT_DEFS` once in its root SVG. When
-building a board from `renderXyGraph()` / `renderPieGraph()` groups, include
+building a board from `renderXyGraph()` / `renderCircularGraph()` groups, include
 those same definitions once at the board root, not once per child. The board
 compositor is still a scaffold.
 

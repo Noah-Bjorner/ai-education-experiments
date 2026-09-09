@@ -17,11 +17,13 @@ system-font defaults into new whiteboard types.
 - `handwritten.ts`: reusable pen outlines and hatch fills.
 - `hatching.ts`: stroke intersections, sector geometry, and fill variation.
 - `bounds.ts`: shared painted bounds, curve extrema, and export sizing.
-- `graphs.ts`: working XY line and pie examples, not a universal layout engine.
-- `index.ts`: shared staged board renderer, base SVG and emphasis snapshots.
+- `graphs.ts`: XY and circular chart renderers, not a universal layout engine.
+- `index.ts`: shared staged board renderer with base, emphasis, and callout snapshots.
 - `layout.ts`: single, split, and stack child allocations.
 - `targets.ts`: semantic SVG IDs and measured child-local annotation targets.
-- `annotations.ts`: emphasis rendering and explicit deferred callout reporting.
+- `annotations.ts`: emphasis rendering and a queue for message callouts.
+- `callouts.ts`: measured messages, candidate placement, brackets, and connectors.
+- `placement.ts`: geometric collision checks and connector routing.
 
 Keep the code small and direct. Shared values belong in code; explanations,
 visual priorities, and rules belong here. Do not create a large token framework
@@ -169,7 +171,9 @@ Board layouts:
 
 Each renderer must receive its allocated size. Merely scaling a side-by-side SVG
 down will not turn it into a mobile stack; a different arrangement requires a
-different layout render. Content-driven board sizing is not implemented yet.
+different layout render. Final board placement increases inter-child spacing
+when completed annotations extend beyond their original allocations. It moves
+complete child groups without scaling or regenerating their base geometry.
 
 ### Tight export bounds
 
@@ -187,9 +191,9 @@ Separate two steps:
 
 Implement this through shared bounds helpers used by every renderer, rather than
 per-chart hardcoded crop values. `renderXyGraphDrawing()` and
-`renderPieGraphDrawing()` return `{ markup, bounds: { x, y, width, height }, targets }`;
+`renderCircularGraphDrawing()` return `{ markup, bounds: { x, y, width, height }, targets }`;
 nonpainting fragments use `bounds: null`. Existing `renderXyGraph()` and
-`renderPieGraph()` retain their string return values. The board compositor
+`renderCircularGraph()` retain their string return values. The board compositor
 applies each group's transform to its bounds, unions the results, and sets the
 root viewBox to `"minX minY width height"`. Set the root width and height to
 those same dimensions so its intrinsic aspect ratio matches the content. A
@@ -332,17 +336,21 @@ wobble for every new visualization type.
 
 ## Current scope and intentional gaps
 
-- Implemented: XY line charts, pie charts, transparent graph exports, embedded
+- Implemented: XY line, grouped bar, scatter, and overlapping area charts; pie,
+  and donut charts; transparent graph exports, embedded
   Shantell Sans, character-width-based label fitting, pen primitives, and shared
   tight export bounds for the current graph geometry. No browser is required to
   calculate those bounds. Future primitives must supply their own painted
   bounds.
 - Implemented board processing: `renderWhiteboardSvg(spec, options)` first
   renders base child groups with target geometry, then appends emphasis groups,
-  then exports the complete SVG. It returns `svg`, dimensions, and bounds, plus
-  `stages.base` and `stages.emphasis` snapshots. The current final SVG is the
-  emphasis snapshot. The renderer does not write files; `../local-test.ts` saves
-  base and final SVG files under `output-ex/` and logs deferred annotations.
+  places callouts, and exports the complete SVG. It returns `svg`, dimensions,
+  bounds, and `stages.base`, `stages.emphasis`, and `stages.callouts` snapshots.
+  The current final SVG is the callout snapshot. `calloutPlacements` describes
+  each label and connector in child-local coordinates; `childPlacements` gives
+  final board translations. The renderer does not write files;
+  `../local-test.ts` saves base, emphasis, and final SVG files under `output-ex/`
+  and logs the chosen callout sides and outside-gutter placements.
 - Emphasis supports circle, box, underline, strikethrough, and number. Circles
   enclose the target's bounds, boxes add a small gap, text strokes follow the
   label orientation, and numbers sit just above/right of the target. All use
@@ -352,15 +360,36 @@ wobble for every new visualization type.
   local to the child; base and emphasis share its board translation. XY point
   IDs survive sorting. Missing targets (including omitted tiny-slice percentage
   labels), duplicate content IDs, and invalid text targets fail explicitly.
-- Arrow, line, and bracket annotations are validated for target existence but
-  are not drawn. They are returned in `deferredAnnotations` with their child,
-  original annotation, and reason. Future callout and asset stages belong after
-  emphasis. Do not imply deferred annotations are visible in the export.
+- Arrow and line callouts measure and wrap complete messages at 15 units, with
+  21-unit line spacing and a 190-unit maximum line width. Explicit newlines and
+  long words are preserved. There is no truncation or opaque text backing.
+- All visible base text and shapes, data strokes, and emphasis reserve space.
+  Grid lines and hatching do not. Pie disks reserve their circular area for
+  labels; wedge arrows attach to their outer arc. An interior percentage can
+  receive a connector through its own filled region while avoiding other text.
+- Callouts try eight directions at increasing distances, biased toward the
+  target's position within the plot. Messages with fewer available positions
+  are placed first, then larger messages, then original annotation order. Each
+  placement reserves its message, connector, and arrowhead for following items.
+- Connectors prefer straight or one-bend routes. A bounded visibility graph
+  around nearby obstacle corners handles blocked routes; outside gutters are
+  evaluated as alternatives. Paths avoid unrelated text, shapes, and data
+  strokes. Arrowheads face the target, and the gap to it must not hide an
+  intervening label. Crowded axis intersections may use a slightly longer gap.
+- Brackets evaluate both sides of vertical groups and above/below horizontal
+  spans, reserving their caps and optional label. They can move outside the
+  child's painted extent when nearby sides are occupied.
+- This is a deterministic, bounded placement search, not a guarantee that every
+  possible annotation set has a solution. If no non-overlapping candidate can
+  be routed, rendering fails with the child and annotation index; it never
+  silently drops a callout or accepts an overlapping label. Existing emphasis
+  positions and the base chart's internal layout are not globally optimized.
 - `index-test.ts` runs the supplied book example and an XY emphasis demo
   without an LLM call; run it with font read and output-ex write permissions.
-- Planned: content-driven internal layout sizing, wrapping
-  labels, robust collision avoidance, category color mapping across views, and
-  dark themes.
+- `callouts-test.ts` adds motion, grouping, and split-board review examples,
+  saving their SVGs and JSON specs/placement diagnostics under `output-ex/`.
+- Planned: asset processing, global layout optimization, wrapping base chart
+  labels, category color mapping across views, and dark themes.
 - `handwritten-demo.ts` predates these export rules. Its cream presentation
   background and system-font headings are an isolated shape-comparison fixture,
   not the template for new visualization types.
@@ -370,3 +399,70 @@ wobble for every new visualization type.
 
 Keep this document and shared code aligned as the renderer evolves. Describe
 unfinished capabilities as planned rather than implying they already work.
+
+
+## Chart first version and design iteration
+
+Run `deno run --allow-read --allow-write charts-gallery.ts` from this directory.
+It writes all six SVG examples, their board JSON specs, and an `index.html`
+gallery into `output-ex/charts/`. Open the gallery locally to compare white and
+tinted surfaces. No model call, upload, or API key is needed. The separate HTTP
+endpoint still returns its existing fixed demo URL; this gallery and
+`renderWhiteboardSvg` exercise the actual rendering pipeline.
+
+- Edit `charts-gallery.ts` for sample data; `graphs.ts` for geometry and type
+  layouts; `theme.ts` for the shared palette and fill opacity.
+- `GraphOptions` controls allocation, roughness, hatch gap, and seed.
+  `CIRCULAR_STYLE` in `graphs.ts` controls the donut hole size.
+- XY `chartStyle` supports `line`, `bar`, `scatter`, and `area`. Numeric charts
+  sort copied points by X. Bars treat X values as equally spaced categories in
+  first-appearance order, including numeric categories. Multiple series use
+  grouped bars with stable slots for missing categories. Duplicate categories
+  within one bar series are rejected; zero bars show a baseline stroke.
+- Areas fill to zero, including negative values. Multiple series overlap;
+  stacking and interpolation are not implemented. Flat zero areas and single
+  points retain their line/markers without manufacturing a filled region.
+- The family definition lives in `../children/circular-chart.ts`, alongside
+  `xy-chart.ts`. Its exported type and renderer names use `CircularChart` and
+  `renderCircularGraph` because the family includes both pie and donut styles.
+- Circular charts retain `type: "pie_chart"` for compatibility. Optional
+  `chartStyle` selects `pie` (default) or `donut`. A single positive
+  slice is supported, including a complete ring. Holes use annular clipping,
+  never opaque cover shapes.
+- Increase the height if the slice legend does not fit. Slices below 8% omit
+  their interior percentage target. Richer label collision handling is future work.
+
+Run `deno test --allow-read *test.ts` for chart and annotation behavior checks.
+
+## Math expressions
+
+`math-expressions.ts` lays out the math child defined in
+`../children/math-expressions.ts`. `latex.ts` parses a documented, bounded subset
+of math LaTeX; it does not execute TeX, macros, external resources, or arithmetic.
+Unsupported commands fail with the expression ID and input position.
+
+Letters, numbers, text, and delimiters use the existing Shantell Sans font and
+measurements. Fraction bars, radicals, and common operators use the shared pen
+renderer. Stretch delimiters vertically around measured content. Greek glyphs,
+matrices, and general LaTeX are not supported in this first version; adding them
+requires deliberate layout and glyph support, not browser font fallback.
+
+Each expression is one centered row. Lay out fractions and scripts relative to a
+baseline, retain painted bounds through translations and scaling, and reserve
+row bounds as annotation obstacles. Uniformly shrink the expressions to the
+child allocation only while the base size stays at least 18 units; otherwise ask
+for more space or less content through a clear rendering error. Titles use the
+standard 25-unit font. Expose `<childId>.<expressionId>.expression` as a target for
+the whole row and `<childId>.title` for the title. Individual terms are not
+addressable yet. The original LaTeX remains in the spec for subsequent editing.
+
+To run the focused tests and regenerate the standalone example from the repo root:
+
+```sh
+deno test --allow-read projects/sixtus/tools/learning-material/visualization/whiteboard/render/math-expressions-test.ts
+deno run --allow-read --allow-write=projects/sixtus/tools/learning-material/visualization/whiteboard/render/output-ex projects/sixtus/tools/learning-material/visualization/whiteboard/render/math-expressions-test.ts
+```
+
+The example is `output-ex/math-expressions.svg`. Render a spec through
+`renderWhiteboardSvg()` for a real SVG; `executeWhiteboard()` still returns its
+pre-existing fixed demo URL and does not yet render/upload specs.

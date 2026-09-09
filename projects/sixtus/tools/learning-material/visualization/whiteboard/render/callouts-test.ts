@@ -3,12 +3,13 @@ import type { WhiteboardSpec } from "../schema.ts";
 import type { PendingCallout } from "./annotations.ts";
 import { renderCallouts } from "./callouts.ts";
 import { renderWhiteboardSvg } from "./index.ts";
-import { renderPieGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
+import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
 import {
   clearRoute,
   inflate,
   obstacleHitsBox,
   overlaps,
+  port,
   routeConnector,
 } from "./placement.ts";
 import type { RenderObstacle, TargetedDrawing } from "./targets.ts";
@@ -75,6 +76,13 @@ Deno.test("messages and connectors avoid base content and other callouts", () =>
         "Connector must avoid unrelated text, marks, and data lines",
       );
     }
+    const target = base.targets.get(placement.targetIds[0])!;
+    const end = placement.paths[0].at(-1)!;
+    const aim = port(target.bounds, end, 0);
+    assert(
+      clearRoute([end, aim], unrelated.filter((o) => o.kind === "text"), 1.5),
+      "No intervening tick label may obscure what the arrow points at",
+    );
     for (const other of result.calloutPlacements) {
       if (other !== placement) {
         assert(!overlaps(inflate(box, 5), other.labelBounds!));
@@ -86,6 +94,10 @@ Deno.test("messages and connectors avoid base content and other callouts", () =>
   }
   assert(result.svg.includes("Maximum height"));
   assert(result.svg.includes("The descent begins here"));
+  assert(
+    !result.calloutPlacements.find((p) => p.annotationIndex === 2)!.usedGutter,
+    "A nearby diagonal note should not be forced into a remote gutter",
+  );
   assert(
     result.calloutPlacements.find((p) => p.annotationIndex === 0)!.labelBounds!
       .y < base.targets.get("motion.peak.mark")!.bounds.y,
@@ -189,7 +201,7 @@ Deno.test("pie arrows use wedge boundaries and can also reach interior percentag
       value: 40,
     }],
   };
-  const base = renderPieGraphDrawing(pie, { id: "test" });
+  const base = renderCircularGraphDrawing(pie, { id: "test" });
   const result = renderWhiteboardSvg({
     layout: "single",
     children: [{

@@ -30,11 +30,12 @@ export const xyChart = {
   schema: xyChartSchema,
   instructions: `### When to use it
 
-trends, comparisons, functions, or distributions on X/Y (line, bar, or scatter)
+trends, comparisons, functions, or distributions on X/Y (line, bar, scatter, or area)
 Use for values plotted against categories or a numeric X axis.
 Choose \`chartStyle\` according to the relationship:
 - \`line\`: change over an ordered numeric axis, such as time or an input variable.
 - \`bar\`: comparisons between categories.
+- \`area\`: magnitude over an ordered numeric axis, filled to zero (multiple series overlap, not stack).
 - \`scatter\`: relationships between paired numeric observations.
 
 ### Fields
@@ -42,7 +43,7 @@ Choose \`chartStyle\` according to the relationship:
 - \`type\`: always "xy_chart".
 - \`title\`: the chart's title.
 - \`id\` and \`annotations\`: follow the shared annotation rules.
-- \`chartStyle\`: "line", "bar", or "scatter".
+- \`chartStyle\`: "line", "bar", "scatter", or "area".
 - \`xLabel\`: the horizontal axis label, including units when they help a learner read the values.
 - \`yLabel\`: the vertical axis label, including units when they help a learner read the values.
 - \`series\`: an array of series.
@@ -59,10 +60,10 @@ Each point contains:
 
 ### Rules
 
-- Use numeric X values for line and scatter charts.
+- Use numeric X values for line, area, and scatter charts.
 - For category comparisons, use bar charts with category names as X values.
 - Within a chart, use a consistent kind of X value.
-- Order line-chart points by ascending X value.
+- Order line- and area-chart points by ascending X value.
 - Give each series a distinct, meaningful name.
 - All series share the chart's axis labels and units.
 - Annotation targets: \`<childId>.title\`, \`<childId>.x-label\`, \`<childId>.y-label\`, \`<childId>.<seriesId>.legend-label\`, and \`<childId>.<pointId>.mark\`. Point marks mean the plotted point or bar; do not invent separate point-label targets.

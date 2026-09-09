@@ -1,0 +1,23 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "pie_chart",
+      "id": "donut",
+      "chartStyle": "donut",
+      "title": "Donut · Book collection",
+      "slices": [
+        {
+          "id": "fiction",
+          "label": "Fiction",
+          "value": 12
+        },
+        {
+          "id": "nonfiction",
+          "label": "Nonfiction",
+          "value": 8
+        }
+      ]
+    }
+  ]
+}
