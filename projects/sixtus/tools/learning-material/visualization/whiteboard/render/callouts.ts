@@ -18,7 +18,6 @@ import {
   center,
   clearRoute,
   distance,
-  inflate,
   obstacleHitsBox,
   port,
   routeConnector,
@@ -247,7 +246,7 @@ function bracketCandidates(job: Job, occupied: Bounds): Candidate[] {
         path,
         gutter: gap === outerGap,
         score: gap * 2 +
-          (((side === "left" || side === "right") === vertical) ? 0 : 100) +
+          (((side === "left" || side === "right") === vertical) ? 0 : 250) +
           (side === "left" ? 8 : 0),
       });
     }
@@ -355,7 +354,8 @@ export function renderCallouts(
           (b.score + (b.label ? distance(center(b.label), job.anchor) : 0))
         );
       for (const candidate of detailed ? free.slice(0, 8) : free) {
-        let paths: Point[][];
+        let paths: Point[][] | undefined;
+        let endpointPenalty = 0;
         if (type === "bracket") {
           if (!clearRoute(candidate.path!, obstacles, clearance)) continue;
           paths = [candidate.path!];
@@ -369,29 +369,40 @@ export function renderCallouts(
               o.ownerId === job.item.annotation.targetIds[0]
             ).map((o) => o.bounds),
           ])!;
-          const end = target.anchor
-            ? {
-              x: target.anchor.point.x + target.anchor.direction.x * 9,
-              y: target.anchor.point.y + target.anchor.direction.y * 9,
-            }
-            : port(emphasized, center(label), 9);
-          const start = port(label, end, 10);
           const barriers = [...hard, { kind: "text" as const, bounds: label }];
-          const route = routeConnector(
-            start,
-            end,
-            barriers,
-            soft,
-            clearance,
-            detailed,
-          );
-          if (!route || route.length < 2) continue;
-          paths = [route, ...(type === "arrow" ? arrowHead(route) : [])];
-          if (!paths.every((p) => clearRoute(p, barriers, 2 + roughness))) {
-            continue;
+          // A marker at an axis intersection may need more room for the tip.
+          // Prefer the closest endpoint, then try a slightly larger stand-off.
+          for (const gap of target.anchor ? [9] : [9, 18, 28]) {
+            const end = target.anchor
+              ? {
+                x: target.anchor.point.x + target.anchor.direction.x * gap,
+                y: target.anchor.point.y + target.anchor.direction.y * gap,
+              }
+              : port(emphasized, center(label), gap);
+            const start = port(label, end, 10);
+            const route = routeConnector(
+              start,
+              end,
+              barriers,
+              soft,
+              clearance,
+              detailed,
+            );
+            if (!route || route.length < 2) continue;
+            const proposal = [
+              route,
+              ...(type === "arrow" ? arrowHead(route) : []),
+            ];
+            if (
+              !proposal.every((p) => clearRoute(p, barriers, 2 + roughness))
+            ) continue;
+            paths = proposal;
+            endpointPenalty = (gap - 9) * 3;
+            break;
           }
         }
-        const score = candidate.score +
+        if (!paths) continue;
+        const score = candidate.score + endpointPenalty +
           (type === "bracket" ? 0 : routeScore(paths[0], soft, clearance));
         if (!selected || score < selected.score) {
           selected = { ...candidate, score, paths };

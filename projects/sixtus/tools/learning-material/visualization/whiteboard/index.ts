@@ -73,7 +73,7 @@ export const executeWhiteboard = (
   // const url = await renderAndUploadWhiteboard(_input);
   // return { url };
 
-  const temporaryUrl = "https://static.noahbjorner.com/sixtus/graph-2-pie_chart-v2.svg";
+  const temporaryUrl = "https://static.noahbjorner.com/sixtus/whiteboard-final-v3-test.svg";
 
   return Promise.resolve({ url: temporaryUrl });
 };

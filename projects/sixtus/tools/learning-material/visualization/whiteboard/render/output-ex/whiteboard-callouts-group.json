@@ -1,0 +1,158 @@
+{
+  "spec": {
+    "layout": "single",
+    "children": [
+      {
+        "type": "xy_chart",
+        "id": "motion",
+        "title": "Illustrative motion",
+        "chartStyle": "line",
+        "xLabel": "Time (s)",
+        "yLabel": "Height (m)",
+        "series": [
+          {
+            "id": "height",
+            "name": "Height",
+            "points": [
+              {
+                "id": "start",
+                "x": 0,
+                "y": 0
+              },
+              {
+                "id": "rise",
+                "x": 1,
+                "y": 3
+              },
+              {
+                "id": "peak",
+                "x": 2,
+                "y": 5
+              },
+              {
+                "id": "fall",
+                "x": 3,
+                "y": 2
+              },
+              {
+                "id": "finish",
+                "x": 4,
+                "y": 1
+              }
+            ]
+          }
+        ],
+        "annotations": [
+          {
+            "type": "bracket",
+            "targetIds": [
+              "motion.start.mark",
+              "motion.finish.mark"
+            ],
+            "content": "The complete journey"
+          },
+          {
+            "type": "arrow",
+            "targetIds": [
+              "motion.peak.mark"
+            ],
+            "content": "Highest point"
+          }
+        ]
+      }
+    ]
+  },
+  "placements": [
+    {
+      "childId": "motion",
+      "annotationIndex": 0,
+      "type": "bracket",
+      "targetIds": [
+        "motion.start.mark",
+        "motion.finish.mark"
+      ],
+      "labelBounds": {
+        "x": 344.5325,
+        "y": 533.38,
+        "width": 160.93499999999997,
+        "height": 15.315000000000001
+      },
+      "paths": [
+        [
+          {
+            "x": 83.5,
+            "y": 511.38
+          },
+          {
+            "x": 83.5,
+            "y": 519.38
+          },
+          {
+            "x": 766.5,
+            "y": 519.38
+          },
+          {
+            "x": 766.5,
+            "y": 511.38
+          }
+        ]
+      ],
+      "bounds": {
+        "x": 82.47694026552684,
+        "y": 510.58,
+        "width": 684.8247222529454,
+        "height": 38.115000000000066
+      },
+      "side": "bottom",
+      "usedGutter": true
+    },
+    {
+      "childId": "motion",
+      "annotationIndex": 1,
+      "type": "arrow",
+      "targetIds": [
+        "motion.peak.mark"
+      ],
+      "labelBounds": {
+        "x": 453.49999999999994,
+        "y": 82.3425,
+        "width": 99.705,
+        "height": 15.315000000000001
+      },
+      "paths": [
+        [
+          {
+            "x": 443.49999999999994,
+            "y": 90
+          },
+          {
+            "x": 438.5,
+            "y": 90
+          }
+        ],
+        [
+          {
+            "x": 447.5,
+            "y": 86
+          },
+          {
+            "x": 438.5,
+            "y": 90
+          },
+          {
+            "x": 447.5,
+            "y": 94
+          }
+        ]
+      ],
+      "bounds": {
+        "x": 437.7,
+        "y": 82.3425,
+        "width": 115.50499999999994,
+        "height": 15.314999999999998
+      },
+      "side": "right",
+      "usedGutter": false
+    }
+  ]
+}

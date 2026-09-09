@@ -1,0 +1,203 @@
+{
+  "spec": {
+    "layout": "single",
+    "children": [
+      {
+        "type": "xy_chart",
+        "id": "motion",
+        "title": "Illustrative motion",
+        "chartStyle": "line",
+        "xLabel": "Time (s)",
+        "yLabel": "Height (m)",
+        "series": [
+          {
+            "id": "height",
+            "name": "Height",
+            "points": [
+              {
+                "id": "start",
+                "x": 0,
+                "y": 0
+              },
+              {
+                "id": "rise",
+                "x": 1,
+                "y": 3
+              },
+              {
+                "id": "peak",
+                "x": 2,
+                "y": 5
+              },
+              {
+                "id": "fall",
+                "x": 3,
+                "y": 2
+              },
+              {
+                "id": "finish",
+                "x": 4,
+                "y": 1
+              }
+            ]
+          }
+        ],
+        "annotations": [
+          {
+            "type": "arrow",
+            "targetIds": [
+              "motion.peak.mark"
+            ],
+            "content": "Maximum height\nThe descent begins here"
+          },
+          {
+            "type": "line",
+            "targetIds": [
+              "motion.finish.mark"
+            ],
+            "content": "Still above the starting height"
+          },
+          {
+            "type": "arrow",
+            "targetIds": [
+              "motion.start.mark"
+            ],
+            "content": "Start at ground level"
+          }
+        ]
+      }
+    ]
+  },
+  "placements": [
+    {
+      "childId": "motion",
+      "annotationIndex": 2,
+      "type": "arrow",
+      "targetIds": [
+        "motion.start.mark"
+      ],
+      "labelBounds": {
+        "x": 12.132500000000007,
+        "y": 458.5,
+        "width": 159.73499999999999,
+        "height": 15.3
+      },
+      "paths": [
+        [
+          {
+            "x": 92,
+            "y": 448.5
+          },
+          {
+            "x": 92,
+            "y": 438.5
+          }
+        ],
+        [
+          {
+            "x": 96,
+            "y": 447.5
+          },
+          {
+            "x": 92,
+            "y": 438.5
+          },
+          {
+            "x": 88,
+            "y": 447.5
+          }
+        ]
+      ],
+      "bounds": {
+        "x": 12.132500000000007,
+        "y": 437.7,
+        "width": 159.735,
+        "height": 36.10000000000002
+      },
+      "side": "bottom",
+      "usedGutter": false
+    },
+    {
+      "childId": "motion",
+      "annotationIndex": 0,
+      "type": "arrow",
+      "targetIds": [
+        "motion.peak.mark"
+      ],
+      "labelBounds": {
+        "x": 189.08000000000004,
+        "y": 71.85,
+        "width": 183.41999999999996,
+        "height": 36.3
+      },
+      "paths": [
+        [
+          {
+            "x": 382.5,
+            "y": 90
+          },
+          {
+            "x": 411.5,
+            "y": 90
+          }
+        ],
+        [
+          {
+            "x": 402.5,
+            "y": 94
+          },
+          {
+            "x": 411.5,
+            "y": 90
+          },
+          {
+            "x": 402.5,
+            "y": 86
+          }
+        ]
+      ],
+      "bounds": {
+        "x": 189.08000000000004,
+        "y": 71.85,
+        "width": 223.21999999999997,
+        "height": 36.3
+      },
+      "side": "left",
+      "usedGutter": false
+    },
+    {
+      "childId": "motion",
+      "annotationIndex": 1,
+      "type": "line",
+      "targetIds": [
+        "motion.finish.mark"
+      ],
+      "labelBounds": {
+        "x": 786.5,
+        "y": 324.65000000000003,
+        "width": 174.81,
+        "height": 36.3
+      },
+      "paths": [
+        [
+          {
+            "x": 776.5,
+            "y": 342.8
+          },
+          {
+            "x": 771.5,
+            "y": 342.8
+          }
+        ]
+      ],
+      "bounds": {
+        "x": 770.7,
+        "y": 324.65000000000003,
+        "width": 190.6099999999999,
+        "height": 36.30000000000001
+      },
+      "side": "right",
+      "usedGutter": false
+    }
+  ]
+}
