@@ -447,7 +447,8 @@ unsupported commands, external content, and absent font glyphs fail explicitly.
 `math-font.ts` supplies metrics and outlines from Shantell Sans Math instead of
 MathJax's default font. The font build also derives larger display operators and
 long arrows from those outlines. Stretch delimiters scale the actual font glyph;
-MathJax draws structural rules. Ordinary bold and italic use the Medium face;
+Custom wrappers draw rounded fraction/radical bars and position root indices.
+Ordinary bold and italic use the Medium face;
 calligraphic/Fraktur alphabets are unavailable and double-struck C/N/P/Q/R/Z use
 dedicated glyphs. Rendering produces self-contained paths with no glyph-cache
 IDs, so equations compose without collisions. The parser resets between rows.
@@ -460,12 +461,6 @@ for more space or less content through a clear rendering error. Titles use the
 standard 25-unit font. Expose `<childId>.<expressionId>.expression` as a target for
 the whole row and `<childId>.title` for the title. Individual terms are not
 addressable yet. The original LaTeX remains in the spec for subsequent editing.
-
-For the local paste-and-preview playground, run `deno task whiteboard:math`
-from the repo root and open `http://127.0.0.1:8787`. It offers live preview,
-examples, explicit errors, board dimensions, and SVG / child JSON downloads.
-The server binds only to loopback and calls `renderWhiteboardSvg()` directly,
-without model credentials or uploads.
 
 To run the focused tests and regenerate the standalone example from the repo root:
 

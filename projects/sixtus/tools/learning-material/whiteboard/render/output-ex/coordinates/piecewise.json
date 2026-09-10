@@ -1,0 +1,52 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "coordinate_plot",
+      "id": "piecewise",
+      "title": "Piecewise functions and endpoints",
+      "axes": {
+        "x": {
+          "min": -5,
+          "max": 5
+        },
+        "y": {
+          "min": -4,
+          "max": 4
+        }
+      },
+      "elements": [
+        {
+          "type": "function",
+          "id": "left",
+          "expression": "-x",
+          "domain": [
+            {
+              "min": -4,
+              "max": 0,
+              "includeMin": true,
+              "includeMax": false
+            }
+          ],
+          "endpointMarkers": true,
+          "label": "−x for x < 0"
+        },
+        {
+          "type": "function",
+          "id": "right",
+          "expression": "x+1",
+          "domain": [
+            {
+              "min": 0,
+              "max": 3,
+              "includeMin": true,
+              "includeMax": false
+            }
+          ],
+          "endpointMarkers": true,
+          "label": "x + 1 for x ≥ 0"
+        }
+      ]
+    }
+  ]
+}

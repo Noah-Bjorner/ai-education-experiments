@@ -1,0 +1,49 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "coordinate_plot",
+      "id": "functions",
+      "title": "Functions and asymptotes",
+      "axes": {
+        "x": {
+          "min": -5,
+          "max": 5
+        },
+        "y": {
+          "min": -4,
+          "max": 4
+        }
+      },
+      "elements": [
+        {
+          "type": "function",
+          "id": "reciprocal",
+          "expression": "1/(x-0.3)",
+          "label": "1/(x − 0.3)"
+        },
+        {
+          "type": "line",
+          "id": "asymptote",
+          "from": [
+            0.3,
+            0
+          ],
+          "to": [
+            0.3,
+            1
+          ],
+          "extend": "both",
+          "stroke": "dashed",
+          "label": "x = 0.3"
+        },
+        {
+          "type": "function",
+          "id": "root",
+          "expression": "sqrt(x)",
+          "label": "√x"
+        }
+      ]
+    }
+  ]
+}

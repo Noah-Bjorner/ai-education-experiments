@@ -37,7 +37,14 @@ type SixtusChatEnv = {
 
 export const sixtusRoutes = new Hono<SixtusEnv>();
 
+sixtusRoutes.route("/whiteboard", whiteboardRoutes);
+
 sixtusRoutes.use("*", sixtusAuthMiddleware);
+sixtusRoutes.route("/context-lookup", contextLookupRoutes);
+sixtusRoutes.route("/glossary", glossaryRoutes);
+sixtusRoutes.route("/library", libraryRoutes);
+sixtusRoutes.route("/models", sixtusModelRoutes);
+sixtusRoutes.route("/tangent", tangentRoutes);
 
 sixtusRoutes.post("/test", (c) => {
   const user = c.get("sixtusUser");
@@ -70,12 +77,6 @@ sixtusRoutes.post(
   },
 );
 
-sixtusRoutes.route("/context-lookup", contextLookupRoutes);
-sixtusRoutes.route("/glossary", glossaryRoutes);
-sixtusRoutes.route("/library", libraryRoutes);
-sixtusRoutes.route("/models", sixtusModelRoutes);
-sixtusRoutes.route("/tangent", tangentRoutes);
-sixtusRoutes.route("/whiteboard", whiteboardRoutes);
 
 sixtusRoutes.post(
   "/realtime/client-secret",

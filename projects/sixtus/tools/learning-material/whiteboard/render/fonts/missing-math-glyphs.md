@@ -1,10 +1,14 @@
-# Missing math glyph artwork checklist
+# Completed math glyph artwork checklist
 
-Checked against the bundled Shantell Sans metrics. This is a practical expansion set, not all mathematical Unicode or full LaTeX coverage. One SVG per row; names encode the Unicode assignment. Existing glyphs are omitted.
+Historical artwork input: all 93 entries below are now bundled and supported.
+Retained because the scratch artwork generator reads these rows.
+
+Originally checked against the base Shantell Sans metrics. This is a practical expansion set, not all mathematical Unicode or full LaTeX coverage. One SVG per row; names encode the Unicode assignment. Existing glyphs are omitted.
 
 SVGs should contain filled vector outlines on transparent backgrounds, use a consistent coordinate system and baseline, and match the existing Medium weight. Import into the corresponding Unicode slot; the filename alone does not assign the glyph.
 
-Math command mappings and layout support still need implementation after font import. Preserve the existing font glyphs and license.
+Math command mappings and layout support are implemented in `../math-font.ts` and
+`../latex.ts`. Preserve the source font and license.
 
 ## Greek lowercase
 

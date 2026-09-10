@@ -1,0 +1,46 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "coordinate_plot",
+      "id": "annotated",
+      "title": "The roots of a quadratic",
+      "axes": {
+        "x": {
+          "min": -5,
+          "max": 5
+        },
+        "y": {
+          "min": -4,
+          "max": 4
+        }
+      },
+      "elements": [
+        {
+          "type": "function",
+          "id": "curve",
+          "expression": "x^2-4",
+          "label": "x² − 4"
+        },
+        {
+          "type": "point",
+          "id": "root",
+          "position": [
+            2,
+            0
+          ],
+          "label": "(2, 0)"
+        }
+      ],
+      "annotations": [
+        {
+          "type": "arrow",
+          "targetIds": [
+            "annotated.root.mark"
+          ],
+          "content": "Here, y = 0"
+        }
+      ]
+    }
+  ]
+}

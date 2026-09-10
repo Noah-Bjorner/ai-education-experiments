@@ -30,8 +30,8 @@ export const xyChart = {
   schema: xyChartSchema,
   instructions: `### When to use it
 
-trends, comparisons, functions, or distributions on X/Y (line, bar, scatter, or area)
-Use for values plotted against categories or a numeric X axis.
+trends, comparisons, or distributions on X/Y (line, bar, scatter, or area)
+Use for supplied values plotted against categories or a numeric X axis. Use coordinate_plot for expression-defined functions, domains, and coordinate geometry.
 Choose \`chartStyle\` according to the relationship:
 - \`line\`: change over an ordered numeric axis, such as time or an input variable.
 - \`bar\`: comparisons between categories.

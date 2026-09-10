@@ -16,6 +16,8 @@ import { type LayoutOptions, layoutWhiteboard } from "./layout.ts";
 import { renderEmphasisAnnotations } from "./annotations.ts";
 import { type CalloutPlacement, renderCallouts } from "./callouts.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
+import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
+import { renderGeometryDrawing } from "./geometry.ts";
 import type { TargetedDrawing } from "./targets.ts";
 
 export type WhiteboardRenderOptions = LayoutOptions & {
@@ -51,8 +53,12 @@ function renderBaseChild(child: Child, options: GraphOptions): TargetedDrawing {
       return renderXyGraphDrawing(child, options);
     case "pie_chart":
       return renderCircularGraphDrawing(child, options);
+    case "geometry":
+      return renderGeometryDrawing(child, options);
     case "math_expressions":
       return renderMathExpressionsDrawing(child, options);
+    case "coordinate_plot":
+      return renderCoordinatePlotDrawing(child, options);
     default:
       throw new Error("Unsupported whiteboard child type.");
   }
@@ -117,6 +123,10 @@ export function renderWhiteboardSvg(
       ? child.slices
       : child.type === "xy_chart"
       ? child.series.flatMap((s) => [s, ...s.points])
+      : child.type === "geometry"
+      ? [...child.points, ...child.objects, ...child.labels, ...child.markings]
+      : child.type === "coordinate_plot"
+      ? child.elements
       : child.expressions;
     const ids = content.flatMap((element) => element.id ? [element.id] : []);
     if (new Set(ids).size !== ids.length) {

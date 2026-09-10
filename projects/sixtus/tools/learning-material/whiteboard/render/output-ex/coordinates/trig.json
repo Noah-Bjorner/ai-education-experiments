@@ -1,0 +1,58 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "coordinate_plot",
+      "id": "trig",
+      "title": "Trigonometric functions",
+      "axes": {
+        "x": {
+          "min": -3.141592653589793,
+          "max": 3.141592653589793,
+          "ticks": [
+            {
+              "value": -3.141592653589793,
+              "label": "−π"
+            },
+            {
+              "value": -1.5707963267948966,
+              "label": "−π/2"
+            },
+            {
+              "value": 0,
+              "label": "0"
+            },
+            {
+              "value": 1.5707963267948966,
+              "label": "π/2"
+            },
+            {
+              "value": 3.141592653589793,
+              "label": "π"
+            }
+          ]
+        },
+        "y": {
+          "min": -2,
+          "max": 2
+        },
+        "scale": "independent"
+      },
+      "elements": [
+        {
+          "type": "function",
+          "id": "sine",
+          "expression": "sin(x)",
+          "label": "sin(x)"
+        },
+        {
+          "type": "function",
+          "id": "tangent",
+          "expression": "tan(x)",
+          "label": "tan(x)",
+          "stroke": "dashed"
+        }
+      ]
+    }
+  ]
+}

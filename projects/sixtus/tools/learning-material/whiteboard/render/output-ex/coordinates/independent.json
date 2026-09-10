@@ -1,0 +1,31 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "coordinate_plot",
+      "id": "independent",
+      "title": "A different scale on each axis",
+      "axes": {
+        "x": {
+          "min": 10,
+          "max": 20,
+          "label": "Time (s)"
+        },
+        "y": {
+          "min": 100,
+          "max": 200,
+          "label": "Distance (m)"
+        },
+        "scale": "independent"
+      },
+      "elements": [
+        {
+          "type": "function",
+          "id": "distance",
+          "expression": "10*x",
+          "label": "d = 10t"
+        }
+      ]
+    }
+  ]
+}

@@ -21,11 +21,11 @@ import { renderWhiteboardSvg } from "./render/index.ts";
 /* all these are just tempoary for demo */
 
 export const WHITEBOARD_TOOL_DESCRIPTION =
-  "Show the learner a whiteboard diagram. Use when a chart, graph, or composed visual explanation would help them understand something.";
+  "Show the learner a whiteboard diagram. Use when a chart, graph, geometry diagram, or composed visual explanation would help them understand something.";
 
 export const WHITEBOARD_SYSTEM_PROMPT_DESCRIPTION = [
   "Use when a composed diagram would help the learner understand a relationship, comparison, quantity, or math idea.",
-  "Prefer whiteboard over image when the visual should be a chart, graph, or math layout rather than a photo or illustration.",
+  "Prefer whiteboard over image when the visual should be a chart, graph, geometry diagram, or math layout rather than a photo or illustration.",
   "Pass a self-contained goal describing what the audience should understand, including relevant audience context, supplied facts or data, and constraints.",
 ].join("\n");
 

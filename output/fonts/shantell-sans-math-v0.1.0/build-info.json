@@ -4,11 +4,14 @@
   "weight": 500,
   "version": "0.100",
   "original_font_sha256": "7cac88420633f67401f06637d54cfa1fe0d72de18aa202d33d67d1e125fa03af",
-  "ttf_sha256": "82361932e0e7429787928e7088ecefc2e3f583fd2ca9616a73a9028d90b7a4d3",
-  "woff2_sha256": "81c2a34c2fa418047032cf3ceb1059682540c3f06936f0c5e67a9d0c2a4ea70e",
+  "ttf_sha256": "dccf23336ab884750d638df05e5651092947dfa8b26520c68a5e27d2b5095209",
+  "woff2_sha256": "f7cd3218857999f328676799676fc6f4cb909145a18be0a815336ceb2f73f651",
   "original_character_count": 655,
   "added_character_count": 93,
   "character_count": 748,
   "original_glyph_count": 1123,
-  "glyph_count": 1216
+  "glyph_count": 1216,
+  "modified_original_characters": [
+    "U+221A"
+  ]
 }

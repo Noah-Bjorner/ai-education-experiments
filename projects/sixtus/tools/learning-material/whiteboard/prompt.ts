@@ -85,7 +85,7 @@ Prefer the simplest type and layout that accomplishes the educational or communi
 - Prefer concrete labels a learner can read at a glance. Avoid meta commentary ("this visualization shows…").
 - Use concise labels. Include units when they help a learner read the values.
 - Use JSON numbers for numeric values: 1200, not "1,200".
-- Populate content arrays with meaningful items; annotations may be empty.
+- Populate content arrays with meaningful items; annotations may be empty. Coordinate plots may use an empty elements array for a blank grid exercise.
 - Keep terminology and units consistent across related children.
 - Do not add fields that are absent from the output or child definitions.
 
@@ -104,12 +104,12 @@ Each annotation has exactly three fields: \`type\`, \`targetIds\`, and \`content
 
 Arrow and line are message callouts: the renderer connects the message to the single target. They do not connect two existing targets. Number places the supplied number beside the target; it is not animation or reveal order.
 Use underline and strikethrough on text targets. Use strikethrough only when the teaching goal explicitly calls for crossing out content, without changing the supplied facts.
-Keep messages concise, factual, and useful to the intended takeaway. The renderer controls positions, sizes, colors, and connector placement; do not output coordinates or styling.
+Keep messages concise, factual, and useful to the intended takeaway. The renderer controls positions, sizes, colors, and connector placement; do not output pixel coordinates or presentation styling. Geometry and coordinate_plot children may supply mathematical coordinates and the semantic drawing options documented in their definition.
 
 ## Target IDs
 
-Assign every child, expression, series, point, and slice an \`id\` in the generated spec. IDs start with a lowercase letter and contain only lowercase letters, digits, and hyphens.
-Child IDs must be unique across the board. Series and point IDs must be unique together within their XY child; slice IDs must be unique within their pie child; expression IDs must be unique within their math child. Preserve IDs when editing existing content.
+Assign every child, coordinate plot element, expression, series, point, slice, geometry object, geometry label, and geometry marking an \`id\` in the generated spec. IDs start with a lowercase letter and contain only lowercase letters, digits, and hyphens.
+Child IDs must be unique across the board. Series and point IDs must be unique together within their XY child; slice IDs must be unique within their pie child; expression IDs must be unique within their math child. Geometry element IDs must be unique together within their geometry child. Coordinate plot element IDs must be unique within their coordinate plot child. Preserve IDs when editing existing content.
 Build visual target IDs using the exact naming rules in each child definition, such as \`books.fiction.legend-label\`. The suffix identifies the visual part of the element.
 Reference only IDs declared in this spec and visual parts supported by that child. Annotations belong to their own child; do not reference another child's targets.
 
@@ -133,7 +133,7 @@ Before returning the JSON, check that:
 
 - The number of children matches the layout.
 - Every child follows its selected type's structure.
-- All content arrays contain items; annotations may be empty.
+- Content arrays contain items, except annotations and coordinate plot elements for a blank grid exercise.
 - IDs are unique in their scope, and annotation targets resolve to declared elements and supported parts in the same child.
 - Every annotation follows its type's target count and content rules.
 - The visual content makes the intended takeaway clear and serves the goal.

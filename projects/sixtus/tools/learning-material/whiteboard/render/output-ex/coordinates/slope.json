@@ -1,0 +1,59 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "coordinate_plot",
+      "id": "slope",
+      "title": "A rise of 2 for a run of 1",
+      "axes": {
+        "x": {
+          "min": -1,
+          "max": 4
+        },
+        "y": {
+          "min": -1,
+          "max": 7
+        },
+        "scale": "equal",
+        "grid": true
+      },
+      "elements": [
+        {
+          "type": "function",
+          "id": "f",
+          "expression": "2*x",
+          "label": "f(x)"
+        },
+        {
+          "type": "line",
+          "id": "run",
+          "from": [
+            1,
+            2
+          ],
+          "to": [
+            2,
+            2
+          ],
+          "extend": "neither",
+          "label": "1"
+        },
+        {
+          "type": "line",
+          "id": "rise",
+          "from": [
+            2,
+            2
+          ],
+          "to": [
+            2,
+            4
+          ],
+          "extend": "neither",
+          "label": "2"
+        }
+      ],
+      "annotations": []
+    }
+  ]
+}

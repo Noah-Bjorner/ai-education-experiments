@@ -1,6 +1,6 @@
 """Build Shantell Sans Math Medium from Shantell Sans and the reviewed SVG glyphs.
 Usage: python build_font.py --source source.woff2 --glyphs glyph-folder --output out
-Requires fonttools[woff]. SVG inputs and source font are never modified.
+Requires fonttools[woff] and skia-pathops. SVG inputs and source font are never modified.
 """
 import argparse
 import hashlib
@@ -14,6 +14,7 @@ from fontTools.pens.cu2quPen import Cu2QuPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.svgLib.path import parse_path
+from thin_radical import apply_radical
 
 
 def build(source: Path, artwork: Path, output: Path):
@@ -22,7 +23,7 @@ def build(source: Path, artwork: Path, output: Path):
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     if source_hash != manifest['source_sha256']:
         raise ValueError('Source font differs from the font used to design these glyphs.')
-    font = TTFont(source)
+    font = TTFont(source, recalcTimestamp=False)
     font.ensureDecompiled()  # Materialize tables before extending the glyph count.
     font.flavor = None
     if font['head'].unitsPerEm != manifest['units_per_em']:
@@ -64,6 +65,8 @@ def build(source: Path, artwork: Path, output: Path):
                 table.cmap[cp] = name
     font.setGlyphOrder(order)
     font['OS/2'].recalcUnicodeRanges(font)
+    with TTFont(source) as original:
+        apply_radical(font, original)
     # Retain weight 500 and the source's Regular style-linking flags. Medium is
     # represented by typographic family/subfamily (IDs 16/17), as in the source.
     replacement = {
@@ -89,7 +92,7 @@ def build(source: Path, artwork: Path, output: Path):
     ttf = output / 'ShantellSansMath-Medium.ttf'
     woff = output / 'ShantellSansMath-Medium.woff2'
     font.save(ttf)
-    webfont = TTFont(ttf)
+    webfont = TTFont(ttf, recalcTimestamp=False)
     webfont.flavor = 'woff2'
     webfont.save(woff)
     final = TTFont(woff)
@@ -116,6 +119,7 @@ def build(source: Path, artwork: Path, output: Path):
         'original_character_count': len(original_cmap), 'added_character_count': len(new_names),
         'character_count': len(cmap), 'original_glyph_count': len(original_order),
         'glyph_count': len(order),
+        'modified_original_characters': ['U+221A'],
     }, indent=2) + '\n')
     print(f'Built {ttf.name} and {woff.name}: {len(cmap)} mapped characters, {len(new_names)} additions.')
 

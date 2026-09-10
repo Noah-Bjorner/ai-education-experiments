@@ -1,0 +1,21 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "coordinate_plot",
+      "id": "blank",
+      "title": "Plot the points on this grid",
+      "axes": {
+        "x": {
+          "min": -5,
+          "max": 5
+        },
+        "y": {
+          "min": -4,
+          "max": 4
+        }
+      },
+      "elements": []
+    }
+  ]
+}

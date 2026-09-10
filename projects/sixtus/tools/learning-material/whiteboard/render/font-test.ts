@@ -17,6 +17,7 @@ Deno.test("the extended whiteboard font preserves existing spacing and ink bound
       advance,
       `Advance changed for U+${Number(code).toString(16)}`,
     );
+    if (code === "8730") continue; // U+221A is inset to match letter weight.
     assertEquals(
       bounds[code],
       (original.glyphBounds as Record<string, unknown>)[code],

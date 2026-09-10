@@ -33,6 +33,57 @@ Deno.test("math child is registered in input, output and generation instructions
   );
 });
 
+Deno.test("fractions use a round-capped bar without a TeX rule", () => {
+  for (
+    const latex of [
+      String.raw`\frac{a}{b}`,
+      String.raw`\frac{x_1}{2}^2`,
+      String.raw`\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`,
+      String.raw`\left\lceil\frac{a}{b}\right\rceil`,
+    ]
+  ) {
+    const result = renderMathLatex(latex);
+    assert(result.markup.includes("<path"), latex);
+    assert(result.markup.includes('data-mml-node="mfrac"'), latex);
+    assert(!result.markup.includes("<rect"), latex);
+    assert(!/<(?:text|use|foreignObject|image)\b/.test(result.markup), latex);
+  }
+  const binom = renderMathLatex(String.raw`\binom{n}{k}`);
+  assert(!binom.markup.includes("<rect"));
+});
+
+Deno.test("radicals join the surd to a stem-matched overline without a TeX rule", () => {
+  for (
+    const latex of [
+      String.raw`\sqrt{x}`,
+      String.raw`\sqrt{1 - x^2}`,
+      String.raw`\sqrt[3]{8}`,
+    ]
+  ) {
+    const result = renderMathLatex(latex);
+    assert(result.markup.includes("<path"), latex);
+    assert(!result.markup.includes("<rect"), latex);
+    assert(!/<(?:text|use|foreignObject|image)\b/.test(result.markup), latex);
+  }
+});
+
+Deno.test("cube-root index sits in the upper notch, not at TeX's 0.55 height", () => {
+  const result = renderMathLatex(String.raw`\sqrt[3]{x+1}`);
+  const index = result.markup.match(
+    /data-mml-node="mn" transform="translate\(([-\d.]+),([-\d.]+)\) scale\(([\d.]+)\)"/,
+  );
+  const surd = result.markup.match(
+    /data-mml-node="mo" transform="translate\([^"]*\) scale\(([\d.]+)\)"/,
+  );
+  assert(index && surd, result.markup);
+  const y = Number(index[2]);
+  const script = Number(index[3]);
+  const surdScale = Number(surd[1]);
+  assertEquals(script, 0.5);
+  // TeX 0.55 of this √ would land near 490. The handwritten notch is higher.
+  assert(y > 0.7 * 695 * surdScale, `index y=${y} surdScale=${surdScale}`);
+});
+
 Deno.test("align* splits rows on \\\\ and columns on &", () => {
   const result = renderMathLatex(String.raw`\begin{align*}
 x^2 + y^2 &= 1 \\
@@ -56,6 +107,8 @@ Deno.test("LaTeX supports common math using the actual font and accepts paste wr
     String
       .raw`\forall x\in\mathbb{R},\quad x\in A\cap B\iff x\in A\land x\in B`,
     String.raw`\left\lceil\frac{a}{b}\right\rceil`,
+    String.raw`\sin^2\theta + \cos^2\theta = 1`,
+    String.raw`P(A \mid B) = \frac{P(A \cap B)}{P(B)}`,
     String.raw`\text{Δ and ÅÄÖ}`,
   ];
   for (const latex of expressions) {
@@ -221,6 +274,42 @@ Deno.test("math annotations and mixed chart boards compose without ID collisions
   );
 });
 
+Deno.test("MathJax format characters and punctuation aliases use existing outlines", () => {
+  for (
+    const latex of [
+      String.raw`\sin\theta`,
+      String.raw`\cos\theta`,
+      String.raw`\sin(\theta)`,
+      String.raw`\log x`,
+      String.raw`P(A \mid B)`,
+      String.raw`a \perp b`,
+    ]
+  ) {
+    const result = renderMathLatex(latex);
+    assert(result.markup.includes("<path"), latex);
+    assert(!/<(?:text|use|foreignObject|image)\b/.test(result.markup), latex);
+  }
+  const board = renderWhiteboardSvg({
+    layout: "single",
+    children: [{
+      type: "math_expressions",
+      id: "board",
+      title: "Conditional probability",
+      expressions: [
+        {
+          id: "p-a-given-b",
+          latex: String.raw`P(A \mid B) = \frac{P(A \cap B)}{P(B)}`,
+        },
+        {
+          id: "cos-theta-expr",
+          latex: String.raw`\cos\theta`,
+        },
+      ],
+    }],
+  });
+  assert(board.svg.includes("<path"));
+});
+
 Deno.test("math rejects unreadable content and unsupported glyphs and escapes text", () => {
   const render = (latex: string) =>
     renderWhiteboardSvg({
@@ -300,11 +389,42 @@ y &= \sqrt{1 - x^2}
 \end{align*}`,
         }],
       },
+      {
+        type: "math_expressions",
+        id: "roots",
+        title: "Radical join",
+        expressions: [
+          { id: "short", latex: String.raw`\sqrt{x}` },
+          { id: "plain", latex: String.raw`\sqrt{1 - x^2}` },
+          { id: "nested", latex: String.raw`\sqrt{b^2 - 4ac}` },
+          { id: "cube", latex: String.raw`\sqrt[3]{8} = 2` },
+          { id: "frac", latex: String.raw`\sqrt{\frac{a}{b}}` },
+        ],
+      },
     ],
   });
   await Deno.writeTextFile(
     new URL("./output-ex/math-expressions.svg", import.meta.url),
     gallery.svg,
   );
-  console.log("Wrote output-ex/math-expressions.svg");
+  const preview = renderWhiteboardSvg({
+    layout: "single",
+    children: [{
+      type: "math_expressions",
+      id: "roots",
+      title: "Radical join",
+      expressions: [
+        { id: "short", latex: String.raw`\sqrt{x}` },
+        { id: "plain", latex: String.raw`\sqrt{1 - x^2}` },
+        { id: "nested", latex: String.raw`\sqrt{b^2 - 4ac}` },
+        { id: "cube", latex: String.raw`\sqrt[3]{8} = 2` },
+        { id: "frac", latex: String.raw`\sqrt{\frac{a}{b}}` },
+      ],
+    }],
+  });
+  await Deno.writeTextFile(
+    new URL("./output-ex/radical-join.svg", import.meta.url),
+    preview.svg,
+  );
+  console.log("Wrote output-ex/math-expressions.svg and radical-join.svg");
 }
