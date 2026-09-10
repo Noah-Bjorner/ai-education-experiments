@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "mapped_characters": 748,
+  "added_characters": 93,
+  "preserved_original_glyphs": 1123,
+  "all_original_outlines_and_metrics_preserved": true,
+  "ttf_and_woff2_tables_decompile": true,
+  "unicode_mappings_and_renderer_metrics_verified": true,
+  "source_font_unchanged": true,
+  "maximum_added_glyph_bounds_error": 0.5,
+  "exports": {
+    "ttf": {
+      "bytes": 283620,
+      "sha256": "00457b5863acdd1f7d3e75521ad6520ace03ab9066d44144ddbcdeaa744d4b1a"
+    },
+    "woff2": {
+      "bytes": 85500,
+      "sha256": "efc4fe952498152f4dff8c89e947c9d779fc42fcf168de4a34cc7f1619412b3d"
+    }
+  }
+}

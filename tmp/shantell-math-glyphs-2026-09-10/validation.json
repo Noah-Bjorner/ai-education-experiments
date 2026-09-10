@@ -1,0 +1,15 @@
+{
+  "glyph_count": 93,
+  "checks": [
+    "Every checklist entry has a unique SVG and Unicode assignment",
+    "SVGs contain only title plus filled closed outline path",
+    "All glyphs fit their canvas with finite coordinates",
+    "SVG bounds match manifest within 0.1 font unit",
+    "All SVGs round-trip through a TrueType proof font",
+    "Proof-font advances match manifest",
+    "Source application font hash is unchanged",
+    "Every glyph was visually inspected across five proof sheets"
+  ],
+  "max_true_type_roundtrip_bounds_error_units": 0.5,
+  "fontforge_ui_import_tested": false
+}

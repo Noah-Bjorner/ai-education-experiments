@@ -1,0 +1,62 @@
+{
+  "layout": "stack",
+  "children": [
+    {
+      "type": "math_expressions",
+      "id": "algebra",
+      "title": "Fractions, roots, and powers",
+      "expressions": [
+        {
+          "id": "quadratic",
+          "latex": "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}"
+        },
+        {
+          "id": "root",
+          "latex": "\\sqrt[3]{8} = 2"
+        },
+        {
+          "id": "scripts",
+          "latex": "a_{i+1}^{2} \\leq \\left(\\frac{b}{c}\\right)^2"
+        }
+      ]
+    },
+    {
+      "type": "math_expressions",
+      "id": "greek",
+      "title": "Greek glyphs through text blocks",
+      "expressions": [
+        {
+          "id": "triangle",
+          "latex": "\\text{α}^2 + \\text{β}^2 = \\text{γ}^2"
+        },
+        {
+          "id": "slope",
+          "latex": "\\frac{\\text{Δ}y}{\\text{Δ}x} = m"
+        },
+        {
+          "id": "theta",
+          "latex": "\\sin(\\text{θ}) = \\frac{a}{c}"
+        }
+      ]
+    },
+    {
+      "type": "math_expressions",
+      "id": "symbols",
+      "title": "New symbols with baseline layout",
+      "expressions": [
+        {
+          "id": "sets",
+          "latex": "x\\,\\text{∈}\\,\\text{ℝ} \\quad A\\,\\text{⊆}\\,B"
+        },
+        {
+          "id": "logic",
+          "latex": "P\\,\\text{⇒}\\,Q \\quad a\\,\\text{⊥}\\,b"
+        },
+        {
+          "id": "contour",
+          "latex": "\\text{∮} f(z)\\,dz = 0"
+        }
+      ]
+    }
+  ]
+}

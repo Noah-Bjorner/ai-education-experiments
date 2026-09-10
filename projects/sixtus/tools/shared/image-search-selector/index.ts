@@ -4,13 +4,20 @@ import { z } from "@zod";
 import {
   imageSearch,
   type ImageSearchResult,
+  type ImageSize,
   type TimeRange,
 } from "../../../../../lib/serper.ts";
+import { cerebras } from "../../../../../lib/cerebras.ts";
 import {
   defaultSelectionCriteria,
   fastImageSearchParamsPrompt,
   intelligentImageSearchParamsPrompt,
 } from "./prompts.ts";
+
+const DEFAULT_MODEL = cerebras("qwen-3.8-27b");
+const DEFAULT_PROVIDER_OPTIONS = {
+  cerebras: { reasoningEffort: "low" as const },
+};
 
 const imageSearchSelectorInputSchema = z.object({
   prompt: z.string().min(1).describe(
@@ -23,7 +30,7 @@ const imageSearchSelectorInputSchema = z.object({
     "Maximum number of image search results to judge.",
   ),
   size: z.enum(["large", "medium", "icon"]).optional().describe(
-    "Preferred Google Images size filter.",
+    "Optional Google Images size filter. Omit to search all sizes.",
   ),
   paramsModel: z.string().optional().describe(
     "Optional model id for turning instructions into image-search parameters.",
@@ -88,11 +95,12 @@ export type ImageSearchSelectorOutput = z.infer<
 
 async function instructionsToQueryParams(
   prompt: string,
-  model: string,
+  model: string | undefined,
   mode: "smart" | "fast",
 ): Promise<ImageQueryParams> {
   const result = await generateText({
-    model: model,
+    model: model ?? DEFAULT_MODEL,
+    ...(model ? {} : { providerOptions: DEFAULT_PROVIDER_OPTIONS }),
     output: Output.object({
       schema: queryParamsSchema,
       name: "image_search_query",
@@ -114,12 +122,12 @@ async function searchCandidates(
   params: ImageQueryParams,
   maxResults: number,
   requireDownloadable: boolean,
-  size: "large" | "medium" | "icon",
+  size?: ImageSize,
 ): Promise<ImageSearchResult[]> {
   const candidates = await imageSearch({
     q: params.query,
     num: maxResults,
-    size: size,
+    size,
     timeRange: params.timeRange ?? undefined,
     download: requireDownloadable,
   });
@@ -148,7 +156,7 @@ async function judgeImage(
   prompt: string,
   selectionCriteria: string | null,
   candidates: ImageSearchResult[],
-  model: string,
+  model: string | undefined,
 ): Promise<{ image: ImageSearchResult; reasoning: string }> {
   if (candidates.length === 0) {
     throw new Error("No image candidates to judge");
@@ -185,8 +193,10 @@ async function judgeImage(
   let output: z.infer<typeof selectedIndexSchema>;
   try {
     const result = await generateText({
-      model: model,
-      reasoning: "low",
+      model: model ?? DEFAULT_MODEL,
+      ...(model
+        ? { reasoning: "low" as const }
+        : { providerOptions: DEFAULT_PROVIDER_OPTIONS }),
       output: Output.object({
         schema: selectedIndexSchema,
         name: "selected_image",
@@ -240,12 +250,12 @@ export async function imageSearchSelector(
 ): Promise<ImageSearchSelectorOutput> {
   const {
     prompt,
-    paramsModel = "zai/glm-5.2-fast",
-    judgeModel = "anthropic/claude-sonnet-5",
+    paramsModel,
+    judgeModel,
     requireDownloadable = false,
     mode = "fast",
     maxCandidates = 6,
-    size = "large",
+    size,
   } = input;
   const start = performance.now();
   const params = await instructionsToQueryParams(prompt, paramsModel, mode);

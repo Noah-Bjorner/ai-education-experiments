@@ -130,11 +130,11 @@ export async function generateContextLookup(
 
   const { text } = await generateText({
     model: cerebras("qwen-3.8-27b"),
-    system,
-    prompt,
     providerOptions: {
       cerebras: { reasoningEffort: "low" },
     },  
+    system,
+    prompt,
   });
 
   const result: ContextLookupResult = {

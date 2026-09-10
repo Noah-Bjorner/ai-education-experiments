@@ -2,10 +2,11 @@ import { imageSearchSelector } from "./index.ts";
 
 if (import.meta.main) {
     const result = await imageSearchSelector({
-        prompt: "Swedish prime mininster portrait",
+        prompt: "Current photo of Swedish prime mininster portrait",
         mode: "smart",
         maxCandidates: 6,
         size: "large",
+        requireDownloadable: false,
     });
     console.log(result);    
 }
@@ -19,5 +20,6 @@ example prompts:
 - Swedish prime mininster portrait
 - cool photo of Drake Maye for a social media post
 - photo from norway vs brazil in the world cup
+- Current photo of Swedish prime mininster portrait
 
 */
