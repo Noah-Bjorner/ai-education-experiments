@@ -1,80 +1,63 @@
-# Shantell Sans in exported SVGs
+# Shantell Sans Math in whiteboard exports
 
-The graph renderer embeds Shantell Sans Medium (500) as a WOFF2 data URL. The
-frontend can display the resulting file in an ordinary `<img>` without loading a
-font stylesheet. Text remains SVG text, rather than outlined letter shapes.
+All whiteboard text uses **Shantell Sans Math Medium (500)**, a custom derivative
+of the supplied Shantell Sans Medium. It preserves all original 655 mapped
+characters, outlines, advances, and vertical metrics, and adds 93 math glyphs
+(748 mapped characters total). Original Swedish text and ordinary chart labels
+retain their measurements. This is a custom extension, not an official release
+of Shantell Sans. The original copyright and SIL OFL remain in `OFL.txt` and
+are embedded in exported SVGs.
 
-## Assets and source
+## Runtime assets
 
-- `ShantellSans-Medium.woff2`: 67,880 bytes, containing all 655 mapped
-  characters from the source font, including ÅÄÖåäö. No per-chart subsetting.
-- `shantell-sans-metrics.json`: character advances and glyph ink bounds
-  extracted from the same font, plus the SHA-256 of the uploaded WOFF2 for
-  provenance.
-- `OFL.txt`: the original copyright and SIL Open Font License. The license is
-  also included in each exported SVG's metadata.
-- `build.py`: optional development tool for preparing WOFF2 and metrics. The
-  application does not depend on Python or FontTools.
+- `ShantellSansMath-Medium.woff2`: the extended font, 85,588 bytes.
+- `shantell-sans-math-metrics.json`: advances, ink bounds, units per em, and
+  SHA-256 of the bundled WOFF2.
+- `shantell-sans-math-paths.json`: exact outlines extracted from this font for
+  MathJax equation rendering. Ordinary whiteboard labels remain SVG text.
+- `shantell-sans-math-layout.json`: enlarged display operators and long arrows,
+  derived by scaling the same font outlines with corresponding layout metrics.
+- `ShantellSans-Medium.woff2` and `shantell-sans-metrics.json`: original assets
+  retained for regression checks and rollback; the runtime no longer loads them.
 
-The font was supplied as `ShantellSans-Medium-no-cyrillic.woff2`. This subset
-removes Cyrillic characters and retains Swedish letters. It is stored
-byte-for-byte under the stable runtime name `ShantellSans-Medium.woff2`, without
-further subsetting or recompression, and uses the static Medium (500) weight.
-Its embedded metadata credits The Shantell Sans Project Authors and identifies
-the SIL Open Font License 1.1; `OFL.txt` carries that copyright and license
-text.
+`../font.ts` loads the WOFF2 once at module startup and embeds it once per board.
+Chart titles, axes, legends, annotations, and math titles share that loader.
+Math uses `../math-font.ts` with MathJax's layout engine, drawing the font's own
+outlines as paths. Delimiters stretch those outlines; fraction and radical bars
+come from the layout engine. No browser fallback or runtime font downloads.
 
-To rebuild metrics, install `fonttools[woff]` in a development Python
-environment and run
-`python build.py /path/to/ShantellSans-Medium-no-cyrillic.woff2`. The script
-copies WOFF2 bytes unchanged, or compresses a TTF/OTF input, and extracts
-advances and ink bounds from that same source. Commit the font and metrics
-together. The initial extraction used FontTools 4.64.0.
+The extension is a single Medium face. Ordinary bold/italic math variants use
+that face without synthetic styles. Calligraphic/Fraktur alphabets are rejected.
+Double-struck C, N, P, Q, R, Z use the corresponding dedicated glyphs. Unbundled
+symbols produce an explicit error; 93 additions do not cover all mathematics.
 
-## Runtime and composition
+## Rebuilding
 
-`../font.ts` reads the local font and license asynchronously at module startup,
-then caches the encoded markup through normal module caching. Rendering charts
-does not fetch fonts or re-encode them. Keep these asset files available when
-deploying or bundling the Deno application; Deno needs read permission for this
-directory. The existing synchronous graph rendering API is unchanged.
-
-`renderGraphSvg()` includes `GRAPH_FONT_DEFS` once in its root SVG. When
-building a board from `renderXyGraph()` / `renderCircularGraph()` groups, include
-those same definitions once at the board root, not once per child. The board
-compositor is still a scaffold.
-
-From the parent `render` directory:
+The editable glyph sources and font build are in the repository's
+`output/fonts/shantell-sans-math-v0.1.0/` package. After changing that font,
+regenerate the runtime assets together from the repository root:
 
 ```sh
-deno run --allow-read=fonts --allow-write=. graphs-test.ts
-deno test --allow-read=fonts graphs-test.ts bounds-test.ts hatching-test.ts
+python3 projects/sixtus/tools/learning-material/whiteboard/render/fonts/build.py output/fonts/shantell-sans-math-v0.1.0/ShantellSansMath-Medium.woff2
 ```
 
-## Trade-offs
+Requires FontTools with WOFF2 support in the development Python environment;
+Python is not used by the application. Commit the generated font, metrics,
+paths, and layout data together. The original font assets remain unchanged.
 
-Embedding this subset adds about 91 KB of base64 markup, plus its license, to an
-uncompressed SVG, down from about 153 KB for the full Shantell Sans file. HTTP
-compression can reduce transfer size. Each separate SVG repeats the font bytes.
-A composed board can share one embedded copy; different SVG images cannot share
-that copy through the browser's font-URL cache. Whole SVG files can still be
-cached.
+## Testing
 
-Using a fixed subset keeps exports simple and supports all its retained glyphs.
-Subsetting to just the characters in a chart could reduce file size later, at
-the cost of another generation step and more caching logic.
+From the repository root:
 
-The uploaded file provides the Medium (500) weight. Synthetic bold and italic,
-kerning, and optional ligatures are disabled so the simple advance-width
-measurements match rendering. Text is normalized to NFC so decomposed Swedish
-characters use the same glyphs. Tight graph exports reject visible characters
-missing from the bundled subset, including Cyrillic and Greek Δ. A viewer's
-fallback font has unknown painted bounds and could be clipped. Supporting more
-scripts or mathematical typesetting requires an additional font with matching
-metrics. Advance-only measurement remains an estimate for unsupported glyphs;
-export-bound measurement fails explicitly.
+```sh
+deno task whiteboard:math
+deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/render/*-test.ts projects/sixtus/tools/learning-material/whiteboard/math-local-test_test.ts
+```
 
-Browser `<img>` display is the primary target and was visually verified. Some
-SVG-to-PDF/image converters do not honor embedded web fonts; those tools must
-load this font themselves or receive a separate export with text converted to
-paths. Browser-specific rendering details can still vary slightly.
+Open http://127.0.0.1:8787 to paste LaTeX, try examples, and save SVG or child
+JSON. This uses the actual whiteboard renderer, without AI calls or uploads.
+
+The extended WOFF2 adds about 24 KB of base64 markup per SVG compared with the
+original font. Equation paths add content-dependent size. The SVG embeds its
+font for browser `<img>` display; converters that ignore embedded web fonts
+still need to load it explicitly for ordinary text labels.

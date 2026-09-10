@@ -78,7 +78,7 @@ The demo must stay at its supplied location in this repository because it import
 
 ## Replacing the active whiteboard font
 
-The project's active loader is `projects/sixtus/tools/learning-material/visualization/whiteboard/render/font.ts`. For adoption:
+The project's active loader is `projects/sixtus/tools/learning-material/whiteboard/render/font.ts`. For adoption:
 
 1. Copy `ShantellSansMath-Medium.woff2` and `shantell-sans-math-metrics.json` into the renderer's `fonts/` directory together.
 2. Update the loader's WOFF2 path, metrics import, and `GRAPH_FONT_FAMILY` to `Shantell Sans Math`. Preserve its Medium/500 style and embedded license.

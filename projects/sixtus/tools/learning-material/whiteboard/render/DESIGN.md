@@ -13,7 +13,7 @@ system-font defaults into new whiteboard types.
 - `theme.ts`: shared color values and fill opacity constants. Import these
   instead of adding hex literals to renderers. Update this guide when changing a
   color's role or palette order.
-- `font.ts`: Shantell Sans, embedded font definitions, and text measurement.
+- `font.ts`: Shantell Sans Math, embedded font definitions, and text measurement.
 - `handwritten.ts`: reusable pen outlines and hatch fills.
 - `hatching.ts`: stroke intersections, sector geometry, and fill variation.
 - `bounds.ts`: shared painted bounds, curve extrema, and export sizing.
@@ -49,7 +49,7 @@ with its renderer.
 
 ## Typography
 
-Use **Shantell Sans Medium, weight 500**, for titles, axes, numbers, legends,
+Use **Shantell Sans Math Medium, weight 500**, for titles, axes, numbers, legends,
 annotations, and text inside diagram nodes.
 
 - Apply `GRAPH_FONT_STYLE` to the graph's enclosing group. Do not invent a
@@ -63,11 +63,10 @@ annotations, and text inside diagram nodes.
   ligatures to match the simple character-advance measurements.
 - Use `measureGraphText()` and `fitGraphText()` before positioning labels.
   Preserve the complete text in `<title>` when truncating it visually.
-- The bundled Shantell Sans Medium subset excludes Cyrillic and supports Swedish
-  letters. Tight graph exports reject unsupported visible glyphs because a
-  viewer's fallback font cannot be measured reliably on the server. Add a font
-  and its metrics for mathematical typesetting or other scripts rather than
-  assuming universal coverage.
+- The bundled Shantell Sans Math Medium font preserves the original Swedish
+  letters and adds Greek and mathematical symbols. Tight exports reject visible
+  glyphs absent from the font; a system fallback cannot be measured reliably.
+  Font metrics and math outlines must be regenerated together when extending it.
 
 Starting sizes in SVG viewBox units, based on the current 800 × 520 chart:
 
@@ -436,16 +435,22 @@ Run `deno test --allow-read *test.ts` for chart and annotation behavior checks.
 
 ## Math expressions
 
-`math-expressions.ts` lays out the math child defined in
-`../children/math-expressions.ts`. `latex.ts` parses a documented, bounded subset
-of math LaTeX; it does not execute TeX, macros, external resources, or arithmetic.
-Unsupported commands fail with the expression ID and input position.
+`math-expressions.ts` lays out the child defined in
+`../children/math-expressions.ts`. `latex.ts` uses MathJax 4.0.0 with only the
+base, AMS, and textmacros configurations, preserving synchronous rendering.
+It accepts Greek letters, common operators, fractions, roots, scripts, limits,
+matrices, cases, and aligned equations. One surrounding pair of math-mode
+paste delimiters is accepted. Input is limited to 2000 characters and 32 nested
+groups, with bounded macro expansion. This is not a full LaTeX document compiler;
+unsupported commands, external content, and absent font glyphs fail explicitly.
 
-Letters, numbers, text, and delimiters use the existing Shantell Sans font and
-measurements. Fraction bars, radicals, and common operators use the shared pen
-renderer. Stretch delimiters vertically around measured content. Greek glyphs,
-matrices, and general LaTeX are not supported in this first version; adding them
-requires deliberate layout and glyph support, not browser font fallback.
+`math-font.ts` supplies metrics and outlines from Shantell Sans Math instead of
+MathJax's default font. The font build also derives larger display operators and
+long arrows from those outlines. Stretch delimiters scale the actual font glyph;
+MathJax draws structural rules. Ordinary bold and italic use the Medium face;
+calligraphic/Fraktur alphabets are unavailable and double-struck C/N/P/Q/R/Z use
+dedicated glyphs. Rendering produces self-contained paths with no glyph-cache
+IDs, so equations compose without collisions. The parser resets between rows.
 
 Each expression is one centered row. Lay out fractions and scripts relative to a
 baseline, retain painted bounds through translations and scaling, and reserve
@@ -456,11 +461,17 @@ standard 25-unit font. Expose `<childId>.<expressionId>.expression` as a target 
 the whole row and `<childId>.title` for the title. Individual terms are not
 addressable yet. The original LaTeX remains in the spec for subsequent editing.
 
+For the local paste-and-preview playground, run `deno task whiteboard:math`
+from the repo root and open `http://127.0.0.1:8787`. It offers live preview,
+examples, explicit errors, board dimensions, and SVG / child JSON downloads.
+The server binds only to loopback and calls `renderWhiteboardSvg()` directly,
+without model credentials or uploads.
+
 To run the focused tests and regenerate the standalone example from the repo root:
 
 ```sh
-deno test --allow-read projects/sixtus/tools/learning-material/visualization/whiteboard/render/math-expressions-test.ts
-deno run --allow-read --allow-write=projects/sixtus/tools/learning-material/visualization/whiteboard/render/output-ex projects/sixtus/tools/learning-material/visualization/whiteboard/render/math-expressions-test.ts
+deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/render/math-expressions-test.ts
+deno run --allow-read --allow-write=projects/sixtus/tools/learning-material/whiteboard/render/output-ex projects/sixtus/tools/learning-material/whiteboard/render/math-expressions-test.ts
 ```
 
 The example is `output-ex/math-expressions.svg`. Render a spec through

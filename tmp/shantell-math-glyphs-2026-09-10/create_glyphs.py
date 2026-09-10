@@ -13,7 +13,7 @@ from fontTools.pens.cu2quPen import Cu2QuPen
 from fontTools.svgLib.path import parse_path
 from PIL import Image, ImageDraw, ImageFont
 OUT=Path(__file__).parent
-SOURCE=Path('/Users/noahbjorner/Developer/Edu/edu_experiments/projects/sixtus/tools/learning-material/visualization/whiteboard/render/fonts')
+SOURCE=Path('/Users/noahbjorner/Developer/Edu/edu_experiments/projects/sixtus/tools/learning-material/whiteboard/render/fonts')
 FONT=TTFont(SOURCE/'ShantellSans-Medium.woff2');GS=FONT.getGlyphSet();CMAP=FONT.getBestCmap()
 BASELINE=1020;CANVAS=1400
 for directory in ['svg','reference','previews']:(OUT/directory).mkdir(exist_ok=True)

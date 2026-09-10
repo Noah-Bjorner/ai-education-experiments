@@ -5,7 +5,7 @@ import metrics from "../shantell-sans-math-metrics.json" with { type: "json" };
 import {
   type Bounds,
   unionBounds,
-} from "../../../../projects/sixtus/tools/learning-material/visualization/whiteboard/render/bounds.ts";
+} from "../../../../projects/sixtus/tools/learning-material/whiteboard/render/bounds.ts";
 
 export const GRAPH_FONT_FAMILY = "Shantell Sans Math";
 

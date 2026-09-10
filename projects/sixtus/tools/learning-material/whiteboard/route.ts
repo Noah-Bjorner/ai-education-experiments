@@ -1,7 +1,7 @@
 import { type Context, Hono } from "@hono/hono";
 
-import { createZodJsonBodyMiddleware } from "../../../../../../helper/hono.ts";
-import type { SixtusEnv } from "../../../../auth.ts";
+import { createZodJsonBodyMiddleware } from "../../../../../helper/hono.ts";
+import type { SixtusEnv } from "../../../auth.ts";
 import { executeWhiteboard } from "./index.ts";
 import { type WhiteboardRequest, whiteboardRequestSchema } from "./schema.ts";
 

@@ -1,9 +1,9 @@
 /** Exercise the real whiteboard parser and renderer with the extended font. */
 import { assert, assertEquals, assertThrows } from "@std/assert";
-import { renderWhiteboardSvg } from "../../../../projects/sixtus/tools/learning-material/visualization/whiteboard/render/index.ts";
-import { parseMathLatex } from "../../../../projects/sixtus/tools/learning-material/visualization/whiteboard/render/latex.ts";
+import { renderWhiteboardSvg } from "../../../../projects/sixtus/tools/learning-material/whiteboard/render/index.ts";
+import { parseMathLatex } from "../../../../projects/sixtus/tools/learning-material/whiteboard/render/latex.ts";
 import { GRAPH_FONT_FAMILY, graphTextBounds } from "./font.ts";
-import oldMetrics from "../../../../projects/sixtus/tools/learning-material/visualization/whiteboard/render/fonts/shantell-sans-metrics.json" with {
+import oldMetrics from "../../../../projects/sixtus/tools/learning-material/whiteboard/render/fonts/shantell-sans-metrics.json" with {
   type: "json",
 };
 import metrics from "../shantell-sans-math-metrics.json" with { type: "json" };

@@ -33,9 +33,6 @@ metrics = {
     "glyphBounds": {str(code): glyph_bounds(glyph)
                     for code, glyph in sorted(cmap.items())},
 }
-(destination / "shantell-sans-math-metrics.json").write_text(
-    json.dumps(metrics, indent=2) + "\n"
-)
 # Preserve the uploaded WOFF2 byte-for-byte; only convert if given a TTF/OTF.
 output = destination / "ShantellSansMath-Medium.woff2"
 if source.suffix.lower() == ".woff2":
@@ -44,6 +41,8 @@ if source.suffix.lower() == ".woff2":
 else:
     font.flavor = "woff2"
     font.save(output)
+metrics["sourceSha256"] = hashlib.sha256(output.read_bytes()).hexdigest()
+(destination / "shantell-sans-math-metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
 # MathJax consumes paths in 1000-units-per-em font coordinates. Extract from
 # the same exported font used by SVG text, with no alternate system font.
 font = TTFont(output)

@@ -2,7 +2,7 @@
   "imports": {
     "@zod": "npm:zod@4.4.3",
     "@std/assert": "jsr:@std/assert@1.0.19",
-    "../../../../projects/sixtus/tools/learning-material/visualization/whiteboard/render/font.ts": "./font.ts"
+    "../../../../projects/sixtus/tools/learning-material/whiteboard/render/font.ts": "./font.ts"
   },
   "compilerOptions": {
     "lib": [

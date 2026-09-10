@@ -35,7 +35,7 @@ for g in manifest['glyphs']:
     assert font['hmtx'][name][0]==g['advance_width']
     assert g['advance_width']>g['font_bounds'][2],g['svg']
     assert font['glyf'][name].numberOfContours>0
-source=Path('/Users/noahbjorner/Developer/Edu/edu_experiments/projects/sixtus/tools/learning-material/visualization/whiteboard/render/fonts/ShantellSans-Medium.woff2')
+source=Path('/Users/noahbjorner/Developer/Edu/edu_experiments/projects/sixtus/tools/learning-material/whiteboard/render/fonts/ShantellSans-Medium.woff2')
 assert hashlib.sha256(source.read_bytes()).hexdigest()==manifest['source_sha256']
 report={'glyph_count':93,'checks':['Every checklist entry has a unique SVG and Unicode assignment','SVGs contain only title plus filled closed outline path','All glyphs fit their canvas with finite coordinates','SVG bounds match manifest within 0.1 font unit','All SVGs round-trip through a TrueType proof font','Proof-font advances match manifest','Source application font hash is unchanged','Every glyph was visually inspected across five proof sheets'],'max_true_type_roundtrip_bounds_error_units':round(max_error,4),'fontforge_ui_import_tested':False}
 (out/'validation.json').write_text(json.dumps(report,indent=2)+'\n')

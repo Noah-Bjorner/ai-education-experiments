@@ -13,7 +13,7 @@ import { searchLibrary } from "./library/search.ts";
 import { handleLibraryUpload } from "./library/upload.ts";
 import { sixtusModelRoutes } from "./models/route.ts";
 import { tangentRoutes } from "./tangent/route.ts";
-import { whiteboardRoutes } from "./tools/learning-material/visualization/whiteboard/route.ts";
+import { whiteboardRoutes } from "./tools/learning-material/whiteboard/route.ts";
 import {
   type RealtimeClientSecretRequest,
   realtimeClientSecretRequestSchema,

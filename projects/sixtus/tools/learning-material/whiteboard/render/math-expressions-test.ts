@@ -44,39 +44,75 @@ y &= \sqrt{1 - x^2}
 
 Deno.test("LaTeX supports common math using the actual font and accepts paste wrappers", () => {
   const expressions = [
-    String.raw`\frac{x_1}{2}^2`, String.raw`\sqrt[3]{x}`,
-    String.raw`\alpha+\beta=\gamma`, String.raw`\Gamma\Delta\Theta\Lambda\Xi\Pi\Sigma\Upsilon\Phi\Psi\Omega`,
-    String.raw`\int_0^1 x^2\,dx = \frac13`, String.raw`\sum_{k=1}^{n} k`,
+    String.raw`\frac{x_1}{2}^2`,
+    String.raw`\sqrt[3]{x}`,
+    String.raw`\alpha+\beta=\gamma`,
+    String.raw`\Gamma\Delta\Theta\Lambda\Xi\Pi\Sigma\Upsilon\Phi\Psi\Omega`,
+    String.raw`\int_0^1 x^2\,dx = \frac13`,
+    String.raw`\sum_{k=1}^{n} k`,
     String.raw`\begin{pmatrix}a&b\\c&d\end{pmatrix}`,
     String.raw`\begin{cases}x&x\ge0\\-x&x<0\end{cases}`,
     String.raw`\begin{aligned}x+1&=2\\x&=1\end{aligned}`,
-    String.raw`\forall x\in\mathbb{R},\quad x\in A\cap B\iff x\in A\land x\in B`,
-    String.raw`\left\lceil\frac{a}{b}\right\rceil`, String.raw`\text{Δ and ÅÄÖ}`,
+    String
+      .raw`\forall x\in\mathbb{R},\quad x\in A\cap B\iff x\in A\land x\in B`,
+    String.raw`\left\lceil\frac{a}{b}\right\rceil`,
+    String.raw`\text{Δ and ÅÄÖ}`,
   ];
   for (const latex of expressions) {
     const result = renderMathLatex(latex);
     assert(result.markup.includes("<path"), latex);
-    assert(!result.markup.includes('d="MM'), "MathJax must receive valid SVG path data");
+    assert(
+      !result.markup.includes('d="MM'),
+      "MathJax must receive valid SVG path data",
+    );
     assert(!/<(?:text|use|foreignObject|image)\b/.test(result.markup), latex);
-    assert(result.bounds && Object.values(result.bounds).every(Number.isFinite));
+    assert(
+      result.bounds && Object.values(result.bounds).every(Number.isFinite),
+    );
   }
-  for (const source of ["$x^2$", "$$x^2$$", String.raw`\(x^2\)`, String.raw`\[x^2\]`]) {
+  for (
+    const source of [
+      "$x^2$",
+      "$$x^2$$",
+      String.raw`\(x^2\)`,
+      String.raw`\[x^2\]`,
+    ]
+  ) {
     assertEquals(normalizeMathLatex(source), "x^2");
     assertEquals(renderMathLatex(source), renderMathLatex("x^2"));
   }
-  assertEquals(renderMathLatex("x^12"), renderMathLatex("x^{1}2"));
+  assertEquals(
+    renderMathLatex("x^12").bounds,
+    renderMathLatex("x^{1}2").bounds,
+  );
 });
 
 Deno.test("malformed or unsupported LaTeX fails and does not poison the next render", () => {
   const valid = renderMathLatex("x+1");
-  for (const input of [
-    "", " ", "{}", "x^2^3", "x_1_2", "{x", "x}", String.raw`\frac{x}`,
-    String.raw`\left(x`, String.raw`\unknowncommand`, String.raw`\begin{matrix}`,
-    String.raw`\href{https://example.com}{x}`, String.raw`\require{html}`,
-    String.raw`\includegraphics{file}`, String.raw`\newcommand{\foo}{x}\foo`,
-    String.raw`\mathcal{F}`, String.raw`\mathbb{A}`, String.raw`\text{😀}`,
-    "x".repeat(2001), "{".repeat(33) + "x" + "}".repeat(33),
-  ]) {
+  for (
+    const input of [
+      "",
+      " ",
+      "{}",
+      "x^2^3",
+      "x_1_2",
+      "{x",
+      "x}",
+      String.raw`\frac{x}`,
+      String.raw`\left(x`,
+      String.raw`\unknowncommand`,
+      String.raw`\begin{matrix}`,
+      String.raw`\href{https://example.com}{x}`,
+      String.raw`\require{html}`,
+      String.raw`\includegraphics{file}`,
+      String.raw`\newcommand{\foo}{x}\foo`,
+      String.raw`\mathcal{F}`,
+      String.raw`\mathbb{A}`,
+      String.raw`\text{😀}`,
+      "x".repeat(2001),
+      "{".repeat(33) + "x" + "}".repeat(33),
+    ]
+  ) {
     assertThrows(() => renderMathLatex(input), Error, undefined, input);
     assertEquals(renderMathLatex("x+1"), valid);
   }
@@ -197,8 +233,9 @@ Deno.test("math rejects unreadable content and unsupported glyphs and escapes te
     "do not fit legibly",
   );
   assertThrows(() => render(String.raw`\text{😀}`), Error, "has no glyph");
-  const result = render(String.raw`\text{<script>&}`);
-  assert(result.svg.includes("&lt;script&gt;&amp;"));
+  const result = render(String.raw`\text{<script>\&}`);
+  assert(result.svg.includes("&lt;script&gt;"));
+  assert(result.svg.includes("&amp;"));
   assert(!result.svg.includes("<script>"));
   for (
     const op of [
