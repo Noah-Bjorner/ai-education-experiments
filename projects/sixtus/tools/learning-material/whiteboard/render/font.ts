@@ -1,13 +1,13 @@
-import { escapeXml } from "../../static/shared/svg.ts";
-import metrics from "./fonts/shantell-sans-metrics.json" with { type: "json" };
+import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
+import metrics from "./fonts/shantell-sans-math-metrics.json" with { type: "json" };
 import { type Bounds, unionBounds } from "./bounds.ts";
 
-export const GRAPH_FONT_FAMILY = "Shantell Sans";
+export const GRAPH_FONT_FAMILY = "Shantell Sans Math";
 
 // Module initialization runs once per server process/isolate. All graph renders
 // reuse these bytes and the resulting markup; no network requests at runtime.
 const [fontBytes, license] = await Promise.all([
-  Deno.readFile(new URL("./fonts/ShantellSans-Medium.woff2", import.meta.url)),
+  Deno.readFile(new URL("./fonts/ShantellSansMath-Medium.woff2", import.meta.url)),
   Deno.readTextFile(new URL("./fonts/OFL.txt", import.meta.url)),
 ]);
 const base64 = btoa(
@@ -53,7 +53,7 @@ export function graphTextBounds(
     if (!(key in glyphBounds)) {
       // Unknown system fallback glyphs cannot be measured reliably on the server.
       throw new Error(
-        `Shantell Sans has no glyph for '${character}'; provide font metrics before exporting tight bounds.`,
+        `${GRAPH_FONT_FAMILY} has no glyph for '${character}'; provide font metrics before exporting tight bounds.`,
       );
     }
     const b = glyphBounds[key];

@@ -5,7 +5,7 @@ import {
 } from "../children/math-expressions.ts";
 import { whiteboardInputSchema, WhiteboardOutput } from "../schema.ts";
 import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
-import { parseMathLatex } from "./latex.ts";
+import { normalizeMathLatex, renderMathLatex } from "./latex.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 
@@ -34,88 +34,51 @@ Deno.test("math child is registered in input, output and generation instructions
 });
 
 Deno.test("align* splits rows on \\\\ and columns on &", () => {
-  const result = parseMathLatex(String.raw`\begin{align*}
+  const result = renderMathLatex(String.raw`\begin{align*}
 x^2 + y^2 &= 1 \\
 y &= \sqrt{1 - x^2}
 \end{align*}`);
-  assert(result.kind === "row");
-  assertEquals(result.children.length, 1);
-  const align = result.children[0];
-  assert(align.kind === "align");
-  assertEquals(align.rows.length, 2);
-  assertEquals(align.rows[0].length, 2);
-  assertEquals(align.rows[1].length, 2);
+  assertEquals([...result.markup.matchAll(/data-mml-node="mtr"/g)].length, 2);
+  assertEquals([...result.markup.matchAll(/data-mml-node="mtd"/g)].length, 4);
 });
 
-Deno.test("LaTeX preserves fraction structure and script argument boundaries", () => {
-  assertEquals(parseMathLatex(String.raw`\frac{x_1}{2}^2`), {
-    kind: "row",
-    children: [{
-      kind: "scripts",
-      base: {
-        kind: "fraction",
-        numerator: {
-          kind: "row",
-          children: [{
-            kind: "scripts",
-            base: { kind: "text", value: "x" },
-            sup: undefined,
-            sub: { kind: "text", value: "1" },
-          }],
-        },
-        denominator: { kind: "row", children: [{ kind: "text", value: "2" }] },
-      },
-      sup: { kind: "text", value: "2" },
-      sub: undefined,
-    }],
-  });
-  const result = parseMathLatex("x^12");
-  assert(result.kind === "row");
-  assertEquals(result.children.length, 2); // TeX consumes one unbraced character.
-  for (
-    const input of [
-      String.raw`\sqrt[3]{x}`,
-      String.raw`\left[\frac{1}{2}\right]`,
-      String.raw`\text{Area} = a^2`,
-      String.raw`a_{i+1}^{2}`,
-    ]
-  ) {
-    assertEquals(
-      parseMathLatex(JSON.parse(JSON.stringify(input))),
-      parseMathLatex(input),
-    );
+Deno.test("LaTeX supports common math using the actual font and accepts paste wrappers", () => {
+  const expressions = [
+    String.raw`\frac{x_1}{2}^2`, String.raw`\sqrt[3]{x}`,
+    String.raw`\alpha+\beta=\gamma`, String.raw`\Gamma\Delta\Theta\Lambda\Xi\Pi\Sigma\Upsilon\Phi\Psi\Omega`,
+    String.raw`\int_0^1 x^2\,dx = \frac13`, String.raw`\sum_{k=1}^{n} k`,
+    String.raw`\begin{pmatrix}a&b\\c&d\end{pmatrix}`,
+    String.raw`\begin{cases}x&x\ge0\\-x&x<0\end{cases}`,
+    String.raw`\begin{aligned}x+1&=2\\x&=1\end{aligned}`,
+    String.raw`\forall x\in\mathbb{R},\quad x\in A\cap B\iff x\in A\land x\in B`,
+    String.raw`\left\lceil\frac{a}{b}\right\rceil`, String.raw`\text{Δ and ÅÄÖ}`,
+  ];
+  for (const latex of expressions) {
+    const result = renderMathLatex(latex);
+    assert(result.markup.includes("<path"), latex);
+    assert(!result.markup.includes('d="MM'), "MathJax must receive valid SVG path data");
+    assert(!/<(?:text|use|foreignObject|image)\b/.test(result.markup), latex);
+    assert(result.bounds && Object.values(result.bounds).every(Number.isFinite));
   }
+  for (const source of ["$x^2$", "$$x^2$$", String.raw`\(x^2\)`, String.raw`\[x^2\]`]) {
+    assertEquals(normalizeMathLatex(source), "x^2");
+    assertEquals(renderMathLatex(source), renderMathLatex("x^2"));
+  }
+  assertEquals(renderMathLatex("x^12"), renderMathLatex("x^{1}2"));
 });
 
-Deno.test("malformed, unsupported and excessive LaTeX fails explicitly", () => {
-  for (
-    const input of [
-      "",
-      " ",
-      "{}",
-      "x^",
-      "x_",
-      "x^2^3",
-      "x_1_2",
-      "{x",
-      "x}",
-      "$x$",
-      String.raw`\frac{x}`,
-      String.raw`\frac{}{2}`,
-      String.raw`\sqrt{}`,
-      String.raw`\left(x\right]`,
-      String.raw`\left(x`,
-      String.raw`\left(x\rightarrow)`,
-      String.raw`\alpha`,
-      String.raw`\begin{matrix}`,
-      String.raw`\href{url}{x}`,
-      String.raw`\constructor`,
-      String.raw`\text{a\command}`,
-      "x".repeat(2001),
-      "{".repeat(33) + "x" + "}".repeat(33),
-    ]
-  ) {
-    assertThrows(() => parseMathLatex(input), Error);
+Deno.test("malformed or unsupported LaTeX fails and does not poison the next render", () => {
+  const valid = renderMathLatex("x+1");
+  for (const input of [
+    "", " ", "{}", "x^2^3", "x_1_2", "{x", "x}", String.raw`\frac{x}`,
+    String.raw`\left(x`, String.raw`\unknowncommand`, String.raw`\begin{matrix}`,
+    String.raw`\href{https://example.com}{x}`, String.raw`\require{html}`,
+    String.raw`\includegraphics{file}`, String.raw`\newcommand{\foo}{x}\foo`,
+    String.raw`\mathcal{F}`, String.raw`\mathbb{A}`, String.raw`\text{😀}`,
+    "x".repeat(2001), "{".repeat(33) + "x" + "}".repeat(33),
+  ]) {
+    assertThrows(() => renderMathLatex(input), Error, undefined, input);
+    assertEquals(renderMathLatex("x+1"), valid);
   }
 });
 

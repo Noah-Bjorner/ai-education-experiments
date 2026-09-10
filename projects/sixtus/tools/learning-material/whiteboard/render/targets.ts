@@ -1,4 +1,4 @@
-import { escapeXml } from "../../static/shared/svg.ts";
+import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
 import type { Bounds, Drawing, Point } from "./bounds.ts";
 
 export type RenderObstacle = {

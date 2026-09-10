@@ -14,7 +14,7 @@ export const mathExpressionsSchema = z.object({
   expressions: z.array(z.object({
     id: elementIdField,
     latex: z.string().trim().min(1).max(2000).describe(
-      "One expression in the supported LaTeX subset, without dollar signs or display delimiters. Escape backslashes in JSON.",
+      "One LaTeX math expression (MathJax base and AMS commands). Prefer no dollar signs or display delimiters. Escape backslashes in JSON.",
     ),
   })).min(1).max(8),
 });
@@ -33,11 +33,11 @@ Use for equations, formulas, or a short sequence of algebra steps. Each expressi
 - type: always "math_expressions".
 - title, id, annotations: follow the shared rules.
 - expressions: 1–8 objects with a unique stable id and a latex string (at most 2000 characters).
-- Supported: Latin letters, numbers, ordinary parentheses/brackets, + - = < > / |, decimal punctuation, groups {...}, superscripts ^ and subscripts _, \frac{...}{...}, \sqrt{...}, \sqrt[n]{...}, and \begin{align*}...\end{align*} (or align) with & column marks and \\ row breaks.
-- Commands: \times, \cdot, \div, \pm, \le, \leq, \ge, \geq, \ne, \neq; \sin, \cos, \tan, \log, \ln; \text{...}; spaces \, \: \; \quad \qquad and escaped space.
-- Stretch delimiters with matching \left( ... \right), \left[ ... \right], or \left| ... \right|. Use braces around multi-character script arguments.
-- No dollar signs, display wrappers, other environments, matrices, macros, Greek commands, or other commands in this first version. Do not replace an unsupported symbol with a different mathematical meaning.
-- The renderer uses the board font for text and draws operators, fraction bars, and roots as pen strokes. No styling or coordinates are supplied by the agent.
+- Supports MathJax base and AMS math: Greek letters, operators and relations, fractions, roots, scripts, sums/products/integrals with limits, \sin and other functions, \text{...}, \mathbb{R}, \left...\right delimiters, matrices, cases, and aligned equations.
+- Use braces around multi-character script arguments. Prefer math source without dollar signs or display wrappers (one surrounding pair is accepted).
+- The board uses Shantell Sans Math Medium everywhere. Equations use paths extracted from that same font; structural bars are drawn by the layout engine. Ordinary bold/italic styles use Medium. Calligraphic/Fraktur alphabets and unbundled symbols are unavailable; do not replace them with a different mathematical meaning. Double-struck letters supported: C, N, P, Q, R, Z.
+- This is math-mode LaTeX, not a full document compiler. No document preambles, package loading, user-defined macros, HTML, or external content. Unsupported commands or missing glyphs produce explicit errors.
+- No styling or coordinates are supplied by the agent.
 - JSON must escape each LaTeX backslash: "\\frac{1}{2}".
 - Annotation targets: <childId>.title and <childId>.<expressionId>.expression. The latter covers the whole row and supports text emphasis and callouts. Individual terms are not targets yet.`,
   example: {

@@ -15,6 +15,7 @@
     "npm:@aws-sdk/client-s3@3.948.0": "3.948.0",
     "npm:@firecrawl/anydoc@~0.1.3": "0.1.3",
     "npm:@google/genai@*": "1.41.0",
+    "npm:@mathjax/src@4.0.0": "4.0.0",
     "npm:@neondatabase/serverless@1.0.2": "1.0.2",
     "npm:@trigger.dev/sdk@4.4.6": "4.4.6_ai@7.0.3__zod@4.4.3_zod@4.4.3",
     "npm:@upstash/redis@*": "1.38.3",
@@ -886,6 +887,18 @@
     "@jsonhero/path@1.0.21": {
       "integrity": "sha512-gVUDj/92acpVoJwsVJ/RuWOaHyG4oFzn898WNGQItLCTQ+hOaVlEaImhwE1WqOTf+l3dGOUkbSiVKlb3q1hd1Q=="
     },
+    "@mathjax/mathjax-newcm-font@4.0.0": {
+      "integrity": "sha512-kpsJgIF4FpWiwIkFgOPmWwy5GXfL25spmJJNg27HQxPddmEL8Blx0jn2BuU/nlwjM/9SnYpEfDrWiAMgLPlB8Q=="
+    },
+    "@mathjax/src@4.0.0": {
+      "integrity": "sha512-i7oYVLkHTskfTqxBzrbvcJN8ptGChWb6bx2LZsCySk7QWf61JqaMYX5N7M0qr8tnYqRmN5DDedkRda7wDuTdBA==",
+      "dependencies": [
+        "@mathjax/mathjax-newcm-font",
+        "mhchemparser",
+        "mj-context-menu",
+        "speech-rule-engine"
+      ]
+    },
     "@microsoft/fetch-event-source@2.0.1": {
       "integrity": "sha512-W6CLUJ2eBMw3Rec70qrsEW0jOm/3twwJv21mrmj2yORiaVmVYGS4sSS5yUwvQc1ZlDLYGPnClVWmUUMagKNsfA=="
     },
@@ -1634,6 +1647,10 @@
     "@workflow/serde@4.1.0": {
       "integrity": "sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ=="
     },
+    "@xmldom/xmldom@0.9.8": {
+      "integrity": "sha512-p96FSY54r+WJ50FIOsCOjyj/wavs8921hG5+kVMmZgKcvIKxMXHTrjNJvRgWa/zuX3B6t2lijLNFaOyuxUH+2A==",
+      "deprecated": true
+    },
     "abort-controller@3.0.0": {
       "integrity": "sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==",
       "dependencies": [
@@ -1732,6 +1749,9 @@
     },
     "color-name@1.1.4": {
       "integrity": "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA=="
+    },
+    "commander@14.0.0": {
+      "integrity": "sha512-2uM9rYjPvyq39NwLRqaiLtWHyDC1FvryJDa2ATTVims5YAS4PupsEQsDvP14FqhFr0P49CYDugi59xaxJlTXRA=="
     },
     "cookie@0.4.2": {
       "integrity": "sha512-aSWTXFzaKWkvHO1Ny/s+ePFpvKsPnjc551iI41v3ny/ow6tBG5Vd+FuqGNhh1LxOmVzOlGUriIlOaokOvhaStA=="
@@ -2079,6 +2099,9 @@
     "merge-stream@2.0.0": {
       "integrity": "sha512-abv/qOcuPfk3URPfDzmZU1LKmuw8kT+0nIHvKrKgFrwifol/doWcdA4ZqsWQ8ENrFKkd67Mfpo/LovbIUsbt3w=="
     },
+    "mhchemparser@4.2.1": {
+      "integrity": "sha512-kYmyrCirqJf3zZ9t/0wGgRZ4/ZJw//VwaRVGA75C4nhE60vtnIzhl9J9ndkX/h6hxSN7pjg/cE0VxbnNM+bnDQ=="
+    },
     "mime-db@1.52.0": {
       "integrity": "sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg=="
     },
@@ -2102,6 +2125,9 @@
     },
     "minipass@7.1.2": {
       "integrity": "sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw=="
+    },
+    "mj-context-menu@0.9.1": {
+      "integrity": "sha512-ECPcVXZFRfeYOxb1MWGzctAtnQcZ6nRucE3orfkKX7t/KE2mlXO2K/bq4BcCGOuhdz3Wg2BZDy2S8ECK73/iIw=="
     },
     "module-details-from-path@1.0.4": {
       "integrity": "sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w=="
@@ -2334,6 +2360,15 @@
         "socket.io-parser"
       ]
     },
+    "speech-rule-engine@5.0.0-beta.1": {
+      "integrity": "sha512-arqcJpXEYRG9mQMxRCNd2xFERGvIvwvuhcnoXDw/SyeYNyJ5I9SUU5ft+BPw0M1rPpwl3Q+6ZeeYAcwGXTa6oQ==",
+      "dependencies": [
+        "@xmldom/xmldom",
+        "commander",
+        "wicked-good-xpath"
+      ],
+      "bin": true
+    },
     "std-env@3.10.0": {
       "integrity": "sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg=="
     },
@@ -2433,6 +2468,9 @@
       ],
       "bin": true
     },
+    "wicked-good-xpath@1.3.0": {
+      "integrity": "sha512-Gd9+TUn5nXdwj/hFsPVx5cuHHiF5Bwuc30jZ4+ronF1qHK5O7HD0sgmXWSEgwKquT3ClLoKPVbO6qGwVwLzvAw=="
+    },
     "wrap-ansi@7.0.0": {
       "integrity": "sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==",
       "dependencies": [
@@ -2491,6 +2529,7 @@
       "npm:@aws-sdk/client-s3@3.948.0",
       "npm:@firecrawl/anydoc@~0.1.3",
       "npm:@google/genai@*",
+      "npm:@mathjax/src@4.0.0",
       "npm:@neondatabase/serverless@1.0.2",
       "npm:@trigger.dev/sdk@4.4.6",
       "npm:@upstash/redis@*",
