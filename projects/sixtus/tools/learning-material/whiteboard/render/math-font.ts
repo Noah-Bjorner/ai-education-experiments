@@ -7,6 +7,9 @@ import { SvgWrapperFactory } from "@mathjax/src/js/output/svg/WrapperFactory.js"
 import metrics from "./fonts/shantell-sans-math-metrics.json" with { type: "json" };
 import paths from "./fonts/shantell-sans-math-paths.json" with { type: "json" };
 
+import layoutGlyphs from "./fonts/shantell-sans-math-layout.json" with { type: "json" };
+const layoutVariants = layoutGlyphs as unknown as Record<string, SvgCharData>;
+
 const outlines: Record<string, string> = paths;
 const advances: Record<string, number> = metrics.advances;
 const bounds: Record<string, number[] | null> = metrics.glyphBounds;
@@ -45,6 +48,8 @@ export class ShantellMathFont extends SvgFontData {
   }
 
   override getChar(variant: string, n: number): SvgCharData {
+    if (layoutVariants[`${variant}:${n}`]) return layoutVariants[`${variant}:${n}`];
+    if (layoutVariants[n]) return layoutVariants[n];
     // TeX accents use combining codepoints; these share the font's spacing outlines.
     n = ({ 0x302: 94, 0x303: 126, 0x304: 175, 0x305: 175,
       0x20d7: 0x2192, 0x2016: 0x2225 } as Record<number, number>)[n] ?? n;

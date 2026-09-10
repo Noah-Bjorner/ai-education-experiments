@@ -1,5 +1,5 @@
 import type { WhiteboardSpec } from "../schema.ts";
-import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
+import { escapeXml } from "./svg.ts";
 import { handwritten, renderHandwritten } from "./handwritten.ts";
 import {
   fitGraphText,

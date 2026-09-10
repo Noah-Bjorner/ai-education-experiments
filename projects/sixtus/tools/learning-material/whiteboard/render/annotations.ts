@@ -1,5 +1,5 @@
 import type { WhiteboardSpec } from "../schema.ts";
-import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
+import { escapeXml } from "./svg.ts";
 import { type Drawing, unionBounds } from "./bounds.ts";
 import { GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
 import { renderHandwritten } from "./handwritten.ts";

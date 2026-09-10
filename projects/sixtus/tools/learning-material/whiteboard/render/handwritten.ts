@@ -1,4 +1,4 @@
-import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
+import { escapeXml } from "./svg.ts";
 import type { Shape } from "./shapes.ts";
 import { type FillSector, hatchStrokes } from "./hatching.ts";
 import { COLORS, FILL_STYLE } from "./theme.ts";

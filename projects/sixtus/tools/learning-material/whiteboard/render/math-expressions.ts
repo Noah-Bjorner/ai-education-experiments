@@ -1,5 +1,5 @@
 import type { MathExpressions } from "../children/math-expressions.ts";
-import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
+import { escapeXml } from "./svg.ts";
 import { type Bounds, type Drawing, unionBounds } from "./bounds.ts";
 import {
   fitGraphText,

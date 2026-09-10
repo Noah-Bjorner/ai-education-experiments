@@ -58,6 +58,7 @@ export function renderMathLatex(source: string, size = 36): MathBox {
   if (w <= 0 || h <= 0) throw new Error("The expression has no visible content.");
   const scale = size / 1000;
   const markup = adaptor.innerHTML(svg);
+  if (!/<path\b[^>]*\bd="[^"]+"|<rect\b/.test(markup)) throw new Error("The expression has no visible content.");
   // No optional HTML/link/extension packages are enabled. Keep the export contract explicit.
   if (/<(?:script|foreignObject|image|a|text)\b|\s(?:href|on\w+)=/i.test(markup)) throw new Error("The expression requires unsupported external content or font glyphs.");
   return {

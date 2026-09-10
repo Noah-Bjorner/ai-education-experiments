@@ -196,7 +196,7 @@ Deno.test("math rejects unreadable content and unsupported glyphs and escapes te
     Error,
     "do not fit legibly",
   );
-  assertThrows(() => render(String.raw`\text{Δ}`), Error, "has no glyph");
+  assertThrows(() => render(String.raw`\text{😀}`), Error, "has no glyph");
   const result = render(String.raw`\text{<script>&}`);
   assert(result.svg.includes("&lt;script&gt;&amp;"));
   assert(!result.svg.includes("<script>"));

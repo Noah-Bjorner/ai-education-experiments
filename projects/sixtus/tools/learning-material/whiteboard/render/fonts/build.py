@@ -55,6 +55,22 @@ for code, name in sorted(font.getBestCmap().items()):
     glyphs[name].draw(TransformPen(pen, (scale, 0, 0, scale, 0, 0)))
     paths[str(code)] = pen.getCommands()
 (destination / "shantell-sans-math-paths.json").write_text(json.dumps(paths, separators=(",", ":")) + "\n")
+# Layout-sized versions of existing outlines, not additional font glyphs.
+# MathJax's long-arrow commands and display operators need matching metrics.
+layout_glyphs = {}
+variants = [(str(dst), src, 1.65, 1) for dst, src in {
+    0x27f5: 0x2190, 0x27f6: 0x2192, 0x27f7: 0x2194,
+    0x27f8: 0x21d0, 0x27f9: 0x21d2, 0x27fa: 0x21d4, 0x27fc: 0x21a6,
+}.items()]
+variants += [(f"-largeop:{ord(c)}", ord(c), 1.35, 1.35) for c in "∑∏∫∬∭∮∪∩∧∨⊕⊗"]
+for key, code, sx, sy in variants:
+    name = font.getBestCmap()[code]
+    pen = SVGPathPen(glyphs, ntos=lambda v: format(v, ".3f").rstrip("0").rstrip(".") if v else "0")
+    glyphs[name].draw(TransformPen(pen, (sx, 0, 0, sy, 0, 0)))
+    b = glyph_bounds(name)
+    layout_glyphs[key] = [b[3]*sy/1000, -b[1]*sy/1000,
+                         font["hmtx"].metrics[name][0]*sx/1000, {"p": pen.getCommands()[1:-1]}]
+(destination / "shantell-sans-math-layout.json").write_text(json.dumps(layout_glyphs, separators=(",", ":")) + "\n")
 # Keep the font's own copyright with the standard SIL license text.
 license_path = destination / "OFL.txt"
 license_text = license_path.read_text()

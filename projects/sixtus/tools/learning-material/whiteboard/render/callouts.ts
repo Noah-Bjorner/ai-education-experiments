@@ -1,4 +1,4 @@
-import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
+import { escapeXml } from "./svg.ts";
 import {
   type Bounds,
   type Drawing,

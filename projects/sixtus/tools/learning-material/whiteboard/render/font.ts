@@ -1,4 +1,4 @@
-import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
+import { escapeXml } from "./svg.ts";
 import metrics from "./fonts/shantell-sans-math-metrics.json" with { type: "json" };
 import { type Bounds, unionBounds } from "./bounds.ts";
 

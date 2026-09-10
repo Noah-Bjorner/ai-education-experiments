@@ -1,4 +1,4 @@
-import { escapeXml } from "../../outdated-visualization/static/shared/svg.ts";
+import { escapeXml } from "./svg.ts";
 import { COLORS } from "./theme.ts";
 
 /** The same geometry feeds the regular and handwritten renderers. */
