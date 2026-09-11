@@ -17,6 +17,7 @@ import { COLORS } from "./theme.ts";
 import {
   center,
   clearRoute,
+  contains,
   distance,
   inflate,
   obstacleHitsBox,
@@ -100,14 +101,14 @@ function measureLabel(content: string): Label {
   return { lines, bounds };
 }
 
-function labelDrawing(label: Label, box: Bounds): Drawing {
+function labelDrawing(label: Label, box: Bounds, color: string): Drawing {
   const x = box.x - label.bounds.x, y = box.y - label.bounds.y;
   return {
     markup: `<g data-callout-label="true">${
       label.lines.map((line, i) =>
         `<text x="${x}" y="${
           y + i * LINE_HEIGHT
-        }" font-size="${FONT_SIZE}" fill="${COLORS.ink}">${
+        }" font-size="${FONT_SIZE}" fill="${escapeXml(color)}">${
           escapeXml(line)
         }</text>`
       ).join("\n")
@@ -191,6 +192,28 @@ function gutterCandidates(
   return result;
 }
 
+/** Closed shapes that contain the target, such as a pitch around a player. */
+function enclosingOwners(
+  obstacles: RenderObstacle[],
+  targets: RenderTarget[],
+  exclude: Set<string>,
+): Set<string> {
+  const bounds = new Map<string, Bounds>();
+  for (const o of obstacles) {
+    if (!o.ownerId || exclude.has(o.ownerId)) continue;
+    const current = bounds.get(o.ownerId);
+    bounds.set(o.ownerId, unionBounds([current ?? null, o.bounds])!);
+  }
+  return new Set(
+    [...bounds.entries()]
+      .filter(([, b]) =>
+        b.width > 24 && b.height > 24 &&
+        targets.some((t) => contains(b, center(t.bounds)))
+      )
+      .map(([id]) => id),
+  );
+}
+
 function bracketCandidates(job: Job, occupied: Bounds): Candidate[] {
   const b = job.bounds, result: Candidate[] = [];
   const w = job.label?.bounds.width ?? 0, h = job.label?.bounds.height ?? 0;
@@ -255,6 +278,36 @@ function bracketCandidates(job: Job, occupied: Bounds): Candidate[] {
   return result;
 }
 
+/** Choose the nearest visible stroke, including disconnected function branches. */
+function strokeAnchor(target: RenderTarget, toward: Point) {
+  if (target.anchor) return target.anchor;
+  let closest: Point | undefined, best = Infinity;
+  for (const { a, b } of target.outline ?? []) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const t = Math.max(
+      0,
+      Math.min(
+        1,
+        ((toward.x - a.x) * dx + (toward.y - a.y) * dy) /
+          (dx * dx + dy * dy || 1),
+      ),
+    );
+    const point = { x: a.x + t * dx, y: a.y + t * dy };
+    const length = distance(point, toward);
+    if (length > 0 && length < best) {
+      closest = point;
+      best = length;
+    }
+  }
+  return closest && {
+    point: closest,
+    direction: {
+      x: (toward.x - closest.x) / best,
+      y: (toward.y - closest.y) / best,
+    },
+  };
+}
+
 function arrowHead(path: Point[]): Point[][] {
   const end = path.at(-1)!, prev = path.at(-2)!;
   const length = distance(prev, end) || 1,
@@ -271,12 +324,13 @@ export function renderCallouts(
   pending: PendingCallout[],
   scene: TargetedDrawing,
   emphasisObstacles: RenderObstacle[],
-  options: { id: string; roughness?: number; seed?: number },
+  options: { id: string; roughness?: number; seed?: number; color?: string },
 ): {
   drawing: Drawing;
   placements: CalloutPlacement[];
   obstacles: RenderObstacle[];
 } {
+  const color = options.color ?? COLORS.ink;
   const obstacles = [...scene.obstacles, ...emphasisObstacles];
   const parts: Drawing[] = [], placements: CalloutPlacement[] = [];
   const roughness = Math.min(options.roughness ?? 1.5, 0.65);
@@ -333,8 +387,11 @@ export function renderCallouts(
   for (const job of jobs) {
     const type = job.item.annotation.type as CalloutPlacement["type"];
     const ownIds = new Set(job.item.annotation.targetIds);
+    const containers = enclosingOwners(obstacles, job.targets, ownIds);
     const hard = obstacles.filter((o) => {
-      if (o.ownerId && ownIds.has(o.ownerId)) return false;
+      if (o.ownerId && (ownIds.has(o.ownerId) || containers.has(o.ownerId))) {
+        return false;
+      }
       // A percentage inside a pie needs a route into its own filled region.
       // Other text and data strokes remain barriers; hatching is not an obstacle.
       if (
@@ -345,20 +402,34 @@ export function renderCallouts(
     });
     const soft: RenderObstacle[] = [];
     let selected: (Candidate & { paths: Point[][] }) | null = null;
-    const select = (candidates: Candidate[], detailed: boolean) => {
-      const free = candidates.filter((c) =>
-        !c.label ||
-        obstacles.every((o) => !obstacleHitsBox(o, c.label!, clearance))
-      )
-        .sort((a, b) =>
-          (a.score + (a.label ? distance(center(a.label), job.anchor) : 0)) -
-          (b.score + (b.label ? distance(center(b.label), job.anchor) : 0))
-        );
-      for (const candidate of detailed ? free.slice(0, 8) : free) {
+    const select = (
+      candidates: Candidate[],
+      detailed: boolean,
+      relaxed = false,
+    ) => {
+      const ranked = (relaxed
+        ? [...candidates]
+        : candidates.filter((c) =>
+          !c.label ||
+          obstacles.every((o) => !obstacleHitsBox(o, c.label!, clearance))
+        )).sort((a, b) => {
+          const cost = (c: Candidate) =>
+            (relaxed && c.label
+              ? obstacles.filter((o) =>
+                (o.kind === "text" || o.kind === "annotation") &&
+                obstacleHitsBox(o, c.label!, clearance)
+              ).length * 1000
+              : 0) +
+            c.score + (c.label ? distance(center(c.label), job.anchor) : 0);
+          return cost(a) - cost(b);
+        });
+      for (const candidate of detailed ? ranked.slice(0, 8) : ranked) {
         let paths: Point[][] | undefined;
         let endpointPenalty = 0;
         if (type === "bracket") {
-          if (!clearRoute(candidate.path!, obstacles, clearance)) continue;
+          if (
+            !relaxed && !clearRoute(candidate.path!, obstacles, clearance)
+          ) continue;
           paths = [candidate.path!];
         } else {
           const label = candidate.label!;
@@ -370,27 +441,32 @@ export function renderCallouts(
               o.ownerId === job.item.annotation.targetIds[0]
             ).map((o) => o.bounds),
           ])!;
+          const boundary = strokeAnchor(target, center(label));
+          const hasEmphasis = emphasisObstacles.some((o) =>
+            o.ownerId === job.item.annotation.targetIds[0]
+          );
+          const attachment = hasEmphasis ? undefined : boundary;
           const barriers = [...hard, { kind: "text" as const, bounds: label }];
           // A marker at an axis intersection may need more room for the tip.
           // Prefer the closest endpoint, then try a slightly larger stand-off.
-          for (const gap of target.anchor ? [9] : [9, 18, 28]) {
-            const end = target.anchor
+          for (const gap of [9, 18, 28]) {
+            const end = attachment
               ? {
-                x: target.anchor.point.x + target.anchor.direction.x * gap,
-                y: target.anchor.point.y + target.anchor.direction.y * gap,
+                x: attachment.point.x + attachment.direction.x * gap,
+                y: attachment.point.y + attachment.direction.y * gap,
               }
               : port(emphasized, center(label), gap);
             // Exit the padded rectangle, not a fixed distance along a diagonal:
             // a diagonal distance can still leave the start inside its padding.
             const start = port(inflate(label, clearance + 3), end, 1);
-            const aim = target.anchor?.point ??
+            const aim = attachment?.point ??
               port(target.bounds, center(label), 0);
             // A detached tip must not appear to point at an intervening tick or
             // label. Data strokes incident on the target may meet it naturally.
             const gapBarriers = barriers.filter((o) =>
               o.kind !== "stroke" && o.kind !== "area"
             );
-            if (!clearRoute([end, aim], gapBarriers, 1.5)) continue;
+            if (!relaxed && !clearRoute([end, aim], gapBarriers, 1.5)) continue;
             let route = routeConnector(
               start,
               end,
@@ -398,7 +474,7 @@ export function renderCallouts(
               soft,
               clearance,
               detailed,
-            );
+            ) ?? (relaxed ? [start, end] : null);
             if (!route || route.length < 2) continue;
             const toward = { x: aim.x - end.x, y: aim.y - end.y };
             const incoming = {
@@ -414,7 +490,9 @@ export function renderCallouts(
                 x: end.x - toward.x / length * 20,
                 y: end.y - toward.y / length * 20,
               };
-              if (!clearRoute([approach, end], barriers, clearance)) continue;
+              if (
+                !relaxed && !clearRoute([approach, end], barriers, clearance)
+              ) continue;
               const leading = routeConnector(
                 start,
                 approach,
@@ -423,14 +501,15 @@ export function renderCallouts(
                 clearance,
                 detailed,
               );
-              if (!leading) continue;
-              route = [...leading, end];
+              if (!relaxed && !leading) continue;
+              if (leading) route = [...leading, end];
             }
             const proposal = [
               route,
               ...(type === "arrow" ? arrowHead(route) : []),
             ];
             if (
+              !relaxed &&
               !proposal.every((p) => clearRoute(p, barriers, 2 + roughness))
             ) continue;
             paths = proposal;
@@ -457,9 +536,20 @@ export function renderCallouts(
       if (!selected) select(gutters, true);
     }
     if (!selected) {
-      throw new Error(
-        `Could not place ${type} annotation ${job.item.annotationIndex} in '${job.item.childId}' without overlapping content. Increase the child allocation or simplify the annotations.`,
-      );
+      const fallback = type === "bracket"
+        ? nearby
+        : [...gutterCandidates(job, occupiedBounds(), jobs.length), ...nearby];
+      select(fallback, false, true);
+      const where =
+        `${type} annotation ${job.item.annotationIndex} in '${job.item.childId}'`;
+      if (selected) {
+        console.warn(
+          `Could not place ${where} without overlapping content; using a fallback placement.`,
+        );
+      } else {
+        console.warn(`Could not place ${where}; skipping.`);
+        continue;
+      }
     }
     // Assignment happens in the local candidate-search closure.
     const chosen = selected as Candidate & { paths: Point[][] };
@@ -480,7 +570,7 @@ export function renderCallouts(
           roughness,
           seed: (options.seed ?? 10) + job.item.annotationIndex * 31 +
             sequence++,
-          stroke: COLORS.ink,
+          stroke: color,
           strokeWidth: 1.6,
         });
         strokes.push(drawing);
@@ -492,7 +582,7 @@ export function renderCallouts(
       }
     }
     if (job.label && chosen.label) {
-      strokes.push(labelDrawing(job.label, chosen.label));
+      strokes.push(labelDrawing(job.label, chosen.label, color));
       obstacles.push({ bounds: chosen.label, kind: "text" });
     }
     const bounds = unionBounds(strokes.map((s) => s.bounds))!;

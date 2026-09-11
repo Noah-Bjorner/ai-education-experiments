@@ -87,7 +87,8 @@ value into something ambiguous or drop a meaningful unit.
 
 ## Color
 
-Use semantic roles for chart furniture and the ordered accent palette for data.
+Use semantic roles for chart furniture, the ordered accent palette for data,
+and a contrasting second pen for teaching annotations.
 
 | Constant           | Value     | Purpose                                  |
 | ------------------ | --------- | ---------------------------------------- |
@@ -123,6 +124,30 @@ Use semantic roles for chart furniture and the ordered accent palette for data.
   hex values across rendering functions or return styling decisions from the AI.
 - Resolve TypeScript constants to literal SVG attributes during generation. An
   exported image must not depend on CSS variables defined only in the host page.
+
+### Annotation color
+
+Emphasis and callouts use one color per child, chosen by the board compositor
+in `index.ts`. The spec and the model do not pick it.
+
+The rule is contrast with the base drawing, not a fixed annotation hue:
+
+- When the child is drawn in ink — math expressions, and freeform scenes that
+  omit element color — annotations use `SERIES_COLORS[0]` (blue). Circles,
+  underlines, numbers, brackets, and message arrows then read as a second pen
+  on top of the black work.
+- When the child already spends the accent palette on data or categories — XY
+  charts, pie and donut charts, coordinate plots, geometry with filled regions
+  — annotations use `COLORS.ink`. Blue would collide with the first series or
+  slice and look like another category rather than a teaching mark.
+
+Do not color an annotation from its target's stroke, and do not mix annotation
+colors within one child. A split or stack board may mix the two modes because
+each child is decided independently.
+
+When adding a type, pick the side that matches its base drawing: ink-only
+content gets blue annotations; anything that already uses `SERIES_COLORS` for
+marks or fills gets ink annotations.
 
 Example:
 
@@ -352,9 +377,11 @@ wobble for every new visualization type.
   and logs the chosen callout sides and outside-gutter placements.
 - Emphasis supports circle, box, underline, strikethrough, and number. Circles
   enclose the target's bounds, boxes add a small gap, text strokes follow the
-  label orientation, and numbers sit just above/right of the target. All use
-  the shared ink color. Number placement is deterministic; collision avoidance
-  and repositioning around other annotations are not implemented.
+  label orientation, and numbers sit just above/right of the target. Annotation
+  color follows the Color section: ink on types that already use the accent
+  palette, `SERIES_COLORS[0]` on ink-only types (`math_expressions`, `freeform`).
+  Number placement is deterministic; collision avoidance and repositioning
+  around other annotations are not implemented.
 - Base targets use the IDs documented in the child schemas. Geometry remains
   local to the child; base and emphasis share its board translation. XY point
   IDs survive sorting. Missing targets (including omitted tiny-slice percentage
@@ -373,16 +400,18 @@ wobble for every new visualization type.
 - Connectors prefer straight or one-bend routes. A bounded visibility graph
   around nearby obstacle corners handles blocked routes; outside gutters are
   evaluated as alternatives. Paths avoid unrelated text, shapes, and data
-  strokes. Arrowheads face the target, and the gap to it must not hide an
-  intervening label. Crowded axis intersections may use a slightly longer gap.
+  strokes, except closed containers that enclose the target (a pitch around a
+  player, a pie slice around its percentage). Arrowheads face the target, and
+  the gap to it must not hide an intervening label. Crowded axis intersections
+  may use a slightly larger gap.
 - Brackets evaluate both sides of vertical groups and above/below horizontal
   spans, reserving their caps and optional label. They can move outside the
   child's painted extent when nearby sides are occupied.
 - This is a deterministic, bounded placement search, not a guarantee that every
-  possible annotation set has a solution. If no non-overlapping candidate can
-  be routed, rendering fails with the child and annotation index; it never
-  silently drops a callout or accepts an overlapping label. Existing emphasis
-  positions and the base chart's internal layout are not globally optimized.
+  possible annotation set has a non-overlapping solution. If no clear candidate
+  can be routed, a fallback placement is used and a warning is logged; only
+  unusable leftover cases are skipped. Existing emphasis positions and the base
+  chart's internal layout are not globally optimized.
 - `index-test.ts` runs the supplied book example and an XY emphasis demo
   without an LLM call; run it with font read and output-ex write permissions.
 - `callouts-test.ts` adds motion, grouping, and split-board review examples,
@@ -470,5 +499,169 @@ deno run --allow-read --allow-write=projects/sixtus/tools/learning-material/whit
 ```
 
 The example is `output-ex/math-expressions.svg`. Render a spec through
-`renderWhiteboardSvg()` for a real SVG; `executeWhiteboard()` still returns its
-pre-existing fixed demo URL and does not yet render/upload specs.
+`renderWhiteboardSvg()` for a real SVG; `executeWhiteboard()` renders and uploads
+the resulting SVG through the shared whiteboard execution path.
+
+## Geometry diagrams
+
+`geometry.ts` renders the `geometry` child after the shared construction resolver
+validates its points, objects, and mathematical markings. Geometry is registered
+in the parent schema, generation prompt, and staged renderer.
+
+- Mathematical coordinates use positive Y upward. One uniform scale preserves
+  lengths, angles, and circles. All declared points appear as dots; names and
+  measurements appear only through explicit labels.
+- Outlines use exact paths with rounded pen caps. Unlike decorative sketch
+  outlines, these paths do not perturb intersections, tangencies, or right
+  angles. Filled circles and polygons use the shared seeded hatch treatment.
+- Lines extend in both directions and rays in one direction to the local drawing
+  boundary. Arrowheads indicate continuation. Segments retain their endpoints.
+- Right angles use squares. Equal lengths use matching ticks, parallel groups
+  use matching chevrons, and equal-angle groups use matching arc counts. Where
+  a segment has both ticks and chevrons, place them separately.
+- LaTeX labels use the same math renderer as `math_expressions`. Automatic length
+  labels use the common unit and at most two decimal places; symbolic labels
+  reveal no computed value. Label candidates are checked against measured text
+  and shape strokes. Labels sit on the fill with no backing rectangle and no
+  punched clearance holes.
+- Register all documented point, object, marking, label, and title target IDs.
+  These feed the shared emphasis and callout stages. Internal clip IDs use the
+  parent's unique renderer prefix so split and stack boards remain independent.
+- Reject labels or markings that cannot fit legibly. Ask for a larger allocation,
+  shorter labels, or a simpler diagram rather than silently clipping content.
+
+Generate the six example SVGs and their gallery with:
+
+```sh
+deno run --allow-read --allow-write projects/sixtus/tools/learning-material/whiteboard/render/geometry-gallery.ts
+```
+
+The gallery is written to `render/output-ex/geometry/index.html`. Fixtures in
+`geometry-examples.ts` cover an annotated altitude, circle/tangent construction,
+equality and parallel markings, minor/reflex angles, equal angles, and shaded
+regions with math labels. `geometry-test.ts` exercises the same figures through
+both the child renderer and the parent pipeline.
+
+## Coordinate plots
+
+`coordinate-plot.ts` renders the five `coordinate_plot` elements: functions,
+points, lines (including segments and rays), circles, and polygon outlines.
+The child registry connects this definition to the parent output/request schemas,
+generation instructions, and `renderWhiteboardSvg()` dispatch. The existing
+`executeWhiteboard()` path renders and uploads its SVG like the other children.
+
+- Axes describe a visible mathematical window. Equal unit scale is the default;
+  fit the plane's aspect ratio within its allocation without changing the ranges.
+  Independent scaling is explicit. Positive Y points upward. A zero axis outside
+  the window sits on the nearest edge. Axis names stay horizontal and sit at the
+  positive tips: `y` just above the vertical axis, `x` just to the right of the
+  horizontal axis. Do not borrow chart-style placement (centered under the frame,
+  rotated along the left edge); that belongs to `xy_chart`.
+- Grid and tick values are generated once per axis. Authors can supply a positive
+  tick step or explicit numeric positions with symbolic text labels. Reject
+  excessive or overlapping ticks rather than dropping or truncating values.
+- Use exact, round-capped geometry and the shared font and palette. Outlines do
+  not receive decorative jitter, which could change the apparent relationship
+  between a point, an axis, and a curve. Shapes remain unfilled.
+- `coordinate-math.ts` compiles the restricted expression AST into closures, never
+  JavaScript source. Nonfinite intermediate results stay undefined. This is real
+  numerical arithmetic: negative bases with fractional powers are unsupported,
+  and zero to the zeroth power is treated as undefined.
+- Clip segments, rays, and lines parametrically. Sample functions adaptively in
+  screen space with quarter-point probes and a bounded evaluation budget. Leave
+  unresolved intervals as gaps. This handles ordinary poles, jumps, and domain
+  boundaries, but is not symbolic continuity analysis: very narrow features and
+  rapid oscillations may require a narrower window. Numerical overflow, sampling
+  budget exhaustion, and unreadable allocations produce explicit errors.
+- Each supplied domain interval is independent of viewport clipping. Closed
+  endpoints require a defined value. Open endpoints require a finite one-sided
+  limit from inside the interval. Only requested finite domain endpoints receive
+  markers; leaving the visible window does not create an endpoint.
+- Open markers use a local transparency mask to remove underlying geometry,
+  including grid strokes. White mask values are coverage, not an opaque painted
+  background. Internal mask/clip IDs use the parent's unique renderer prefix.
+- Labels are measured and placed after gathering all visible geometry. Prefer
+  an available location beside the curve or shape; use a legend below the plane
+  when needed. Register element `.mark` and explicit `.label` targets, plus the
+  title and axis labels. Entirely clipped elements have no visual targets or
+  labels; annotations targeting them fail clearly.
+- All geometry retains child-local bounds and obstacles for the shared emphasis,
+  callout, and split/stack layout stages. Multiple coordinate children can coexist
+  with charts, geometry diagrams, and math expressions.
+
+Regenerate the eight classroom examples and their JSON specs with:
+
+```sh
+deno run --allow-read --allow-write projects/sixtus/tools/learning-material/whiteboard/render/coordinate-gallery.ts
+```
+
+The gallery is `render/output-ex/coordinates/index.html`. Focused verification:
+
+```sh
+deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/children/coordinate-plot-test.ts projects/sixtus/tools/learning-material/whiteboard/render/coordinate-plot-test.ts
+```
+
+## Freeform scenes
+
+The `freeform` child is generated in the existing spec call and rendered by
+`renderFreeformDrawing`. It supports text, rectangles, ellipses (equal radii for
+circles), solid/dashed lines and arrows, and X/O/dot markers. No SVG input, images,
+rotation, arbitrary paths, or additional model calls are involved.
+
+- Use an 800 × 440 logical scene with positive Y downward beneath the shared
+  title. Rectangles use top-left coordinates; ellipses and markers use centers.
+  The renderer fits that working area uniformly into its allocation, preserving
+  aspect ratios. Content that extends past 800 × 440 is included in painted
+  bounds and grows the export rather than failing or clipping. Negative scene Y
+  is shifted down so it does not collide with the title. Array order determines
+  paint order. The default allocation is 800 × 520. Scene content starts 64
+  units below the allocation's top.
+- Every element needs a unique ID. Optional color selects `ink` (default) or
+  `accent-1` through `accent-6` from the shared palette. Specs should omit color
+  so the diagram stays in ink and leaves blue for teaching annotations (see
+  Color). Use later accents only to distinguish categories; never accent-1
+  on the base scene. Rectangle/ellipse `fill` uses seeded shared
+  hatching. Outlines are rendered with zero roughness to keep meaningful
+  positions and attachments stable. X/O markers are outlined; dots are solid.
+  Thin outline obstacles allow annotations inside container shapes.
+- Text specifies content, width, alignment, and small/normal/large size
+  (18/22/28 logical units). Explicit positions locate the top-left layout box.
+  Attached positions reference a rectangle, ellipse, or marker with a side and
+  gap (8 by default). Text wraps using shared font advances, splits oversized
+  words at glyph boundaries, and preserves whitespace and explicit newlines.
+  Painted bounds use shared glyph metrics. Text is never truncated. Allocations
+  that reduce scene text below 14 units, and titles that wrap past one line,
+  warn and still render. Titles remain 25 units.
+- Arrow endpoints accept explicit points or shape references, including forward
+  references. Referenced endpoints meet the shape boundary toward the opposite
+  endpoint. X attachment uses the actual two round-capped strokes. Arrows are
+  straight, with a 10-unit maximum head. No automatic routing or scene repair is
+  attempted; shared annotation callouts retain their existing routing behavior.
+- Targets are `<child>.title`, `<child>.<text>.label`, and
+  `<child>.<element>.mark` for other primitives. Targets, painted bounds, and
+  obstacles are transformed together into child-local allocation coordinates.
+  Parent composition owns the final translation and embedded font.
+- Reject invalid references, duplicate IDs, and invalid render sizes/options.
+  Absurd geometry is skipped before any fill generation. Other layout problems
+  warn and still render: stacked labels, lines or arrows that cross text,
+  unreadably small allocations, wrapping titles, degenerate attached
+  connectors, and individual elements whose painted bounds are invalid or
+  exceed the 10k safety extent (those elements are skipped). Rectangle and
+  ellipse outlines are containers: labels may sit inside them or meet their
+  border. Warnings identify the child and involved elements. Intentional shape
+  overlap remains supported; hatch strokes are not text collision obstacles.
+  Ellipse collision outlines use 256 segments.
+
+Run the tests and generate JSON/SVG examples plus the white/tinted review gallery
+from the repository root:
+
+```sh
+deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/render/freeform-test.ts
+deno run --allow-read --allow-write=projects/sixtus/tools/learning-material/whiteboard/render/output-ex/freeform projects/sixtus/tools/learning-material/whiteboard/render/freeform-gallery.ts
+```
+
+The gallery is `render/output-ex/freeform/index.html`. Its fixtures cover sports
+markers and a passing arrow, a sender/receiver diagram with attached labels, and
+an experiment diagram with wrapped text, fills, and a shared message callout.
+These are deterministic drawing fixtures, not evaluations of model-generated
+scene quality.

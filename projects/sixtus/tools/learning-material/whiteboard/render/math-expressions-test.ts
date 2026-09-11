@@ -17,6 +17,20 @@ Deno.test("math child is registered in input, output and generation instructions
     "Solve an equation",
   );
   assertEquals(
+    whiteboardInputSchema.parse({
+      goal: "Solve an equation",
+      domain: "math",
+      mode: "fast",
+      format: "svg",
+    }),
+    {
+      goal: "Solve an equation",
+      domain: "math",
+      mode: "fast",
+      format: "svg",
+    },
+  );
+  assertEquals(
     WhiteboardOutput.parse({ layout: "single", children: [child] }).children[0],
     child,
   );

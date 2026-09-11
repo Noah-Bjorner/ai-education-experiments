@@ -1,3 +1,4 @@
+import { renderFreeformDrawing } from "./freeform.ts";
 import { WhiteboardOutput, type WhiteboardSpec } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import {
@@ -19,6 +20,7 @@ import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import type { TargetedDrawing } from "./targets.ts";
+import { COLORS, SERIES_COLORS } from "./theme.ts";
 
 export type WhiteboardRenderOptions = LayoutOptions & {
   /** Prefix for internal SVG definitions; semantic target IDs come from the spec. */
@@ -49,6 +51,8 @@ type Child = WhiteboardSpec["children"][number];
 /** Dispatch base content by family; future diagram and asset types belong here. */
 function renderBaseChild(child: Child, options: GraphOptions): TargetedDrawing {
   switch (child.type) {
+    case "freeform":
+      return renderFreeformDrawing(child, options);
     case "xy_chart":
       return renderXyGraphDrawing(child, options);
     case "pie_chart":
@@ -125,7 +129,7 @@ export function renderWhiteboardSvg(
       ? child.series.flatMap((s) => [s, ...s.points])
       : child.type === "geometry"
       ? [...child.points, ...child.objects, ...child.labels, ...child.markings]
-      : child.type === "coordinate_plot"
+      : (child.type === "coordinate_plot" || child.type === "freeform")
       ? child.elements
       : child.expressions;
     const ids = content.flatMap((element) => element.id ? [element.id] : []);
@@ -161,13 +165,21 @@ export function renderWhiteboardSvg(
   );
   const base = exportSvg(compose(baseChildren, placements, childIds), title);
 
+  const annotationOptions = graphOptions.map((options, i) => ({
+    ...options,
+    color: spec.children[i].type === "math_expressions" ||
+        spec.children[i].type === "freeform"
+      ? SERIES_COLORS[0]
+      : COLORS.ink,
+  }));
+
   // 2. Add emphasis without changing or regenerating the base drawing.
   const emphasisResults = baseChildren.map((drawing, i) =>
     renderEmphasisAnnotations(
       spec.children[i].annotations ?? [],
       drawing.targets,
       {
-        ...graphOptions[i],
+        ...annotationOptions[i],
         childId: childIds[i],
       },
     )
@@ -187,7 +199,7 @@ export function renderWhiteboardSvg(
       emphasisResults[i].pendingCallouts,
       drawing,
       emphasisResults[i].obstacles,
-      graphOptions[i],
+      annotationOptions[i],
     )
   );
   const completeChildren = emphasizedChildren.map((drawing, i): Drawing => ({

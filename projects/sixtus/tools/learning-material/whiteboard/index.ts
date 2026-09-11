@@ -32,12 +32,18 @@ export const WHITEBOARD_SYSTEM_PROMPT_DESCRIPTION = [
 const WHITEBOARD_UPLOAD_PREFIX = "sixtus/whiteboards";
 
 export {
+  WHITEBOARD_DOMAINS,
+  WHITEBOARD_FORMATS,
+  WHITEBOARD_MODES,
   whiteboardInputSchema,
   whiteboardResultSchema,
 } from "./schema.ts";
 
 export type {
+  WhiteboardDomain,
+  WhiteboardFormat,
   WhiteboardInput,
+  WhiteboardMode,
   WhiteboardRequest,
   WhiteboardResult,
   WhiteboardSpec,
@@ -49,17 +55,17 @@ export const whiteboardSpec = async (
   const { goal } = input;
 
   const system = WHITEBOARD_SPEC_SYSTEM_PROMPT;
-  console.log("system: ", system);
+  console.log("system.length: ", system.length);
   const prompt = WHITEBOARD_GOAL_WRAPPER_PROMPT(goal);
+
+  const useFastModel = input.mode === "fast";
 
   try {
     const { output } = await generateText({
-      model: cerebras("qwen-3.8-27b"),
-      providerOptions: {
-        cerebras: { reasoningEffort: "medium" },
-      },
-      //model: "google/gemini-3.8-flash",
-      //reasoning: "high",
+      ...(useFastModel ? {
+        model: cerebras("qwen-3.8-27b"),
+        providerOptions: { cerebras: { reasoningEffort: "medium" } }
+      } : { model: "openai/gpt-5.6-sol", reasoning: "medium" }),
       system,
       prompt,
       output: Output.object({
@@ -109,6 +115,9 @@ export const executeWhiteboard = async (
 ): Promise<WhiteboardResult> => {
   const spec = await resolveWhiteboardSpec(input);
   const { svg } = renderWhiteboardSvg(spec);
+  if ("format" in input && input.format === "svg") {
+    return { svg };
+  }
   const url = await uploadWhiteboardSvg(svg);
   return { url };
 };

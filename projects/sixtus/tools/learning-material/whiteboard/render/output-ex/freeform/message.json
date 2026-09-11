@@ -1,0 +1,63 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "freeform",
+      "id": "message",
+      "title": "Sending a message",
+      "annotations": [],
+      "elements": [
+        {
+          "id": "sender",
+          "type": "rectangle",
+          "x": 100,
+          "y": 72,
+          "width": 160,
+          "height": 100
+        },
+        {
+          "id": "receiver",
+          "type": "rectangle",
+          "x": 540,
+          "y": 72,
+          "width": 160,
+          "height": 100
+        },
+        {
+          "id": "send",
+          "type": "arrow",
+          "from": {
+            "target": "sender"
+          },
+          "to": {
+            "target": "receiver"
+          }
+        },
+        {
+          "id": "sender-label",
+          "type": "text",
+          "content": "Sender",
+          "width": 160,
+          "align": "center",
+          "size": "normal",
+          "position": {
+            "target": "sender",
+            "side": "bottom"
+          }
+        },
+        {
+          "id": "receiver-label",
+          "type": "text",
+          "content": "Receiver",
+          "width": 160,
+          "align": "center",
+          "size": "normal",
+          "position": {
+            "target": "receiver",
+            "side": "bottom"
+          }
+        }
+      ]
+    }
+  ]
+}

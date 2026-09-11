@@ -4,6 +4,7 @@ import type { PendingCallout } from "./annotations.ts";
 import { renderCallouts } from "./callouts.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
+import { freeformExamples } from "./freeform-examples.ts";
 import {
   clearRoute,
   inflate,
@@ -280,6 +281,18 @@ Deno.test("message XML is escaped and invalid references fail explicitly", () =>
     Error,
     "Unknown or unavailable",
   );
+});
+
+Deno.test("arrow callouts can reach marks inside a freeform container", () => {
+  const sports = structuredClone(freeformExamples[0]);
+  sports.annotations = [{
+    type: "arrow",
+    targetIds: ["sports.receiver.mark"],
+    content: "This attacker is onside",
+  }];
+  const result = renderWhiteboardSvg({ layout: "single", children: [sports] });
+  assertEquals(result.calloutPlacements.length, 1);
+  assert(result.calloutPlacements[0].paths.length >= 1);
 });
 
 if (import.meta.main) {

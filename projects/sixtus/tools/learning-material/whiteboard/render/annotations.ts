@@ -20,12 +20,19 @@ export type PendingCallout = {
 export function renderEmphasisAnnotations(
   annotations: Annotation[],
   targets: Map<string, RenderTarget>,
-  options: { childId: string; id: string; roughness?: number; seed?: number },
+  options: {
+    childId: string;
+    id: string;
+    roughness?: number;
+    seed?: number;
+    color?: string;
+  },
 ): {
   drawing: Drawing;
   pendingCallouts: PendingCallout[];
   obstacles: RenderObstacle[];
 } {
+  const color = options.color ?? COLORS.ink;
   const parts: Drawing[] = [];
   const pendingCallouts: PendingCallout[] = [];
   const obstacles: RenderObstacle[] = [];
@@ -55,7 +62,7 @@ export function renderEmphasisAnnotations(
       id,
       seed: (options.seed ?? 10) + annotationIndex,
       roughness: options.roughness ?? 1.5,
-      stroke: COLORS.ink,
+      stroke: color,
       strokeWidth: 2,
     };
     let drawing: Drawing;
@@ -64,21 +71,33 @@ export function renderEmphasisAnnotations(
       const x = b.x + b.width + 6;
       const y = b.y - 6;
       drawing = {
-        markup: `<text x="${x}" y="${y}" font-size="16" fill="${COLORS.ink}">${
-          escapeXml(value)
-        }</text>`,
+        markup: `<text x="${x}" y="${y}" font-size="16" fill="${
+          escapeXml(color)
+        }">${escapeXml(value)}</text>`,
         bounds: graphTextBounds(value, 16, x, y),
       };
     } else {
       let shape: Shape;
-      if (annotation.type === "circle") {
-        shape = {
-          type: "circle",
-          cx: b.x + b.width / 2,
-          cy: b.y + b.height / 2,
-          r: Math.hypot(b.width, b.height) / 2 + 5,
-        };
-      } else if (annotation.type === "box") {
+      // Wide targets use the existing box outline to keep emphasis close to ink.
+      const useBox = annotation.type === "box" ||
+        (annotation.type === "circle" && b.width > b.height * 3);
+      if (annotation.type === "circle" && !useBox) {
+        shape = target.kind === "text"
+          ? {
+            type: "ellipse",
+            cx: b.x + b.width / 2,
+            cy: b.y + b.height / 2,
+            // Enclose the text rectangle without making height depend on width.
+            rx: b.width / Math.SQRT2 + 5,
+            ry: b.height / Math.SQRT2 + 5,
+          }
+          : {
+            type: "circle",
+            cx: b.x + b.width / 2,
+            cy: b.y + b.height / 2,
+            r: Math.hypot(b.width, b.height) / 2 + 5,
+          };
+      } else if (useBox) {
         shape = {
           type: "rectangle",
           x: b.x - 5,

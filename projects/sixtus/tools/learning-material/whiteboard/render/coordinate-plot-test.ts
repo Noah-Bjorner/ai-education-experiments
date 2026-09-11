@@ -8,7 +8,7 @@ import {
   type CoordinatePlot,
   coordinatePlot,
 } from "../children/coordinate-plot.ts";
-import { WhiteboardOutput } from "../schema.ts";
+import { WhiteboardOutput, whiteboardRequestSchema } from "../schema.ts";
 import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
 import { coordinateExamples } from "./coordinate-gallery.ts";
 import {
@@ -44,6 +44,16 @@ Deno.test("coordinate expressions evaluate real arithmetic with safe, correct pr
     ] as const
   ) assertAlmostEquals(compileCoordinateExpression(source)(x), expected);
   assert(Number.isNaN(compileCoordinateExpression("sqrt(x)")(-1)));
+  for (const expression of ["sqrt(x)^0", "(1/x)^0", "exp(-1/x)", "x^0"]) {
+    assert(
+      Number.isNaN(
+        compileCoordinateExpression(expression)(
+          expression.startsWith("sqrt") ? -1 : 0,
+        ),
+      ),
+      expression,
+    );
+  }
   assert(!Number.isFinite(compileCoordinateExpression("tan(x)")(Math.PI / 2)));
   assertThrows(() => compileCoordinateExpression("globalThis.x"));
 });
@@ -105,6 +115,26 @@ Deno.test("sampling leaves gaps at shifted poles, jumps, and natural-domain boun
 });
 
 Deno.test("endpoint limits accept removable holes but reject divergent poles", () => {
+  assertEquals(
+    coordinateEndpointValue(
+      compileCoordinateExpression("sqrt(-x)"),
+      0,
+      1,
+      10,
+      0.001,
+    ),
+    null,
+  );
+  assertEquals(
+    coordinateEndpointValue(
+      compileCoordinateExpression("sqrt(x)"),
+      0,
+      1,
+      10,
+      0.001,
+    ),
+    0,
+  );
   assertAlmostEquals(
     coordinateEndpointValue(
       compileCoordinateExpression("sin(x)/x"),
@@ -140,6 +170,34 @@ Deno.test("endpoint limits accept removable holes but reject divergent poles", (
   assert(!noMarkers.markup.includes('r="4"'));
 });
 
+Deno.test("axis names sit at the positive tips of the axes", () => {
+  const full = draw(plane);
+  const box = full.focusBounds;
+  const xLabel = full.targets.get("slope.x-label")!.bounds;
+  const yLabel = full.targets.get("slope.y-label")!.bounds;
+  assert(xLabel.x >= box.x + box.width);
+  assert(xLabel.y < box.y + box.height);
+  assert(xLabel.y + xLabel.height > box.y);
+  assert(yLabel.y + yLabel.height <= box.y);
+  assert(yLabel.x < box.x + box.width / 2);
+  assert(yLabel.x + yLabel.width > box.x + box.width / 2);
+  assert(!full.markup.includes("rotate("));
+
+  const quadrant = draw({
+    ...plane,
+    axes: {
+      x: { min: 0, max: 5, label: "Time (s)" },
+      y: { min: 0, max: 5, label: "Distance (m)" },
+    },
+  });
+  const qBox = quadrant.focusBounds;
+  const qX = quadrant.targets.get("slope.x-label")!.bounds;
+  const qY = quadrant.targets.get("slope.y-label")!.bounds;
+  assert(qX.x >= qBox.x + qBox.width);
+  assert(qY.y + qY.height <= qBox.y);
+  assert(qY.x + qY.width / 2 < qBox.x + 40);
+});
+
 Deno.test("equal scale preserves circles and independent scale preserves supplied ranges", () => {
   const p: CoordinatePlot = {
     ...plane,
@@ -163,6 +221,7 @@ Deno.test("coordinate gallery integrates with schemas, prompts, annotations, and
   for (const plot of coordinateExamples) {
     const spec = { layout: "single" as const, children: [plot] };
     assertEquals(WhiteboardOutput.parse(spec), spec);
+    assertEquals(whiteboardRequestSchema.parse(spec), spec);
     const before = JSON.stringify(spec), a = renderWhiteboardSvg(spec);
     assertEquals(a.svg, renderWhiteboardSvg(spec).svg);
     assertEquals(JSON.stringify(spec), before);

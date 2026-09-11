@@ -32,7 +32,7 @@ Use for equations, formulas, or a short sequence of algebra steps. Each expressi
 
 - type: always "math_expressions".
 - title, id, annotations: follow the shared rules.
-- expressions: 1–8 objects with a unique stable id and a latex string (at most 2000 characters).
+- expressions: 1-8 objects with a unique stable id and a latex string (at most 2000 characters).
 - Supports MathJax base and AMS math: Greek letters, operators and relations, fractions, roots, scripts, sums/products/integrals with limits, \sin and other functions, \text{...}, \mathbb{R}, \left...\right delimiters, matrices, cases, and aligned equations.
 - Use braces around multi-character script arguments. Prefer math source without dollar signs or display wrappers (one surrounding pair is accepted).
 - The board uses Shantell Sans Math Medium everywhere. Equations use paths extracted from that same font; structural bars are drawn by the layout engine. Ordinary bold/italic styles use Medium. Calligraphic/Fraktur alphabets and unbundled symbols are unavailable; do not replace them with a different mathematical meaning. Double-struck letters supported: C, N, P, Q, R, Z.

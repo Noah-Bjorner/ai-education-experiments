@@ -305,7 +305,7 @@ export function renderGeometryDrawing(
         );
         local.unshift({
           markup:
-            `<defs><clipPath id="${clipId}">${clip}</clipPath></defs><g clip-path="url(#${options.id}-label-clearance)"><g clip-path="url(#${clipId})">${fill.markup}</g></g>`,
+            `<defs><clipPath id="${clipId}">${clip}</clipPath></defs><g clip-path="url(#${clipId})">${fill.markup}</g>`,
           bounds,
           obstacles: [{ kind: "area", bounds }],
         });
@@ -542,20 +542,12 @@ export function renderGeometryDrawing(
     );
     obstacles.push(...part.obstacles ?? []);
   }
-  // Cut actual transparent clearances in fills around labels, without painting
-  // a background over either the geometry or the host surface.
-  const holes = parts.filter((p) => p.obstacles?.some((o) => o.kind === "text"))
-    .map((p) => expandBounds(p.bounds, 4)!).map((b) =>
-      `M ${b.x} ${b.y} h ${b.width} v ${b.height} h ${-b.width} Z`
-    ).join(" ");
-  const clearance =
-    `<defs><clipPath id="${options.id}-label-clearance"><path clip-rule="evenodd" d="M 0 0 H ${width} V ${height} H 0 Z ${holes}"/></clipPath></defs>`;
   const bounds = unionBounds(parts.map((p) => p.bounds))!;
   if (!Object.values(bounds).every(Number.isFinite)) {
     throw new Error("Geometry produced nonfinite drawing bounds.");
   }
   return {
-    markup: `${clearance}<g style="${GRAPH_FONT_STYLE};color:${COLORS.ink}">${
+    markup: `<g style="${GRAPH_FONT_STYLE};color:${COLORS.ink}">${
       parts.map((p) => p.markup).join("")
     }</g>`,
     bounds,

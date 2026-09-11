@@ -1,3 +1,6 @@
+import { freeform } from "./freeform.ts";
+export { freeform, freeformSchema } from "./freeform.ts";
+export type { Freeform, FreeformElement } from "./freeform.ts";
 import { circularChart } from "./circular-chart.ts";
 import { xyChart } from "./xy-chart.ts";
 import { mathExpressions } from "./math-expressions.ts";
@@ -17,4 +20,5 @@ export const whiteboardChildren = [
   mathExpressions,
   coordinatePlot,
   geometry,
+  freeform,
 ] as const;

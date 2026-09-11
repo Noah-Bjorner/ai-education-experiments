@@ -141,12 +141,20 @@ export function renderCoordinatePlotDrawing(
     labels.push(registered);
     obstacles.push(...registered.obstacles ?? []);
   }
-  function stroke(a: Point, b: Point, color: string, size = 1): ScenePart {
+  function stroke(
+    a: Point,
+    b: Point,
+    color: string,
+    size = 1,
+    dashed = false,
+  ): ScenePart {
     const bounds = expandBounds(segmentBounds(a, b), size / 2)!;
     return {
       markup: `<path d="M${fmt(a.x)} ${fmt(a.y)}L${fmt(b.x)} ${
         fmt(b.y)
-      }" fill="none" stroke="${color}" stroke-width="${size}"/>`,
+      }" fill="none" stroke="${color}" stroke-width="${size}"${
+        dashed ? ' stroke-dasharray="4 5"' : ""
+      }/>`,
       bounds,
       obstacles: [{ bounds, kind: "stroke", segment: { a, b } }],
     };
@@ -161,13 +169,25 @@ export function renderCoordinatePlotDrawing(
     for (const t of xticks) {
       const x = project(t.value, 0).x;
       furniture.push(
-        stroke({ x, y: box.y }, { x, y: box.y + box.height }, COLORS.grid),
+        stroke(
+          { x, y: box.y },
+          { x, y: box.y + box.height },
+          COLORS.grid,
+          1,
+          true,
+        ),
       );
     }
     for (const t of yticks) {
       const y = project(0, t.value).y;
       furniture.push(
-        stroke({ x: box.x, y }, { x: box.x + box.width, y }, COLORS.grid),
+        stroke(
+          { x: box.x, y },
+          { x: box.x + box.width, y },
+          COLORS.grid,
+          1,
+          true,
+        ),
       );
     }
   }
@@ -250,19 +270,13 @@ export function renderCoordinatePlotDrawing(
     addText(part);
   }
   addText(text(plot.title, width / 2, 36, 25, "middle"), `${id}.title`);
+  // Names sit at the positive tips, still horizontal so math stays upright.
   addText(
-    text(
-      xAxis.label ?? "x",
-      box.x + box.width / 2,
-      box.y + box.height + 58,
-      16,
-      "middle",
-    ),
+    text(xAxis.label ?? "x", box.x + box.width + 12, origin.y + 6, 16, "start"),
     `${id}.x-label`,
   );
-  // Horizontal y label above the plane avoids rotating mathematical symbols.
   addText(
-    text(yAxis.label ?? "y", box.x - 16, box.y - 20, 16, "end"),
+    text(yAxis.label ?? "y", origin.x, box.y - 14, 16, "middle"),
     `${id}.y-label`,
   );
 
@@ -380,7 +394,9 @@ export function renderCoordinatePlotDrawing(
             if (x === null || x < xAxis.min || x > xAxis.max) continue;
             const span = Math.min(
               xSpan,
-              (domain.max ?? xAxis.max) - (domain.min ?? xAxis.min),
+              domain.min !== null && domain.max !== null
+                ? domain.max - domain.min
+                : xSpan,
             );
             const y = included
               ? f(x)
@@ -452,8 +468,8 @@ export function renderCoordinatePlotDrawing(
     }, "mark");
     marks.push(mark);
     obstacles.push(...mark.obstacles ?? []);
-    const anchors = markers.map((m) => m.p);
-    if (!anchors.length) {
+    const anchors: Point[] = [];
+    if (segments.length) {
       for (const fraction of [0.5, 0.75, 0.25, 0.9, 0.1]) {
         const s = segments[
           Math.min(
@@ -462,10 +478,16 @@ export function renderCoordinatePlotDrawing(
           )
         ];
         if (s) {
-          anchors.push({ x: (s[0].x + s[1].x) / 2, y: (s[0].y + s[1].y) / 2 });
+          anchors.push({
+            x: s[0].x +
+              (s[1].x - s[0].x) * (segments.length === 1 ? fraction : 0.5),
+            y: s[0].y +
+              (s[1].y - s[0].y) * (segments.length === 1 ? fraction : 0.5),
+          });
         }
       }
     }
+    anchors.push(...markers.map((m) => m.p));
     if (element.label) pendingLabels.push({ element, anchors, color });
   }
 

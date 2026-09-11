@@ -22,19 +22,24 @@ export function compileCoordinateExpression(
       }
       case "binary": {
         const a = compile(node.left), b = compile(node.right);
-        switch (node.operator) {
-          case "+":
-            return (x) => a(x) + b(x);
-          case "-":
-            return (x) => a(x) - b(x);
-          case "*":
-            return (x) => a(x) * b(x);
-          case "/":
-            return (x) => a(x) / b(x);
-          case "^":
-            return (x) => a(x) ** b(x);
-        }
-        break;
+        return (x) => {
+          const left = a(x), right = b(x);
+          // JavaScript makes NaN**0 and Infinity**0 equal 1. In a plot,
+          // an undefined subexpression must never regain a real value.
+          if (!Number.isFinite(left) || !Number.isFinite(right)) return NaN;
+          switch (node.operator) {
+            case "+":
+              return left + right;
+            case "-":
+              return left - right;
+            case "*":
+              return left * right;
+            case "/":
+              return right === 0 ? NaN : left / right;
+            case "^":
+              return left === 0 && right === 0 ? NaN : left ** right;
+          }
+        };
       }
       case "call": {
         const functions: Record<string, (x: number) => number> = {
@@ -51,7 +56,10 @@ export function compileCoordinateExpression(
         if (!f) {
           throw new Error(`Unsupported coordinate function '${node.name}'.`);
         }
-        return (x) => f(argument(x));
+        return (x) => {
+          const value = argument(x);
+          return Number.isFinite(value) ? f(value) : NaN;
+        };
       }
     }
     throw new Error("Unsupported coordinate expression.");
@@ -152,7 +160,10 @@ export function sampleCoordinateFunction(
   return segments;
 }
 
-/** Estimate a one-sided finite limit only when endpoint evaluation is undefined. */
+/** Estimate a finite one-sided limit from inside the specified interval.
+ * An endpoint value alone is insufficient: sqrt(-x) exists at zero but has
+ * no real right-hand branch. Avoid drawing a ghost open marker in that case.
+ */
 export function coordinateEndpointValue(
   f: (x: number) => number,
   x: number,
@@ -160,12 +171,16 @@ export function coordinateEndpointValue(
   span: number,
   tolerance: number,
 ): number | null {
-  const exact = f(x);
-  if (Number.isFinite(exact)) return exact;
+  if (!(span > 0) || !Number.isFinite(span)) return null;
   const values = [1e-5, 1e-6, 1e-7].map((step) =>
     f(x + direction * span * step)
   );
   if (!values.every(Number.isFinite)) return null;
+  const exact = f(x);
+  // Supported primitives are continuous at their defined real values. Checking
+  // the inside probes first rules out an endpoint with no real inside branch,
+  // while retaining steep continuous endpoints such as sqrt(x) at zero.
+  if (Number.isFinite(exact)) return exact;
   if (
     Math.abs(values[2] - values[1]) > tolerance ||
     Math.abs(values[1] - values[0]) > tolerance * 10

@@ -44,6 +44,18 @@ export function hatchIntervals(
     return high - low > EPSILON ? [[low, high]] : [];
   }
 
+  if (shape.type === "ellipse") {
+    const x = (origin.x - shape.cx) / shape.rx,
+      y = (origin.y - shape.cy) / shape.ry;
+    const dx = direction.x / shape.rx, dy = direction.y / shape.ry;
+    const a = dx * dx + dy * dy, b = x * dx + y * dy;
+    const discriminant = b * b - a * (x * x + y * y - 1);
+    if (discriminant <= 0) return [];
+    return [[
+      (-b - Math.sqrt(discriminant)) / a,
+      (-b + Math.sqrt(discriminant)) / a,
+    ]];
+  }
   const local = { x: origin.x - shape.cx, y: origin.y - shape.cy };
   const along = dot(local, direction);
   const discriminant = along * along - dot(local, local) + shape.r ** 2;
@@ -116,7 +128,7 @@ export function hatchStrokes(
   const angle = -Math.PI / 4 + (random() * 2 - 1) * 0.1 * variation;
   const direction = { x: Math.cos(angle), y: Math.sin(angle) };
   const normal = { x: -direction.y, y: direction.x };
-  const center = shape.type === "circle"
+  const center = shape.type !== "rectangle"
     ? { x: shape.cx, y: shape.cy }
     : { x: shape.x + shape.width / 2, y: shape.y + shape.height / 2 };
   let projections: number[];
@@ -126,6 +138,9 @@ export function hatchStrokes(
         x * normal.x * shape.width / 2 + y * normal.y * shape.height / 2
       )
     );
+  } else if (shape.type === "ellipse") {
+    const extent = Math.hypot(shape.rx * normal.x, shape.ry * normal.y);
+    projections = [-extent, extent];
   } else if (sector) {
     const normalAngle = Math.atan2(normal.y, normal.x);
     const angles = [

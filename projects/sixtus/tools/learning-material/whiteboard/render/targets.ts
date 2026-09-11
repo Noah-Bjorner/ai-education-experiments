@@ -16,6 +16,8 @@ export type RenderTarget = {
   kind: "text" | "mark";
   /** Current Y-axis labels are rotated -90 degrees. */
   vertical?: boolean;
+  /** Visible stroke segments used to attach callouts to the actual drawing. */
+  outline?: { a: Point; b: Point }[];
   /** Explicit boundary anchor and outward direction, for shapes such as wedges. */
   anchor?: { point: Point; direction: Point };
 };
@@ -37,7 +39,18 @@ export function registerTarget(
 ): ScenePart {
   if (!id || !bounds) return drawing;
   if (targets.has(id)) throw new Error(`Duplicate render target '${id}'.`);
-  targets.set(id, { bounds: { ...bounds }, kind, vertical });
+  targets.set(id, {
+    bounds: { ...bounds },
+    kind,
+    vertical,
+    ...(kind === "mark"
+      ? {
+        outline: drawing.obstacles?.flatMap((o) =>
+          o.segment ? [o.segment] : []
+        ),
+      }
+      : {}),
+  });
   return {
     ...drawing,
     obstacles: (drawing.obstacles ??

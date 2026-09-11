@@ -80,9 +80,19 @@ const imageBranchSchema = imageInputSchema.extend({
   materialType: z.literal("image"),
 });
 
-const whiteboardBranchSchema = whiteboardInputSchema.extend({
-  materialType: z.literal("whiteboard"),
-});
+const WHITEBOARD_CHAT_INPUT = {
+  mode: "fast",
+  format: "url",
+} as const;
+
+const whiteboardBranchSchema = whiteboardInputSchema
+  .omit({
+    mode: true,
+    format: true,
+  })
+  .extend({
+    materialType: z.literal("whiteboard"),
+  });
 
 const learningMaterialInputSchema = z.object({
   learningMaterial: z.discriminatedUnion("materialType", [
@@ -159,6 +169,8 @@ async function executeLearningMaterial(
     case "whiteboard": {
       const result = await executeWhiteboard({
         goal: learningMaterial.goal,
+        domain: learningMaterial.domain,
+        ...WHITEBOARD_CHAT_INPUT,
       });
       return whiteboardOutputBranchSchema.parse({
         materialType: "whiteboard",

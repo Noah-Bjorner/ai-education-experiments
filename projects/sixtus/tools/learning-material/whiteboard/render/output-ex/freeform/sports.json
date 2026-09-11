@@ -1,0 +1,117 @@
+{
+  "layout": "single",
+  "children": [
+    {
+      "type": "freeform",
+      "id": "sports",
+      "title": "An illustrative passing play",
+      "annotations": [],
+      "elements": [
+        {
+          "id": "pitch",
+          "type": "rectangle",
+          "x": 32,
+          "y": 24,
+          "width": 736,
+          "height": 360
+        },
+        {
+          "id": "reference",
+          "type": "line",
+          "from": {
+            "x": 520,
+            "y": 40
+          },
+          "to": {
+            "x": 520,
+            "y": 368
+          },
+          "dashed": true,
+          "color": "accent-6"
+        },
+        {
+          "id": "pass",
+          "type": "arrow",
+          "from": {
+            "target": "passer"
+          },
+          "to": {
+            "target": "receiver"
+          },
+          "color": "accent-2"
+        },
+        {
+          "id": "passer",
+          "type": "marker",
+          "variant": "o",
+          "x": 200,
+          "y": 240,
+          "radius": 16,
+          "color": "accent-2"
+        },
+        {
+          "id": "receiver",
+          "type": "marker",
+          "variant": "o",
+          "x": 440,
+          "y": 160,
+          "radius": 16,
+          "color": "accent-2"
+        },
+        {
+          "id": "defender",
+          "type": "marker",
+          "variant": "x",
+          "x": 520,
+          "y": 260,
+          "radius": 14,
+          "color": "accent-3"
+        },
+        {
+          "id": "ball",
+          "type": "marker",
+          "variant": "dot",
+          "x": 180,
+          "y": 200,
+          "radius": 5
+        },
+        {
+          "id": "passer-label",
+          "type": "text",
+          "content": "Passer",
+          "position": {
+            "target": "passer",
+            "side": "bottom"
+          },
+          "width": 110,
+          "align": "center",
+          "size": "normal"
+        },
+        {
+          "id": "receiver-label",
+          "type": "text",
+          "content": "Receiver",
+          "position": {
+            "target": "receiver",
+            "side": "top"
+          },
+          "width": 130,
+          "align": "center",
+          "size": "normal"
+        },
+        {
+          "id": "legend",
+          "type": "text",
+          "content": "O Attackers     X Defender",
+          "position": {
+            "x": 240,
+            "y": 396
+          },
+          "width": 400,
+          "align": "left",
+          "size": "small"
+        }
+      ]
+    }
+  ]
+}

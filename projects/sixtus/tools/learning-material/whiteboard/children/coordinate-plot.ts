@@ -257,7 +257,7 @@ Use for functions and coordinate geometry on one Cartesian plane. Use xy_chart f
 
 ### Expressions and domains
 
-- Supports finite numbers (including decimals/scientific notation), x, pi, e, parentheses, + - * / ^, and unary +/-. Multiplication must be explicit: 2*x. Powers associate right; -x^2 means -(x^2), and x^-2 is allowed.
+- Supports finite numbers (including decimals/scientific notation), x, pi, e, parentheses, + - * / ^, and unary +/-. Multiplication must be explicit: 2*x. Powers associate right; -x^2 means -(x^2), and x^-2 is allowed. Zero to the zeroth power and negative bases raised to fractional powers are undefined in this real numerical evaluator.
 - Supported single-argument functions: sqrt, abs, sin, cos, tan, exp, ln, log10. Trigonometry uses radians. No equations, implicit multiplication, arbitrary variables, LaTeX, JavaScript, or conditionals. Maximum 1000 characters / 256 tokens.
 - domain: [{ min, max, includeMin, includeMax }]. Null min/max means unbounded below/above; unbounded endpoints must be excluded. Intervals are ordered and nonoverlapping, including included boundary values. Omit domain for the expression's natural real domain. Intervals restrict that domain; they never make an undefined value valid.
 - endpointMarkers: true requires domain. Show filled/open markers for included/excluded finite endpoints only when the corresponding value or one-sided limit is finite. Do not mark viewport clipping edges or infinite/undefined endpoints. Use explicit open points for holes when needed.

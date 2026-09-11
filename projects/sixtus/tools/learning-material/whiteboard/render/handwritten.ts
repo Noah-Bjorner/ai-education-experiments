@@ -68,6 +68,7 @@ export function renderHandwritten(
   if (
     !coordinates.every(Number.isFinite) ||
     (shape.type === "circle" && shape.r <= 0) ||
+    (shape.type === "ellipse" && (shape.rx <= 0 || shape.ry <= 0)) ||
     (shape.type === "rectangle" && (shape.width <= 0 || shape.height <= 0))
   ) {
     throw new Error("Shapes need finite coordinates and positive dimensions.");
@@ -124,14 +125,16 @@ export function renderHandwritten(
     }
 
     // Four cubic curves approximate a circle. Perturb their anchors and handles.
-    const { cx, cy, r } = shape;
-    const k = r * 0.5522847498; // Bezier handle length for a quarter circle.
-    const anchors = [{ x: cx + r, y: cy }, { x: cx, y: cy + r }, {
-      x: cx - r,
+    const { cx, cy } = shape;
+    const rx = shape.type === "circle" ? shape.r : shape.rx;
+    const ry = shape.type === "circle" ? shape.r : shape.ry;
+    const kx = rx * 0.5522847498, ky = ry * 0.5522847498; // Bezier handle length for a quarter circle.
+    const anchors = [{ x: cx + rx, y: cy }, { x: cx, y: cy + ry }, {
+      x: cx - rx,
       y: cy,
-    }, { x: cx, y: cy - r }].map(jitter);
-    const tangents = [{ x: 0, y: k }, { x: -k, y: 0 }, { x: 0, y: -k }, {
-      x: k,
+    }, { x: cx, y: cy - ry }].map(jitter);
+    const tangents = [{ x: 0, y: ky }, { x: -kx, y: 0 }, { x: 0, y: -ky }, {
+      x: kx,
       y: 0,
     }];
     return `M ${point(anchors[0])} ` + anchors.map((a, i) => {

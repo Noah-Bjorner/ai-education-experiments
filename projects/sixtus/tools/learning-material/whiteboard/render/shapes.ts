@@ -3,6 +3,7 @@ import { COLORS } from "./theme.ts";
 
 /** The same geometry feeds the regular and handwritten renderers. */
 export type Shape =
+  | { type: "ellipse"; cx: number; cy: number; rx: number; ry: number }
   | { type: "circle"; cx: number; cy: number; r: number }
   | { type: "rectangle"; x: number; y: number; width: number; height: number }
   | { type: "line"; x1: number; y1: number; x2: number; y2: number };
@@ -16,6 +17,8 @@ export function renderShape(
     escapeXml(stroke)
   }" stroke-width="2"`;
   switch (shape.type) {
+    case "ellipse":
+      return `<ellipse cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
     case "circle":
       return `<circle cx="${shape.cx}" cy="${shape.cy}" r="${shape.r}" ${style}/>`;
     case "rectangle":

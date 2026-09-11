@@ -204,13 +204,14 @@ Deno.test("geometry supports concave polygons, derived intersections, clockwise 
   );
 });
 
-Deno.test("geometry fills leave transparent label clearances and use unique definitions in split boards", () => {
+Deno.test("geometry fills stay under labels and use unique definitions in split boards", () => {
   const a = geometryExamples.at(-1)!;
   const b = { ...structuredClone(a), id: "second-circle" };
   const result = renderWhiteboardSvg({ layout: "split", children: [a, b] });
-  assert(result.svg.includes('clip-rule="evenodd"'));
-  assert(result.svg.includes("whiteboard-child-0-label-clearance"));
-  assert(result.svg.includes("whiteboard-child-1-label-clearance"));
+  assert(result.svg.includes("whiteboard-child-0-disk-region"));
+  assert(result.svg.includes("whiteboard-child-1-disk-region"));
+  assert(!result.svg.includes("label-clearance"));
+  assert(!result.svg.includes('clip-rule="evenodd"'));
   assert(!result.svg.includes('fill="white"'));
   assert(!result.svg.includes('fill="#fff"'));
   assert(result.svg.includes('fill-opacity="0.05"'));
