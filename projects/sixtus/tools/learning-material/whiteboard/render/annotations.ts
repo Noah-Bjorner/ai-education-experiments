@@ -1,17 +1,17 @@
-import type { WhiteboardSpec } from "../schema.ts";
+import type { WhiteboardFigureContent } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import { type Drawing, unionBounds } from "./bounds.ts";
 import { GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import type { Shape } from "./shapes.ts";
 import type { RenderObstacle, RenderTarget } from "./targets.ts";
-import { COLORS } from "./theme.ts";
+import { COLORS, SPACING, TYPE_SCALE } from "./theme.ts";
 
 type Annotation = NonNullable<
-  WhiteboardSpec["children"][number]["annotations"]
+  WhiteboardFigureContent["annotations"]
 >[number];
 export type PendingCallout = {
-  childId: string;
+  figureId: string;
   annotationIndex: number;
   annotation: Annotation;
 };
@@ -21,7 +21,7 @@ export function renderEmphasisAnnotations(
   annotations: Annotation[],
   targets: Map<string, RenderTarget>,
   options: {
-    childId: string;
+    figureId: string;
     id: string;
     roughness?: number;
     seed?: number;
@@ -41,14 +41,14 @@ export function renderEmphasisAnnotations(
       const target = targets.get(id);
       if (!target) {
         throw new Error(
-          `Unknown or unavailable annotation target '${id}' in child '${options.childId}'.`,
+          `Unknown or unavailable annotation target '${id}' in figure '${options.figureId}'.`,
         );
       }
       return target;
     });
     if (["arrow", "line", "bracket"].includes(annotation.type)) {
       pendingCallouts.push({
-        childId: options.childId,
+        figureId: options.figureId,
         annotationIndex,
         annotation,
       });
@@ -68,13 +68,14 @@ export function renderEmphasisAnnotations(
     let drawing: Drawing;
     if (annotation.type === "number") {
       const value = annotation.content!;
-      const x = b.x + b.width + 6;
-      const y = b.y - 6;
+      const x = b.x + b.width + SPACING.labelGap;
+      const y = b.y - SPACING.labelGap;
       drawing = {
-        markup: `<text x="${x}" y="${y}" font-size="16" fill="${
-          escapeXml(color)
-        }">${escapeXml(value)}</text>`,
-        bounds: graphTextBounds(value, 16, x, y),
+        markup:
+          `<text x="${x}" y="${y}" font-size="${TYPE_SCALE.annotation}" fill="${
+            escapeXml(color)
+          }">${escapeXml(value)}</text>`,
+        bounds: graphTextBounds(value, TYPE_SCALE.annotation, x, y),
       };
     } else {
       let shape: Shape;

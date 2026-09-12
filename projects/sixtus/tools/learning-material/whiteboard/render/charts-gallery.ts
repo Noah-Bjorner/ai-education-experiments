@@ -1,3 +1,4 @@
+import { boardExample } from "./board-example.ts";
 /** Edit these specs and rerun: deno run --allow-read --allow-write charts-gallery.ts */
 import { type Graph, renderGraphSvg } from "./graphs.ts";
 
@@ -62,7 +63,7 @@ if (import.meta.main) {
     await Deno.writeTextFile(new URL(`${chart.id}.svg`, directory), svg);
     await Deno.writeTextFile(
       new URL(`${chart.id}.json`, directory),
-      JSON.stringify({ layout: "single", children: [chart] }, null, 2) + "\n",
+      JSON.stringify(boardExample([chart]), null, 2) + "\n",
     );
   }
   await Deno.writeTextFile(
@@ -72,7 +73,9 @@ if (import.meta.main) {
 <style>body{font:16px system-ui;margin:32px;background:#faf9f6;color:#111}h1{font-size:24px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(580px,1fr));gap:24px}figure{margin:0;padding:24px;background:white}figure:nth-child(even){background:#edf5ff}img{display:block;width:100%;height:auto}figcaption{margin-top:20px}a{color:#2459ae}</style>
 <h1>Whiteboard charts — first version</h1><p>Edit charts-gallery.ts for data; graphs.ts and theme.ts for appearance. Examples use white and tinted surfaces.</p><main>${
       chartExamples.map((chart) =>
-        `<figure><img src="${chart.id}.svg" alt="${chart.title}"><figcaption>${chart.id} · <a href="${chart.id}.json">Spec</a> · <a href="${chart.id}.svg">SVG</a></figcaption></figure>`
+        `<figure><img src="${chart.id}.svg" alt="${
+          chart.title ?? chart.id ?? "chart"
+        }"><figcaption>${chart.id} · <a href="${chart.id}.json">Spec</a> · <a href="${chart.id}.svg">SVG</a></figcaption></figure>`
       ).join("")
     }</main>`,
   );

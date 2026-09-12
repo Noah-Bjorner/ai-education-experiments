@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "coordinate_plot",
       "id": "slope",
@@ -53,7 +53,9 @@
           "label": "2"
         }
       ],
-      "annotations": []
+      "annotations": [],
+      "anchor": null,
+      "side": null
     }
   ]
 }

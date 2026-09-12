@@ -340,8 +340,10 @@ export function resolveGeometry(spec: Geometry) {
       );}
   }
   if (spec.annotations?.length) {
-    require(!!spec.id, "Geometry annotations require an explicit child ID.");
-    const targets = new Map<string, boolean>([[`${spec.id}.title`, true]]);
+    require(!!spec.id, "Geometry annotations require an explicit figure ID.");
+    const targets = new Map<string, boolean>(
+      spec.title !== null ? [[`${spec.id}.title`, true]] : [],
+    );
     [...spec.points, ...spec.objects, ...spec.markings].forEach((e) =>
       targets.set(`${spec.id}.${e.id}.mark`, false)
     );

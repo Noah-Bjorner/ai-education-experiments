@@ -10,7 +10,7 @@ export type RenderObstacle = {
 };
 export type ScenePart = Drawing & { obstacles?: RenderObstacle[] };
 
-/** Geometry is local to the child, before the board's placement transform. */
+/** Geometry is local to the figure, before the board's placement transform. */
 export type RenderTarget = {
   bounds: Bounds;
   kind: "text" | "mark";

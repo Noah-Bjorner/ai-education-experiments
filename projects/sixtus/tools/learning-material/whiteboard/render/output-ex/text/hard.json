@@ -1,0 +1,80 @@
+{
+  "title": "Reading a comparison",
+  "figures": [
+    {
+      "type": "text",
+      "id": "question",
+      "title": "Compare the two quantities and explain the difference in your own words",
+      "annotations": [],
+      "role": "question",
+      "text": "There are 4 apples and 6 oranges. How many more oranges are there?\n\nExplain how the bars support your answer, then check the difference by subtraction.",
+      "anchor": null,
+      "side": null
+    },
+    {
+      "type": "xy_chart",
+      "id": "fruit",
+      "title": "Fruit counts",
+      "annotations": [],
+      "chartStyle": "bar",
+      "xLabel": "Fruit",
+      "yLabel": "Count",
+      "series": [
+        {
+          "id": "quantity",
+          "name": "Quantity",
+          "points": [
+            {
+              "id": "apples",
+              "x": "Apples",
+              "y": 4
+            },
+            {
+              "id": "oranges",
+              "x": "Oranges",
+              "y": 6
+            }
+          ]
+        }
+      ],
+      "anchor": "question",
+      "side": "bottom"
+    },
+    {
+      "type": "text",
+      "id": "note",
+      "title": null,
+      "annotations": [
+        {
+          "type": "arrow",
+          "targetIds": [
+            "note.text"
+          ],
+          "content": "Both bars start at zero."
+        }
+      ],
+      "role": "note",
+      "text": "Keep the labels \"Apples\" & \"Oranges\" with their values.\n\n4 < 6, so the orange bar is taller. Read both bars from the same baseline.\nA long unbroken label also wraps: abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
+      "anchor": "fruit",
+      "side": "bottom"
+    },
+    {
+      "type": "text",
+      "id": "takeaway",
+      "title": null,
+      "annotations": [
+        {
+          "type": "box",
+          "targetIds": [
+            "takeaway.text"
+          ],
+          "content": null
+        }
+      ],
+      "role": "takeaway",
+      "text": "6 − 4 = 2. There are 2 more oranges than apples.\n\nThe difference compares the counts; it does not give their total.\nSwedish text is preserved too: äpplen, päron, blåbär.",
+      "anchor": "note",
+      "side": "bottom"
+    }
+  ]
+}

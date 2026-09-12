@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "coordinate_plot",
       "id": "geometry",
@@ -69,7 +69,9 @@
           ],
           "label": "A(3, 2)"
         }
-      ]
+      ],
+      "anchor": null,
+      "side": null
     }
   ]
 }

@@ -1,10 +1,11 @@
+import { boardExample } from "./board-example.ts";
 import {
   assert,
   assertAlmostEquals,
   assertEquals,
   assertThrows,
 } from "@std/assert";
-import { type Geometry, geometry } from "../children/geometry.ts";
+import { type Geometry, geometry } from "../figures/geometry.ts";
 import { WhiteboardOutput, whiteboardRequestSchema } from "../schema.ts";
 import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
@@ -56,8 +57,8 @@ Deno.test("all geometry examples render deterministically with semantic targets 
       }
     }
     assert(
-      renderWhiteboardSvg({ layout: "single", children: [spec] }).svg.includes(
-        `<g data-child-id="${spec.id}"`,
+      renderWhiteboardSvg(boardExample([spec])).svg.includes(
+        `<g data-figure-id="${spec.id}"`,
       ),
     );
   }
@@ -67,37 +68,34 @@ Deno.test("geometry is available in generation and direct requests and composes 
   assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("## geometry"));
   assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("mathematical coordinates"));
   assert(!geometry.instructions.includes("not implemented"));
-  const input = {
-    layout: "stack",
-    children: [geometryExamples[0], {
-      type: "math_expressions",
-      id: "area",
-      title: "Triangle area",
-      expressions: [{ id: "formula", latex: "A = \\frac{bh}{2}" }],
-    }, {
-      type: "xy_chart",
-      id: "chart",
-      title: "Lengths",
-      chartStyle: "bar",
-      xLabel: "Side",
-      yLabel: "cm",
-      series: [{
-        id: "sides",
-        name: "Length",
-        points: [{ id: "base", x: "Base", y: 6 }],
-      }],
+  const input = boardExample([geometryExamples[0], {
+    type: "math_expressions",
+    id: "area",
+    title: "Triangle area",
+    expressions: [{ id: "formula", latex: "A = \\frac{bh}{2}" }],
+  }, {
+    type: "xy_chart",
+    id: "chart",
+    title: "Lengths",
+    chartStyle: "bar",
+    xLabel: "Side",
+    yLabel: "cm",
+    series: [{
+      id: "sides",
+      name: "Length",
+      points: [{ id: "base", x: "Base", y: 6 }],
     }],
-  };
+  }]);
   assert(whiteboardRequestSchema.safeParse(input).success);
   const result = renderWhiteboardSvg(WhiteboardOutput.parse(input));
-  assertEquals(result.childPlacements.length, 3);
+  assertEquals(result.figurePlacements.length, 3);
   assertEquals(result.calloutPlacements.length, 1);
   assert(result.stages.base.svg.includes('id="triangle.height.mark"'));
   assert(result.stages.callouts.svg.includes("Perpendicular height"));
-  assert(result.childPlacements[1].y > result.childPlacements[0].y);
-  assert(result.childPlacements[2].y > result.childPlacements[1].y);
+  assert(result.figurePlacements[1].y > result.figurePlacements[0].y);
+  assert(result.figurePlacements[2].y > result.figurePlacements[1].y);
   const ids = [...result.svg.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
-  // data-child-id is not an SVG id; exclude it from the attribute match.
+  // data-figure-id is not an SVG id; exclude it from the attribute match.
   const svgIds = [...result.svg.matchAll(/(?:\s|<)id="([^"]+)"/g)].map((m) =>
     m[1]
   );
@@ -204,12 +202,12 @@ Deno.test("geometry supports concave polygons, derived intersections, clockwise 
   );
 });
 
-Deno.test("geometry fills stay under labels and use unique definitions in split boards", () => {
+Deno.test("geometry fills stay under labels and use unique definitions in anchored boards", () => {
   const a = geometryExamples.at(-1)!;
   const b = { ...structuredClone(a), id: "second-circle" };
-  const result = renderWhiteboardSvg({ layout: "split", children: [a, b] });
-  assert(result.svg.includes("whiteboard-child-0-disk-region"));
-  assert(result.svg.includes("whiteboard-child-1-disk-region"));
+  const result = renderWhiteboardSvg(boardExample([a, b], "right"));
+  assert(result.svg.includes("whiteboard-figure-0-disk-region"));
+  assert(result.svg.includes("whiteboard-figure-1-disk-region"));
   assert(!result.svg.includes("label-clearance"));
   assert(!result.svg.includes('clip-rule="evenodd"'));
   assert(!result.svg.includes('fill="white"'));
@@ -228,7 +226,7 @@ Deno.test("geometry handles text annotations and rejects unreadable labels and b
     targetIds: ["triangle.foot.mark"],
     content: "Right angle",
   }];
-  const result = renderWhiteboardSvg({ layout: "single", children: [spec] });
+  const result = renderWhiteboardSvg(boardExample([spec]));
   assert(result.stages.base.svg !== result.stages.emphasis.svg);
   assertEquals(result.calloutPlacements.length, 1);
   assertThrows(

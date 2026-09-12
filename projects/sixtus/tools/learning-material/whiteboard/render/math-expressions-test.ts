@@ -1,17 +1,18 @@
+import { boardExample } from "./board-example.ts";
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import {
   mathExpressions,
   mathExpressionsSchema,
-} from "../children/math-expressions.ts";
+} from "../figures/math-expressions.ts";
 import { whiteboardInputSchema, WhiteboardOutput } from "../schema.ts";
 import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
 import { normalizeMathLatex, renderMathLatex } from "./latex.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 
-const child = mathExpressions.example.output;
+const figure = mathExpressions.example.output;
 
-Deno.test("math child is registered in input, output and generation instructions", () => {
+Deno.test("math figure is registered in input, output and generation instructions", () => {
   assertEquals(
     whiteboardInputSchema.parse({ goal: "Solve an equation" }).goal,
     "Solve an equation",
@@ -31,17 +32,17 @@ Deno.test("math child is registered in input, output and generation instructions
     },
   );
   assertEquals(
-    WhiteboardOutput.parse({ layout: "single", children: [child] }).children[0],
-    child,
+    WhiteboardOutput.parse(boardExample([figure])).figures[0],
+    { ...figure, anchor: null, side: null },
   );
   assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("## math_expressions"));
   assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes('"\\\\frac{x}{2} + 3 = 7"'));
   assert(
-    !mathExpressionsSchema.safeParse({ ...child, expressions: [] }).success,
+    !mathExpressionsSchema.safeParse({ ...figure, expressions: [] }).success,
   );
   assert(
     !mathExpressionsSchema.safeParse({
-      ...child,
+      ...figure,
       expressions: [{ id: "empty", latex: "  " }],
     }).success,
   );
@@ -187,7 +188,7 @@ Deno.test("malformed or unsupported LaTeX fails and does not poison the next ren
 
 Deno.test("math renders in the board font with pen paths and measured row targets", () => {
   const input = {
-    ...child,
+    ...figure,
     expressions: [
       {
         id: "quadratic",
@@ -202,11 +203,11 @@ Deno.test("math renders in the board font with pen paths and measured row target
   };
   const original = JSON.stringify(input);
   const drawing = renderMathExpressionsDrawing(input, { id: "math" });
-  const result = renderWhiteboardSvg({ layout: "single", children: [input] });
+  const result = renderWhiteboardSvg(boardExample([input]));
   assertEquals(JSON.stringify(input), original);
   assertEquals(
     result.svg,
-    renderWhiteboardSvg({ layout: "single", children: [input] }).svg,
+    renderWhiteboardSvg(boardExample([input])).svg,
   );
   assertEquals([...result.svg.matchAll(/@font-face/g)].length, 1);
   assert(result.svg.includes("Shantell Sans"));
@@ -230,7 +231,7 @@ Deno.test("math renders in the board font with pen paths and measured row target
 
 Deno.test("math annotations and mixed chart boards compose without ID collisions", () => {
   const annotated = {
-    ...child,
+    ...figure,
     annotations: [
       {
         type: "circle" as const,
@@ -244,15 +245,12 @@ Deno.test("math annotations and mixed chart boards compose without ID collisions
       },
     ],
   };
-  const result = renderWhiteboardSvg({
-    layout: "split",
-    children: [annotated, {
-      type: "pie_chart",
-      id: "pie",
-      title: "Parts",
-      slices: [{ id: "part", label: "Whole", value: 1 }],
-    }],
-  });
+  const result = renderWhiteboardSvg(boardExample([annotated, {
+    type: "pie_chart",
+    id: "pie",
+    title: "Parts",
+    slices: [{ id: "part", label: "Whole", value: 1 }],
+  }], "right"));
   assertEquals(result.calloutPlacements.length, 1);
   assert(result.svg.includes('data-annotation-type="circle"'));
   assert(!result.stages.base.svg.includes("data-annotation-type"));
@@ -260,29 +258,23 @@ Deno.test("math annotations and mixed chart boards compose without ID collisions
   assertEquals(ids.length, new Set(ids).size);
   assertThrows(
     () =>
-      renderWhiteboardSvg({
-        layout: "single",
-        children: [{
-          ...child,
-          expressions: [child.expressions[0], child.expressions[0]],
-        }],
-      }),
+      renderWhiteboardSvg(boardExample([{
+        ...figure,
+        expressions: [figure.expressions[0], figure.expressions[0]],
+      }])),
     Error,
     "Duplicate element ID",
   );
   assertThrows(
     () =>
-      renderWhiteboardSvg({
-        layout: "single",
-        children: [{
-          ...child,
-          annotations: [{
-            type: "circle",
-            targetIds: ["solve.missing.expression"],
-            content: null,
-          }],
+      renderWhiteboardSvg(boardExample([{
+        ...figure,
+        annotations: [{
+          type: "circle",
+          targetIds: ["solve.missing.expression"],
+          content: null,
         }],
-      }),
+      }])),
     Error,
     "Unknown or unavailable",
   );
@@ -303,33 +295,29 @@ Deno.test("MathJax format characters and punctuation aliases use existing outlin
     assert(result.markup.includes("<path"), latex);
     assert(!/<(?:text|use|foreignObject|image)\b/.test(result.markup), latex);
   }
-  const board = renderWhiteboardSvg({
-    layout: "single",
-    children: [{
-      type: "math_expressions",
-      id: "board",
-      title: "Conditional probability",
-      expressions: [
-        {
-          id: "p-a-given-b",
-          latex: String.raw`P(A \mid B) = \frac{P(A \cap B)}{P(B)}`,
-        },
-        {
-          id: "cos-theta-expr",
-          latex: String.raw`\cos\theta`,
-        },
-      ],
-    }],
-  });
+  const board = renderWhiteboardSvg(boardExample([{
+    type: "math_expressions",
+    id: "board",
+    title: "Conditional probability",
+    expressions: [
+      {
+        id: "p-a-given-b",
+        latex: String.raw`P(A \mid B) = \frac{P(A \cap B)}{P(B)}`,
+      },
+      {
+        id: "cos-theta-expr",
+        latex: String.raw`\cos\theta`,
+      },
+    ],
+  }]));
   assert(board.svg.includes("<path"));
 });
 
 Deno.test("math rejects unreadable content and unsupported glyphs and escapes text", () => {
   const render = (latex: string) =>
-    renderWhiteboardSvg({
-      layout: "single",
-      children: [{ ...child, expressions: [{ id: "test", latex }] }],
-    });
+    renderWhiteboardSvg(
+      boardExample([{ ...figure, expressions: [{ id: "test", latex }] }]),
+    );
   assertThrows(
     () => render("x+".repeat(200) + "x"),
     Error,
@@ -364,66 +352,44 @@ Deno.test("math rejects unreadable content and unsupported glyphs and escapes te
 });
 
 if (import.meta.main) {
-  const gallery = renderWhiteboardSvg({
-    layout: "stack",
-    children: [
-      {
-        ...child,
-        annotations: [{
-          type: "circle",
-          targetIds: ["solve.answer.expression"],
-          content: null,
-        }],
-      },
-      {
-        type: "math_expressions",
-        id: "formulas",
-        title: "Fractions, roots, and powers",
-        expressions: [
-          {
-            id: "quadratic",
-            latex: String.raw`x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`,
-          },
-          { id: "root", latex: String.raw`\sqrt[3]{8} = 2` },
-          {
-            id: "scripts",
-            latex: String.raw`a_{i+1}^{2} \leq \left(\frac{b}{c}\right)^2`,
-          },
-        ],
-      },
-      {
-        type: "math_expressions",
-        id: "circle",
-        title: "Unit circle",
-        expressions: [{
-          id: "solve",
-          latex: String.raw`\begin{align*}
+  const gallery = renderWhiteboardSvg(boardExample([
+    {
+      ...figure,
+      annotations: [{
+        type: "circle",
+        targetIds: ["solve.answer.expression"],
+        content: null,
+      }],
+    },
+    {
+      type: "math_expressions",
+      id: "formulas",
+      title: "Fractions, roots, and powers",
+      expressions: [
+        {
+          id: "quadratic",
+          latex: String.raw`x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`,
+        },
+        { id: "root", latex: String.raw`\sqrt[3]{8} = 2` },
+        {
+          id: "scripts",
+          latex: String.raw`a_{i+1}^{2} \leq \left(\frac{b}{c}\right)^2`,
+        },
+      ],
+    },
+    {
+      type: "math_expressions",
+      id: "circle",
+      title: "Unit circle",
+      expressions: [{
+        id: "solve",
+        latex: String.raw`\begin{align*}
 x^2 + y^2 &= 1 \\
 y &= \sqrt{1 - x^2}
 \end{align*}`,
-        }],
-      },
-      {
-        type: "math_expressions",
-        id: "roots",
-        title: "Radical join",
-        expressions: [
-          { id: "short", latex: String.raw`\sqrt{x}` },
-          { id: "plain", latex: String.raw`\sqrt{1 - x^2}` },
-          { id: "nested", latex: String.raw`\sqrt{b^2 - 4ac}` },
-          { id: "cube", latex: String.raw`\sqrt[3]{8} = 2` },
-          { id: "frac", latex: String.raw`\sqrt{\frac{a}{b}}` },
-        ],
-      },
-    ],
-  });
-  await Deno.writeTextFile(
-    new URL("./output-ex/math-expressions.svg", import.meta.url),
-    gallery.svg,
-  );
-  const preview = renderWhiteboardSvg({
-    layout: "single",
-    children: [{
+      }],
+    },
+    {
       type: "math_expressions",
       id: "roots",
       title: "Radical join",
@@ -434,8 +400,24 @@ y &= \sqrt{1 - x^2}
         { id: "cube", latex: String.raw`\sqrt[3]{8} = 2` },
         { id: "frac", latex: String.raw`\sqrt{\frac{a}{b}}` },
       ],
-    }],
-  });
+    },
+  ]));
+  await Deno.writeTextFile(
+    new URL("./output-ex/math-expressions.svg", import.meta.url),
+    gallery.svg,
+  );
+  const preview = renderWhiteboardSvg(boardExample([{
+    type: "math_expressions",
+    id: "roots",
+    title: "Radical join",
+    expressions: [
+      { id: "short", latex: String.raw`\sqrt{x}` },
+      { id: "plain", latex: String.raw`\sqrt{1 - x^2}` },
+      { id: "nested", latex: String.raw`\sqrt{b^2 - 4ac}` },
+      { id: "cube", latex: String.raw`\sqrt[3]{8} = 2` },
+      { id: "frac", latex: String.raw`\sqrt{\frac{a}{b}}` },
+    ],
+  }]));
   await Deno.writeTextFile(
     new URL("./output-ex/radical-join.svg", import.meta.url),
     preview.svg,

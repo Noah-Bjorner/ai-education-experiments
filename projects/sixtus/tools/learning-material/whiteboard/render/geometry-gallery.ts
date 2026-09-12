@@ -1,3 +1,4 @@
+import { boardExample } from "./board-example.ts";
 import { geometryExamples } from "./geometry-examples.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 import { escapeXml } from "./svg.ts";
@@ -7,15 +8,15 @@ await Deno.mkdir(dir, { recursive: true });
 const cards: string[] = [];
 for (const example of geometryExamples) {
   const result = renderWhiteboardSvg(
-    { layout: "single", children: [example] },
+    boardExample([example]),
     { id: example.id },
   );
   await Deno.writeTextFile(new URL(`${example.id}.svg`, dir), result.svg);
   cards.push(
     `<article><h2>${
-      escapeXml(example.title)
+      escapeXml(example.title ?? example.id ?? "geometry")
     }</h2><img src="${example.id}.svg" alt="${
-      escapeXml(example.title)
+      escapeXml(example.title ?? example.id ?? "geometry")
     }"></article>`,
   );
 }

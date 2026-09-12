@@ -99,7 +99,13 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
-</metadata><g data-child-id="sports" transform="translate(0 0)"><g style="font-family:'Shantell Sans Math',sans-serif; font-weight:500; font-style:normal; font-synthesis:none; font-kerning:none; font-variant-ligatures:none"><g id="sports.title"><g fill="#111111" transform="translate(16 8)"><text x="384" y="25" text-anchor="middle" font-size="25" xml:space="preserve">An illustrative passing play</text></g></g><g transform="translate(0 64) scale(1)"><g id="sports.pitch.mark"><g stroke-linecap="round" stroke-linejoin="round">
+</metadata><g data-figure-id="sports" transform="translate(0 0)"><g style="font-family:'Shantell Sans Math',sans-serif; font-weight:500; font-style:normal; font-synthesis:none; font-kerning:none; font-variant-ligatures:none"><g id="sports.title"><g fill="#111111" transform="translate(16 8)"><text x="384" y="25" text-anchor="middle" font-size="25" xml:space="preserve">An illustrative passing play</text></g></g><g data-figure-title-underline><g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="2">
+      <path d="M 228.40 42.53 C 341.77 41.58 457.20 41.14 570.85 42.53"/>
+      <path d="M 228.40 42.53 C 341.20 41.32 457.16 43.43 570.85 42.53" opacity="0.45"/>
+    </g>
+  </g></g><g transform="translate(0 64) scale(1)"><g id="sports.pitch.mark"><g stroke-linecap="round" stroke-linejoin="round">
     
     <g fill="none" stroke="#111111" stroke-width="2">
       <path d="M 32.00 24.00 C 277.33 24.00 522.67 24.00 768.00 24.00 C 768.00 144.00 768.00 264.00 768.00 384.00 C 522.67 384.00 277.33 384.00 32.00 384.00 C 32.00 264.00 32.00 144.00 32.00 24.00 Z"/>

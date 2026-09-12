@@ -1,7 +1,7 @@
 import {
   type CoordinateExpression,
   parseCoordinateExpression,
-} from "../children/coordinate-expression.ts";
+} from "../figures/coordinate-expression.ts";
 import type { Bounds, Point } from "./bounds.ts";
 
 /** Compile the validated AST to closures, never to JavaScript source. */

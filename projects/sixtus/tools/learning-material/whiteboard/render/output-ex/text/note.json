@@ -1,0 +1,15 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "text",
+      "id": "note",
+      "title": null,
+      "annotations": [],
+      "role": "note",
+      "text": "The same text and size for every role.",
+      "anchor": null,
+      "side": null
+    }
+  ]
+}

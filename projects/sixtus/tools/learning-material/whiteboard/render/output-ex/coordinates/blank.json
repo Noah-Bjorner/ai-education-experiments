@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "coordinate_plot",
       "id": "blank",
@@ -15,7 +15,9 @@
           "max": 4
         }
       },
-      "elements": []
+      "elements": [],
+      "anchor": null,
+      "side": null
     }
   ]
 }

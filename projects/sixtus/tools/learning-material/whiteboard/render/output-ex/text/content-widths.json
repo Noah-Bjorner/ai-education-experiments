@@ -1,0 +1,35 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "text",
+      "id": "short",
+      "title": null,
+      "annotations": [],
+      "role": "note",
+      "text": "4 < 6",
+      "anchor": null,
+      "side": null
+    },
+    {
+      "type": "text",
+      "id": "multiline",
+      "title": null,
+      "annotations": [],
+      "role": "note",
+      "text": "4 apples\n6 oranges",
+      "anchor": "short",
+      "side": "bottom"
+    },
+    {
+      "type": "text",
+      "id": "wrapped",
+      "title": null,
+      "annotations": [],
+      "role": "note",
+      "text": "There are 4 apples and 6 oranges. To find how many more oranges there are, subtract the smaller count from the larger count: 6 − 4 = 2.",
+      "anchor": "multiline",
+      "side": "bottom"
+    }
+  ]
+}

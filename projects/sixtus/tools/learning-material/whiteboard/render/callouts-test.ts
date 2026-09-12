@@ -1,3 +1,5 @@
+import { boardExample } from "./board-example.ts";
+import type { WhiteboardFigureContent } from "../schema.ts";
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import type { WhiteboardSpec } from "../schema.ts";
 import type { PendingCallout } from "./annotations.ts";
@@ -50,15 +52,15 @@ const chart = {
       content: "Start at ground level",
     },
   ],
-} satisfies WhiteboardSpec["children"][number];
+} satisfies WhiteboardFigureContent;
 
 Deno.test("messages and connectors avoid base content and other callouts", () => {
   const base = renderXyGraphDrawing(chart, { id: "test" });
-  const result = renderWhiteboardSvg({ layout: "single", children: [chart] });
+  const result = renderWhiteboardSvg(boardExample([chart]));
   assertEquals(result.calloutPlacements.length, 3);
   assertEquals(
     result,
-    renderWhiteboardSvg({ layout: "single", children: [chart] }),
+    renderWhiteboardSvg(boardExample([chart])),
   );
   for (const placement of result.calloutPlacements) {
     const box = placement.labelBounds!;
@@ -94,7 +96,8 @@ Deno.test("messages and connectors avoid base content and other callouts", () =>
     }
   }
   assert(result.svg.includes("Maximum height"));
-  assert(result.svg.includes("The descent begins here"));
+  assert(result.svg.includes("The descent begins"));
+  assert(result.svg.includes("here"));
   assert(
     !result.calloutPlacements.find((p) => p.annotationIndex === 2)!.usedGutter,
     "A nearby diagonal note should not be forced into a remote gutter",
@@ -140,7 +143,7 @@ Deno.test("a crowded plot uses an outside gutter, with full untruncated text", (
   const text =
     "AntidisestablishmentarianismABCDEFGHIJKLMNOPQRSTUVWXYZ\nA second explanatory line";
   const pending: PendingCallout[] = [{
-    childId: "scene",
+    figureId: "scene",
     annotationIndex: 0,
     annotation: {
       type: "arrow",
@@ -173,20 +176,17 @@ Deno.test("brackets support vertical groups, horizontal spans, and no message", 
       content: "The remaining genres",
     }],
   };
-  const vertical = renderWhiteboardSvg({ layout: "single", children: [pie] })
+  const vertical = renderWhiteboardSvg(boardExample([pie]))
     .calloutPlacements[0];
   assert(["left", "right"].includes(vertical.side));
-  const horizontal = renderWhiteboardSvg({
-    layout: "single",
-    children: [{
-      ...chart,
-      annotations: [{
-        type: "bracket",
-        targetIds: ["motion.start.mark", "motion.finish.mark"],
-        content: null,
-      }],
+  const horizontal = renderWhiteboardSvg(boardExample([{
+    ...chart,
+    annotations: [{
+      type: "bracket",
+      targetIds: ["motion.start.mark", "motion.finish.mark"],
+      content: null,
     }],
-  });
+  }]));
   assert(["top", "bottom"].includes(horizontal.calloutPlacements[0].side));
   assertEquals(horizontal.calloutPlacements[0].labelBounds, null);
 });
@@ -203,20 +203,17 @@ Deno.test("pie arrows use wedge boundaries and can also reach interior percentag
     }],
   };
   const base = renderCircularGraphDrawing(pie, { id: "test" });
-  const result = renderWhiteboardSvg({
-    layout: "single",
-    children: [{
-      ...pie,
-      annotations: [
-        { type: "arrow", targetIds: ["pie.a.mark"], content: "Largest share" },
-        {
-          type: "line",
-          targetIds: ["pie.b.percentage"],
-          content: "Two fifths",
-        },
-      ],
-    }],
-  });
+  const result = renderWhiteboardSvg(boardExample([{
+    ...pie,
+    annotations: [
+      { type: "arrow", targetIds: ["pie.a.mark"], content: "Largest share" },
+      {
+        type: "line",
+        targetIds: ["pie.b.percentage"],
+        content: "Two fifths",
+      },
+    ],
+  }]));
   assertEquals(result.calloutPlacements.length, 2);
   const mark = result.calloutPlacements.find((p) => p.annotationIndex === 0)!;
   const anchor = base.targets.get("pie.a.mark")!.anchor!;
@@ -231,53 +228,47 @@ Deno.test("pie arrows use wedge boundaries and can also reach interior percentag
   }
 });
 
-Deno.test("expanded child extents never overlap in split or stack layouts", () => {
+Deno.test("complete annotated figures never overlap on any anchor side", () => {
   const second = { ...chart, id: "second", annotations: [] };
-  for (const layout of ["split", "stack"] as const) {
-    const result = renderWhiteboardSvg({ layout, children: [chart, second] });
-    const first = renderWhiteboardSvg({ layout: "single", children: [chart] });
-    const next = renderWhiteboardSvg({ layout: "single", children: [second] });
+  for (const side of ["top", "left", "right", "bottom"] as const) {
+    const result = renderWhiteboardSvg(boardExample([chart, second], side));
+    const first = renderWhiteboardSvg(boardExample([chart]));
+    const next = renderWhiteboardSvg(boardExample([second]));
     const a = {
       ...first.bounds,
-      x: first.bounds.x + result.childPlacements[0].x,
-      y: first.bounds.y + result.childPlacements[0].y,
+      x: first.bounds.x + result.figurePlacements[0].x,
+      y: first.bounds.y + result.figurePlacements[0].y,
     };
     const b = {
       ...next.bounds,
-      x: next.bounds.x + result.childPlacements[1].x,
-      y: next.bounds.y + result.childPlacements[1].y,
+      x: next.bounds.x + result.figurePlacements[1].x,
+      y: next.bounds.y + result.figurePlacements[1].y,
     };
     assert(!overlaps(inflate(a, 15), inflate(b, 15)));
   }
 });
 
 Deno.test("message XML is escaped and invalid references fail explicitly", () => {
-  const result = renderWhiteboardSvg({
-    layout: "single",
-    children: [{
-      ...chart,
-      annotations: [{
-        type: "line",
-        targetIds: ["motion.peak.mark"],
-        content: "<tag> & value",
-      }],
+  const result = renderWhiteboardSvg(boardExample([{
+    ...chart,
+    annotations: [{
+      type: "line",
+      targetIds: ["motion.peak.mark"],
+      content: "<tag> & value",
     }],
-  });
+  }]));
   assert(result.svg.includes("&lt;tag&gt; &amp; value"));
   assert(!result.svg.includes("<tag>"));
   assertThrows(
     () =>
-      renderWhiteboardSvg({
-        layout: "single",
-        children: [{
-          ...chart,
-          annotations: [{
-            type: "arrow",
-            targetIds: ["missing.mark"],
-            content: "Missing",
-          }],
+      renderWhiteboardSvg(boardExample([{
+        ...chart,
+        annotations: [{
+          type: "arrow",
+          targetIds: ["missing.mark"],
+          content: "Missing",
         }],
-      }),
+      }])),
     Error,
     "Unknown or unavailable",
   );
@@ -290,7 +281,7 @@ Deno.test("arrow callouts can reach marks inside a freeform container", () => {
     targetIds: ["sports.receiver.mark"],
     content: "This attacker is onside",
   }];
-  const result = renderWhiteboardSvg({ layout: "single", children: [sports] });
+  const result = renderWhiteboardSvg(boardExample([sports]));
   assertEquals(result.calloutPlacements.length, 1);
   assert(result.calloutPlacements[0].paths.length >= 1);
 });
@@ -298,10 +289,10 @@ Deno.test("arrow callouts can reach marks inside a freeform container", () => {
 if (import.meta.main) {
   const output = new URL("./output-ex/", import.meta.url);
   const examples: [string, WhiteboardSpec][] = [
-    ["whiteboard-callouts-motion", { layout: "single", children: [chart] }],
-    ["whiteboard-callouts-group", {
-      layout: "single",
-      children: [{
+    ["whiteboard-callouts-motion", boardExample([chart])],
+    [
+      "whiteboard-callouts-group",
+      boardExample([{
         ...chart,
         annotations: [{
           type: "bracket",
@@ -312,11 +303,11 @@ if (import.meta.main) {
           targetIds: ["motion.peak.mark"],
           content: "Highest point",
         }],
-      }],
-    }],
-    ["whiteboard-callouts-split", {
-      layout: "split",
-      children: [chart, {
+      }]),
+    ],
+    [
+      "whiteboard-callouts-split",
+      boardExample([chart, {
         ...chart,
         id: "comparison",
         title: "A second view",
@@ -325,8 +316,8 @@ if (import.meta.main) {
           targetIds: ["comparison.peak.mark"],
           content: "Compare the same maximum",
         }],
-      }],
-    }],
+      }], "right"),
+    ],
   ];
   await Deno.mkdir(output, { recursive: true });
   for (const [name, spec] of examples) {

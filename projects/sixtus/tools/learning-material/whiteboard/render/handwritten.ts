@@ -24,6 +24,10 @@ export type HandwrittenOptions = {
   hatchSector?: FillSector;
   stroke?: string;
   strokeWidth?: number;
+  /** Dash and gap lengths applied to outlines only, never to fill hatching. */
+  strokeDasharray?: readonly number[];
+  /** Omit the faint retraced outline, keeping dashed gaps clear. */
+  singlePass?: boolean;
   /** Color for the faint background and hatch strokes; "none" leaves it empty. */
   fill?: string;
 };
@@ -49,10 +53,19 @@ export function renderHandwritten(
     hatchGap = 9,
     stroke = COLORS.ink,
     strokeWidth = 2,
+    strokeDasharray,
+    singlePass = false,
     fill = "none",
   } = options;
   if (!/^[a-zA-Z][\w-]*$/.test(id)) {
     throw new Error("Use a simple, unique SVG id.");
+  }
+  if (
+    strokeDasharray !== undefined &&
+    (strokeDasharray.length === 0 ||
+      !strokeDasharray.every((length) => Number.isFinite(length) && length > 0))
+  ) {
+    throw new Error("Dash lengths must be finite positive numbers.");
   }
   if (
     ![roughness, hatchGap, strokeWidth, seed, fillSeed].every(
@@ -154,7 +167,7 @@ export function renderHandwritten(
   const border = outline();
   const firstBounds = unionBounds(curves);
   curves = [];
-  const secondBorder = roughness > 0 ? outline() : "";
+  const secondBorder = roughness > 0 && !singlePass ? outline() : "";
   const secondBounds = unionBounds(curves);
   let hatching = "";
   if (fill !== "none" && shape.type !== "line") {
@@ -190,7 +203,9 @@ export function renderHandwritten(
 
   const markup = `<g stroke-linecap="round" stroke-linejoin="round">
     ${hatching}
-    <g fill="none" stroke="${escapeXml(stroke)}" stroke-width="${strokeWidth}">
+    <g fill="none" stroke="${escapeXml(stroke)}" stroke-width="${strokeWidth}"${
+    strokeDasharray ? ` stroke-dasharray="${strokeDasharray.join(" ")}"` : ""
+  }>
       <path d="${border}"/>
       ${secondBorder ? `<path d="${secondBorder}" opacity="0.45"/>` : ""}
     </g>

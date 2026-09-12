@@ -1,4 +1,4 @@
-import { type Geometry, geometry } from "../children/geometry.ts";
+import { type Geometry, geometry } from "../figures/geometry.ts";
 
 /** Representative fixtures, also used by the visual gallery and regression tests. */
 export const geometryExamples: Geometry[] = [

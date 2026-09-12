@@ -1,0 +1,15 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "text",
+      "id": "question",
+      "title": null,
+      "annotations": [],
+      "role": "question",
+      "text": "The same text and size for every role.",
+      "anchor": null,
+      "side": null
+    }
+  ]
+}

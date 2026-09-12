@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "freeform",
       "id": "cycle",
@@ -131,7 +131,9 @@
           "align": "right",
           "size": "normal"
         }
-      ]
+      ],
+      "anchor": null,
+      "side": null
     }
   ]
 }

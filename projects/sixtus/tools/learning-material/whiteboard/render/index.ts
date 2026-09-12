@@ -1,5 +1,10 @@
 import { renderFreeformDrawing } from "./freeform.ts";
-import { WhiteboardOutput, type WhiteboardSpec } from "../schema.ts";
+import { renderTextFigureDrawing } from "./text.ts";
+import {
+  type WhiteboardFigureContent,
+  WhiteboardOutput,
+  type WhiteboardSpec,
+} from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import {
   type Bounds,
@@ -7,22 +12,35 @@ import {
   exportBounds,
   unionBounds,
 } from "./bounds.ts";
-import { GRAPH_FONT_DEFS } from "./font.ts";
+import { GRAPH_FONT_DEFS, GRAPH_FONT_STYLE } from "./font.ts";
 import {
   type GraphOptions,
   renderCircularGraphDrawing,
   renderXyGraphDrawing,
 } from "./graphs.ts";
-import { type LayoutOptions, layoutWhiteboard } from "./layout.ts";
+import {
+  figureAllocation,
+  type FigurePlacement,
+  placeFigures,
+  type PlacementOptions,
+} from "./figure-placement.ts";
 import { renderEmphasisAnnotations } from "./annotations.ts";
 import { type CalloutPlacement, renderCallouts } from "./callouts.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import type { TargetedDrawing } from "./targets.ts";
-import { COLORS, SERIES_COLORS } from "./theme.ts";
+import {
+  COLORS,
+  LINE_HEIGHT,
+  SERIES_COLORS,
+  SPACING,
+  TYPE_SCALE,
+} from "./theme.ts";
+import { textBlock } from "./text-block.ts";
+import { boardTitleDisplay, withTitleBox } from "./titles.ts";
 
-export type WhiteboardRenderOptions = LayoutOptions & {
+export type WhiteboardRenderOptions = PlacementOptions & {
   /** Prefix for internal SVG definitions; semantic target IDs come from the spec. */
   id?: string;
   roughness?: number;
@@ -43,50 +61,94 @@ export type WhiteboardRenderResult = SvgRenderStage & {
     callouts: SvgRenderStage;
   };
   calloutPlacements: CalloutPlacement[];
-  childPlacements: ReturnType<typeof layoutWhiteboard>["children"];
+  figurePlacements: FigurePlacement[];
 };
 
-type Child = WhiteboardSpec["children"][number];
+type Figure = WhiteboardFigureContent;
 
 /** Dispatch base content by family; future diagram and asset types belong here. */
-function renderBaseChild(child: Child, options: GraphOptions): TargetedDrawing {
-  switch (child.type) {
+function renderBaseFigure(
+  figure: Figure,
+  options: GraphOptions,
+): TargetedDrawing {
+  switch (figure.type) {
+    case "text":
+      return renderTextFigureDrawing(figure, options);
     case "freeform":
-      return renderFreeformDrawing(child, options);
+      return renderFreeformDrawing(figure, options);
     case "xy_chart":
-      return renderXyGraphDrawing(child, options);
+      return renderXyGraphDrawing(figure, options);
     case "pie_chart":
-      return renderCircularGraphDrawing(child, options);
+      return renderCircularGraphDrawing(figure, options);
     case "geometry":
-      return renderGeometryDrawing(child, options);
+      return renderGeometryDrawing(figure, options);
     case "math_expressions":
-      return renderMathExpressionsDrawing(child, options);
+      return renderMathExpressionsDrawing(figure, options);
     case "coordinate_plot":
-      return renderCoordinatePlotDrawing(child, options);
+      return renderCoordinatePlotDrawing(figure, options);
     default:
-      throw new Error("Unsupported whiteboard child type.");
+      throw new Error("Unsupported whiteboard figure type.");
   }
 }
 
 function compose(
-  children: Drawing[],
-  placements: ReturnType<typeof layoutWhiteboard>["children"],
-  childIds: string[],
+  figures: Drawing[],
+  placements: FigurePlacement[],
+  figureIds: string[],
 ): Drawing {
   return {
-    markup: children.map((drawing, i) => {
+    markup: figures.map((drawing, i) => {
       const { x, y } = placements[i];
-      return `<g data-child-id="${
-        escapeXml(childIds[i])
+      return `<g data-figure-id="${
+        escapeXml(figureIds[i])
       }" transform="translate(${x} ${y})">${drawing.markup}</g>`;
     }).join("\n"),
-    bounds: unionBounds(children.map((drawing, i) =>
+    bounds: unionBounds(figures.map((drawing, i) =>
       drawing.bounds && ({
         ...drawing.bounds,
         x: drawing.bounds.x + placements[i].x,
         y: drawing.bounds.y + placements[i].y,
       })
     )),
+  };
+}
+
+function renderBoardTitle(
+  title: string,
+  figures: Drawing,
+  options: { id: string; roughness?: number; seed?: number },
+): Drawing {
+  const union = exportBounds(figures.bounds);
+  const titleText = textBlock(
+    boardTitleDisplay(title),
+    Math.max(union.width, TYPE_SCALE.boardTitle * 4),
+    TYPE_SCALE.boardTitle,
+    LINE_HEIGHT.boardTitle,
+    0,
+    0,
+    COLORS.ink,
+    "center",
+  );
+  const boxed = withTitleBox(titleText, {
+    ...options,
+    id: `${options.id}-box`,
+  });
+  const b = boxed.bounds!;
+  const dx = union.x + union.width / 2 -
+    (titleText.bounds!.x + titleText.bounds!.width / 2);
+  const dy = union.y - SPACING.boardTitleGap - (b.y + b.height);
+  return {
+    markup:
+      `<g data-board-title="" style="${GRAPH_FONT_STYLE}" transform="translate(${dx} ${dy})">${boxed.markup}</g>`,
+    bounds: { ...b, x: b.x + dx, y: b.y + dy },
+  };
+}
+
+function withBoardTitle(drawing: Drawing, boardTitle: Drawing | null): Drawing {
+  if (!boardTitle) return drawing;
+  return {
+    markup: boardTitle.markup + "\n" + drawing.markup,
+    bounds: unionBounds([boardTitle.bounds, drawing.bounds]),
   };
 }
 
@@ -114,87 +176,81 @@ export function renderWhiteboardSvg(
   options: WhiteboardRenderOptions = {},
 ): WhiteboardRenderResult {
   const spec = WhiteboardOutput.parse(input);
-  const { children: placements } = layoutWhiteboard(spec, options);
-  const usedChildIds = new Set<string>();
-  for (const child of spec.children) {
-    if (child.id) {
-      if (usedChildIds.has(child.id)) {
-        throw new Error(`Duplicate child ID '${child.id}'.`);
-      }
-      usedChildIds.add(child.id);
-    }
-    const content = child.type === "pie_chart"
-      ? child.slices
-      : child.type === "xy_chart"
-      ? child.series.flatMap((s) => [s, ...s.points])
-      : child.type === "geometry"
-      ? [...child.points, ...child.objects, ...child.labels, ...child.markings]
-      : (child.type === "coordinate_plot" || child.type === "freeform")
-      ? child.elements
-      : child.expressions;
+  const allocation = figureAllocation(options);
+  for (const figure of spec.figures) {
+    const content = figure.type === "pie_chart"
+      ? figure.slices
+      : figure.type === "xy_chart"
+      ? figure.series.flatMap((s) => [s, ...s.points])
+      : figure.type === "geometry"
+      ? [
+        ...figure.points,
+        ...figure.objects,
+        ...figure.labels,
+        ...figure.markings,
+      ]
+      : (figure.type === "coordinate_plot" || figure.type === "freeform")
+      ? figure.elements
+      : figure.type === "text"
+      ? []
+      : figure.expressions;
     const ids = content.flatMap((element) => element.id ? [element.id] : []);
     if (new Set(ids).size !== ids.length) {
       throw new Error(
-        `Duplicate element ID in child '${child.id ?? child.title}'.`,
+        `Duplicate element ID in figure '${figure.id}'.`,
       );
     }
   }
-  const childIds = spec.children.map((child, i) => {
-    if (child.id) return child.id;
-    let id = `child-${i + 1}`;
-    while (usedChildIds.has(id)) id += "-auto";
-    usedChildIds.add(id);
-    return id;
-  });
-  const graphOptions = placements.map((p, i): GraphOptions => ({
-    id: `${options.id ?? "whiteboard"}-child-${i}`,
-    width: p.width,
-    height: p.height,
+  const figureIds = spec.figures.map((figure) => figure.id);
+  const graphOptions = spec.figures.map((_, i): GraphOptions => ({
+    id: `${options.id ?? "whiteboard"}-figure-${i}`,
+    width: allocation.width,
+    height: allocation.height,
     roughness: options.roughness ?? 1.5,
     hatchGap: options.hatchGap ?? 9,
     seed: options.seed ?? 10,
   }));
-  const title = spec.children.map((child) => child.title).join("; ");
+  const title = spec.title ??
+    (spec.figures.map((figure) => figure.title).filter((
+      value,
+    ): value is string => value !== null).join("; ") || "Whiteboard");
 
-  // 1. Build the complete base SVG and retain child-local target geometry.
-  const baseChildren = spec.children.map((child, i) =>
-    renderBaseChild(
-      { ...child, id: childIds[i] },
+  // 1. Build the complete base SVG and retain figure-local target geometry.
+  const baseFigures = spec.figures.map((
+    { anchor: _anchor, side: _side, ...figure },
+    i,
+  ) =>
+    renderBaseFigure(
+      figure,
       graphOptions[i],
     )
   );
-  const base = exportSvg(compose(baseChildren, placements, childIds), title);
 
   const annotationOptions = graphOptions.map((options, i) => ({
     ...options,
-    color: spec.children[i].type === "math_expressions" ||
-        spec.children[i].type === "freeform"
+    color: spec.figures[i].type === "math_expressions" ||
+        spec.figures[i].type === "freeform"
       ? SERIES_COLORS[0]
       : COLORS.ink,
   }));
 
   // 2. Add emphasis without changing or regenerating the base drawing.
-  const emphasisResults = baseChildren.map((drawing, i) =>
+  const emphasisResults = baseFigures.map((drawing, i) =>
     renderEmphasisAnnotations(
-      spec.children[i].annotations ?? [],
+      spec.figures[i].annotations ?? [],
       drawing.targets,
       {
         ...annotationOptions[i],
-        childId: childIds[i],
+        figureId: figureIds[i],
       },
     )
   );
-  const emphasizedChildren = baseChildren.map((drawing, i): Drawing => ({
+  const emphasizedFigures = baseFigures.map((drawing, i): Drawing => ({
     markup: drawing.markup + emphasisResults[i].drawing.markup,
     bounds: unionBounds([drawing.bounds, emphasisResults[i].drawing.bounds]),
   }));
-  const emphasis = exportSvg(
-    compose(emphasizedChildren, placements, childIds),
-    title,
-  );
-
   // 3. Place messages and route connectors around base content and emphasis.
-  const calloutResults = baseChildren.map((drawing, i) =>
+  const calloutResults = baseFigures.map((drawing, i) =>
     renderCallouts(
       emphasisResults[i].pendingCallouts,
       drawing,
@@ -202,32 +258,47 @@ export function renderWhiteboardSvg(
       annotationOptions[i],
     )
   );
-  const completeChildren = emphasizedChildren.map((drawing, i): Drawing => ({
+  const completeFigures = emphasizedFigures.map((drawing, i): Drawing => ({
     markup: drawing.markup + calloutResults[i].drawing.markup,
     bounds: unionBounds([drawing.bounds, calloutResults[i].drawing.bounds]),
   }));
-  // 4. Expand inter-child spacing for gutters without changing base geometry.
-  // A larger viewBox alone would leave callouts overlapping neighboring charts.
-  const childPlacements = placements.map((p) => ({ ...p }));
-  for (let i = 1; i < childPlacements.length; i++) {
-    const previous = childPlacements[i - 1], current = childPlacements[i];
-    const a = completeChildren[i - 1].bounds!, b = completeChildren[i].bounds!;
-    const gap = options.gap ?? 32;
-    if (spec.layout === "split") {
-      current.x = Math.max(current.x, previous.x + a.x + a.width + gap - b.x);
-    } else if (spec.layout === "stack") {
-      current.y = Math.max(current.y, previous.y + a.y + a.height + gap - b.y);
-    }
-  }
+  // 4. Place complete measured figures once, then reuse translations in every stage.
+  const figurePlacements = placeFigures(spec, completeFigures, options);
+  const completeComposed = compose(
+    completeFigures,
+    figurePlacements,
+    figureIds,
+  );
+  const boardTitle = spec.title !== null
+    ? renderBoardTitle(spec.title, completeComposed, {
+      id: `${options.id ?? "whiteboard"}-board-title`,
+      roughness: options.roughness ?? 1.5,
+      seed: options.seed ?? 10,
+    })
+    : null;
+  const base = exportSvg(
+    withBoardTitle(
+      compose(baseFigures, figurePlacements, figureIds),
+      boardTitle,
+    ),
+    title,
+  );
+  const emphasis = exportSvg(
+    withBoardTitle(
+      compose(emphasizedFigures, figurePlacements, figureIds),
+      boardTitle,
+    ),
+    title,
+  );
   // Future asset processing belongs before this final composition/export.
   const callouts = exportSvg(
-    compose(completeChildren, childPlacements, childIds),
+    withBoardTitle(completeComposed, boardTitle),
     title,
   );
   return {
     ...callouts,
     stages: { base, emphasis, callouts },
     calloutPlacements: calloutResults.flatMap((r) => r.placements),
-    childPlacements,
+    figurePlacements,
   };
 }

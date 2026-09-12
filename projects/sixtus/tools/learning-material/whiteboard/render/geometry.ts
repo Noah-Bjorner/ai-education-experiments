@@ -1,8 +1,8 @@
-import { type Geometry, geometrySchema } from "../children/geometry.ts";
+import { type Geometry, geometrySchema } from "../figures/geometry.ts";
 import {
   type GeometryPoint,
   resolveGeometry,
-} from "../children/geometry-resolver.ts";
+} from "../figures/geometry-resolver.ts";
 import {
   type Bounds,
   type Drawing,
@@ -10,12 +10,7 @@ import {
   type Point,
   unionBounds,
 } from "./bounds.ts";
-import {
-  fitGraphText,
-  GRAPH_FONT_STYLE,
-  graphTextBounds,
-  measureGraphText,
-} from "./font.ts";
+import { GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
 import type { GraphOptions } from "./graphs.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import { renderMathLatex } from "./latex.ts";
@@ -28,7 +23,8 @@ import {
   type ScenePart,
   type TargetedDrawing,
 } from "./targets.ts";
-import { COLORS, SERIES_COLORS } from "./theme.ts";
+import { COLORS, SERIES_COLORS, SPACING, TYPE_SCALE } from "./theme.ts";
+import { withFigureTitle } from "./titles.ts";
 
 const TAU = 2 * Math.PI;
 const add = (a: Point, b: Point): Point => ({ x: a.x + b.x, y: a.y + b.y });
@@ -156,18 +152,6 @@ export function renderGeometryDrawing(
     parts.push(part);
     return part;
   };
-  const title = fitGraphText(spec.title, 25, width - 32);
-  addPart("title", {
-    ...translate(
-      plain(title, 25),
-      (width - measureGraphText(title, 25)) / 2,
-      38,
-    ),
-    markup: `<title>${escapeXml(spec.title)}</title>${
-      translate(plain(title, 25), (width - measureGraphText(title, 25)) / 2, 38)
-        .markup
-    }`,
-  }, "text");
 
   const extents = [...resolved.points.values()].map(([x, y]) => ({ x, y }));
   for (const o of resolved.objects.values()) {
@@ -455,7 +439,7 @@ export function renderGeometryDrawing(
   }
   function math(latex: string, id: string): Drawing {
     try {
-      return renderMathLatex(latex, 22);
+      return renderMathLatex(latex, TYPE_SCALE.label);
     } catch (error) {
       throw new Error(
         `Geometry label '${id}': ${
@@ -479,7 +463,10 @@ export function renderGeometryDrawing(
             `Length label '${label.id}' cannot be represented at two decimal places; use explicit LaTeX.`,
           );
         }
-        drawing = plain(`${rounded}${spec.unit ? ` ${spec.unit}` : ""}`, 22);
+        drawing = plain(
+          `${rounded}${spec.unit ? ` ${spec.unit}` : ""}`,
+          TYPE_SCALE.label,
+        );
       }
     } else {
       placement = anchors.get(label.target)!;
@@ -503,7 +490,15 @@ export function renderGeometryDrawing(
       ),
     ];
     let placement: Bounds | undefined;
-    outer: for (const gap of [10, 18, 28, 42, 60]) {
+    outer: for (
+      const gap of [
+        SPACING.labelGap,
+        SPACING.labelGap * 2,
+        SPACING.labelGap * 3,
+        SPACING.labelGap * 5,
+        SPACING.labelGap * 7,
+      ]
+    ) {
       for (const direction of directions) {
         const offset = Math.abs(direction.x) * ink.width / 2 +
           Math.abs(direction.y) * ink.height / 2 + gap;
@@ -523,7 +518,8 @@ export function renderGeometryDrawing(
         }
         if (
           obstacles.some((o) =>
-            o.kind !== "area" && obstacleHitsBox(o, candidate, 3)
+            o.kind !== "area" &&
+            obstacleHitsBox(o, candidate, SPACING.labelClearance)
           )
         ) continue;
         placement = candidate;
@@ -546,13 +542,18 @@ export function renderGeometryDrawing(
   if (!Object.values(bounds).every(Number.isFinite)) {
     throw new Error("Geometry produced nonfinite drawing bounds.");
   }
-  return {
-    markup: `<g style="${GRAPH_FONT_STYLE};color:${COLORS.ink}">${
-      parts.map((p) => p.markup).join("")
-    }</g>`,
-    bounds,
-    targets,
-    obstacles,
-    focusBounds: contentBounds,
-  };
+  return withFigureTitle(
+    {
+      markup: `<g style="${GRAPH_FONT_STYLE};color:${COLORS.ink}">${
+        parts.map((p) => p.markup).join("")
+      }</g>`,
+      bounds,
+      targets,
+      obstacles,
+      focusBounds: contentBounds,
+    },
+    spec.title,
+    namespace,
+    options,
+  );
 }

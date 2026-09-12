@@ -1,16 +1,16 @@
 import { z } from "@zod";
 import {
-  childAnnotationsField,
-  childTitleField,
+  figureAnnotationsField,
+  figureTitleField,
   elementIdField,
-  type WhiteboardChildDefinition,
+  type WhiteboardFigureDefinition,
 } from "./shared.ts";
 
 const xyChartSchema = z.object({
   type: z.literal("xy_chart"),
   id: elementIdField.optional(),
-  title: childTitleField,
-  annotations: childAnnotationsField.optional(),
+  title: figureTitleField,
+  annotations: figureAnnotationsField.optional(),
   chartStyle: z.enum(["line", "bar", "scatter", "area"]),
   xLabel: z.string().min(1),
   yLabel: z.string().min(1),
@@ -49,12 +49,12 @@ Choose \`chartStyle\` according to the relationship:
 - \`series\`: an array of series.
 
 Each series contains:
-- \`id\`: a stable ID, unique among all series and points in this child.
+- \`id\`: a stable ID, unique among all series and points in this figure.
 - \`name\`: a short label identifying the series.
 - \`points\`: an array of objects containing \`x\` and \`y\`.
 
 Each point contains:
-- \`id\`: a stable ID, unique among all series and points in this child.
+- \`id\`: a stable ID, unique among all series and points in this figure.
 - \`x\`: a number for a numeric axis, or a string for a category.
 - \`y\`: a number.
 
@@ -66,8 +66,8 @@ Each point contains:
 - Order line- and area-chart points by ascending X value.
 - Give each series a distinct, meaningful name.
 - All series share the chart's axis labels and units.
-- Annotation targets: \`<childId>.title\`, \`<childId>.x-label\`, \`<childId>.y-label\`, \`<childId>.<seriesId>.legend-label\`, and \`<childId>.<pointId>.mark\`. Point marks mean the plotted point or bar; do not invent separate point-label targets.
-- Use multiple series in one XY chart when they share axes and comparing them together is clearer than using separate children.`,
+- Annotation targets: \`<figureId>.title\` (only when title is not null), \`<figureId>.x-label\`, \`<figureId>.y-label\`, \`<figureId>.<seriesId>.legend-label\`, and \`<figureId>.<pointId>.mark\`. Point marks mean the plotted point or bar; do not invent separate point-label targets.
+- Use multiple series in one XY chart when they share axes and comparing them together is clearer than using separate figures.`,
   example: {
     goal:
       "Help a learner understand that y = 2x increases by 2 for every increase of 1 in x, using x = 0, 1, 2, and 3.",
@@ -109,4 +109,4 @@ Each point contains:
       ],
     },
   },
-} satisfies WhiteboardChildDefinition<typeof xyChartSchema>;
+} satisfies WhiteboardFigureDefinition<typeof xyChartSchema>;

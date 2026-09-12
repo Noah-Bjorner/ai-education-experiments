@@ -1,70 +1,37 @@
-import type { MathExpressions } from "../children/math-expressions.ts";
+import type { MathExpressions } from "../figures/math-expressions.ts";
 import { escapeXml } from "./svg.ts";
 import { type Bounds, type Drawing, unionBounds } from "./bounds.ts";
-import {
-  fitGraphText,
-  GRAPH_FONT_STYLE,
-  graphTextBounds,
-  measureGraphText,
-} from "./font.ts";
+import { GRAPH_FONT_STYLE } from "./font.ts";
 import type { GraphOptions } from "./graphs.ts";
 import { renderMathLatex } from "./latex.ts";
 import {
   registerTarget,
   type RenderTarget,
+  type ScenePart,
   type TargetedDrawing,
 } from "./targets.ts";
-import { COLORS } from "./theme.ts";
+import { COLORS, SPACING, TYPE_SCALE } from "./theme.ts";
+import { withFigureTitle } from "./titles.ts";
 
-/** Baseline-relative layout; painted bounds also include every pen stroke. */
-type Box = Drawing & { width: number; ascent: number; descent: number };
 function move(
   drawing: Drawing,
   x: number,
   y: number,
-  sx = 1,
-  sy = sx,
 ): Drawing {
   const b = drawing.bounds;
   return {
-    markup:
-      `<g transform="translate(${x} ${y}) scale(${sx} ${sy})">${drawing.markup}</g>`,
+    markup: `<g transform="translate(${x} ${y})">${drawing.markup}</g>`,
     bounds: b &&
       {
-        x: x + b.x * sx,
-        y: y + b.y * sy,
-        width: b.width * sx,
-        height: b.height * sy,
+        x: x + b.x,
+        y: y + b.y,
+        width: b.width,
+        height: b.height,
       },
   };
 }
-function box(parts: Drawing[], width: number, ascent = 0, descent = 0): Box {
-  const bounds = unionBounds(parts.map((p) => p.bounds));
-  return {
-    markup: parts.map((p) => p.markup).join(""),
-    bounds,
-    width,
-    ascent: Math.max(ascent, bounds ? -bounds.y : 0),
-    descent: Math.max(descent, bounds ? bounds.y + bounds.height : 0),
-  };
-}
-function text(value: string, size: number): Box {
-  const bounds = graphTextBounds(value, size, 0, 0);
-  return box(
-    [{
-      markup: `<text font-size="${size}" fill="${COLORS.ink}">${
-        escapeXml(value.normalize("NFC"))
-      }</text>`,
-      bounds,
-    }],
-    measureGraphText(value, size),
-    size * 0.75,
-    size * 0.2,
-  );
-}
-
 export function renderMathExpressionsDrawing(
-  child: MathExpressions,
+  figure: MathExpressions,
   options: GraphOptions,
 ): TargetedDrawing {
   const width = options.width ?? 800, height = options.height ?? 520;
@@ -78,11 +45,11 @@ export function renderMathExpressionsDrawing(
       "Math rendering needs a simple SVG id, finite dimensions (at least 160 × 140), and nonnegative roughness.",
     );
   }
-  const namespace = child.id ?? options.id;
+  const namespace = figure.id ?? options.id;
   const targets = new Map<string, RenderTarget>();
-  const rows = child.expressions.map((expression) => {
+  const rows = figure.expressions.map((expression) => {
     try {
-      return renderMathLatex(expression.latex, 36);
+      return renderMathLatex(expression.latex, TYPE_SCALE.mathDisplay);
     } catch (error) {
       throw new Error(
         `Math expression '${expression.id}': ${
@@ -91,62 +58,56 @@ export function renderMathExpressionsDrawing(
       );
     }
   });
-  const rowGap = 26;
-  const naturalHeight =
-    rows.reduce((sum, row) => sum + row.ascent + row.descent, 0) +
-    rowGap * (rows.length - 1);
+  const rowGap = SPACING.mathRowGap;
   const naturalWidth = Math.max(
     ...rows.map((row) =>
       Math.max(row.width, (row.bounds?.x ?? 0) + (row.bounds?.width ?? 0)) -
       Math.min(0, row.bounds?.x ?? 0)
     ),
   );
-  const scale = Math.min(
-    1,
-    (width - 64) / naturalWidth,
-    (height - 110) / naturalHeight,
-  );
-  if (!Number.isFinite(scale) || scale * 36 < 18) {
+  if (
+    !Number.isFinite(naturalWidth) ||
+    naturalWidth > width - SPACING.sectionGap * 2
+  ) {
     throw new Error(
-      "Math expressions do not fit legibly; increase the board size or split the content into fewer or shorter rows.",
+      "Math expressions do not fit legibly at the shared size; increase the width or split the expression into shorter rows.",
     );
   }
-  const title = text(fitGraphText(child.title, 25, width - 48), 25);
-  const parts = [registerTarget(targets, `${namespace}.title`, {
-    ...move(title, (width - title.width) / 2, 38),
-    markup: `<title>${escapeXml(child.title)}</title>${
-      move(title, (width - title.width) / 2, 38).markup
-    }`,
-  }, "text")];
+  const expressions: ScenePart[] = [];
   let y = 78;
   rows.forEach((row, i) => {
-    y += row.ascent * scale;
-    parts.push(
+    y += row.ascent;
+    expressions.push(
       registerTarget(
         targets,
-        `${namespace}.${child.expressions[i].id}.expression`,
+        `${namespace}.${figure.expressions[i].id}.expression`,
         {
-          ...move(row, (width - row.width * scale) / 2, y, scale),
-          markup: `<g aria-label="${escapeXml(child.expressions[i].latex)}">${
-            move(row, (width - row.width * scale) / 2, y, scale).markup
+          ...move(row, (width - row.width) / 2, y),
+          markup: `<g aria-label="${escapeXml(figure.expressions[i].latex)}">${
+            move(row, (width - row.width) / 2, y).markup
           }</g>`,
         },
         "text",
       ),
     );
-    y += (row.descent + rowGap) * scale;
+    y += row.descent + rowGap;
   });
-  const bounds = unionBounds(parts.map((part) => part.bounds))!;
+  const bounds = unionBounds(expressions.map((part) => part.bounds))!;
   const focusBounds: Bounds = unionBounds(
-    parts.slice(1).map((part) => part.bounds),
+    expressions.map((part) => part.bounds),
   )!;
-  return {
-    markup: `<g style="${GRAPH_FONT_STYLE};color:${COLORS.ink}">${
-      parts.map((p) => p.markup).join("")
-    }</g>`,
-    bounds,
-    targets,
-    focusBounds,
-    obstacles: parts.flatMap((p) => p.obstacles ?? []),
-  };
+  return withFigureTitle(
+    {
+      markup: `<g style="${GRAPH_FONT_STYLE};color:${COLORS.ink}">${
+        expressions.map((p) => p.markup).join("")
+      }</g>`,
+      bounds,
+      targets,
+      focusBounds,
+      obstacles: expressions.flatMap((p) => p.obstacles ?? []),
+    },
+    figure.title,
+    namespace,
+    options,
+  );
 }

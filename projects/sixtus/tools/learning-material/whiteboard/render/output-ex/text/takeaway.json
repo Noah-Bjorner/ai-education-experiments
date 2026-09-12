@@ -1,0 +1,15 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "text",
+      "id": "takeaway",
+      "title": null,
+      "annotations": [],
+      "role": "takeaway",
+      "text": "The same text and size for every role.",
+      "anchor": null,
+      "side": null
+    }
+  ]
+}

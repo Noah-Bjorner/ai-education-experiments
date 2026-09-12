@@ -2,19 +2,24 @@ import {
   type Freeform,
   type FreeformElement,
   freeformSchema,
-} from "../children/freeform.ts";
+} from "../figures/freeform.ts";
 import {
   type Bounds,
   expandBounds,
   type Point,
   unionBounds,
 } from "./bounds.ts";
-import { GRAPH_FONT_STYLE, graphTextBounds, measureGraphText } from "./font.ts";
+import { GRAPH_FONT_STYLE } from "./font.ts";
 import type { GraphOptions } from "./graphs.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import { center, obstacleHitsBox } from "./placement.ts";
-import { escapeXml } from "./svg.ts";
-import { COLORS, SERIES_COLORS } from "./theme.ts";
+import {
+  COLORS,
+  LINE_HEIGHT,
+  SERIES_COLORS,
+  SPACING,
+  TYPE_SCALE,
+} from "./theme.ts";
 import {
   registerTarget,
   type RenderObstacle,
@@ -22,12 +27,14 @@ import {
   type ScenePart,
   type TargetedDrawing,
 } from "./targets.ts";
+import { textBlock } from "./text-block.ts";
+import { withFigureTitle } from "./titles.ts";
 
 type ShapeElement = Extract<
   FreeformElement,
   { type: "rectangle" | "ellipse" | "marker" }
 >;
-const sizes = { small: 18, normal: 22, large: 28 };
+const roles = { small: "label", normal: "body", large: "prominent" } as const;
 const SCENE_WIDTH = 800;
 const SCENE_HEIGHT = 440;
 const MAX_EXTENT = 10_000;
@@ -60,69 +67,7 @@ const segment = (a: Point, b: Point): RenderObstacle => ({
   segment: { a, b },
 });
 
-/** Word wrapping retains whitespace and explicit blank lines; long tokens split by glyph. */
-export function wrapFreeformText(
-  value: string,
-  size: number,
-  width: number,
-): string[] {
-  const lines: string[] = [];
-  for (const paragraph of value.normalize("NFC").split("\n")) {
-    let line = "";
-    for (const token of paragraph.match(/\s+|\S+/g) ?? []) {
-      if (measureGraphText(line + token, size) <= width) {
-        line += token;
-        continue;
-      }
-      if (line) {
-        lines.push(line);
-        line = "";
-      }
-      for (const ch of token) {
-        if (measureGraphText(ch, size) > width) {
-          throw new Error("Text width is narrower than a glyph");
-        }
-        if (measureGraphText(line + ch, size) > width) {
-          lines.push(line);
-          line = "";
-        }
-        line += ch;
-      }
-    }
-    lines.push(line);
-  }
-  return lines;
-}
-
-function textPart(
-  content: string,
-  size: number,
-  width: number,
-  align: "left" | "center" | "right",
-) {
-  const lines = wrapFreeformText(content, size, width);
-  const anchor = align === "left"
-    ? "start"
-    : align === "center"
-    ? "middle"
-    : "end";
-  const x = align === "left" ? 0 : align === "center" ? width / 2 : width;
-  const parts = lines.map((line, i) => {
-    const y = size + i * size * 1.3;
-    return {
-      markup:
-        `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${size}" xml:space="preserve">${
-          escapeXml(line)
-        }</text>`,
-      bounds: graphTextBounds(line, size, x, y, anchor),
-    };
-  });
-  return {
-    markup: parts.map((p) => p.markup).join(""),
-    bounds: unionBounds(parts.map((p) => p.bounds))!,
-    height: lines.length * size * 1.3,
-  };
-}
+export { wrapGraphText as wrapFreeformText } from "./font.ts";
 
 /** Intersection of a center ray with the actual primitive boundary. */
 function boundary(e: ShapeElement, toward: Point): Point {
@@ -170,10 +115,10 @@ export function renderFreeformDrawing(
   const parsed = freeformSchema.safeParse(input);
   if (!parsed.success) {
     throw new Error(
-      `Freeform '${input.id ?? input.title}': ${parsed.error.message}`,
+      `Freeform '${input.id}': ${parsed.error.message}`,
     );
   }
-  const child = parsed.data, namespace = child.id ?? options.id;
+  const figure = parsed.data, namespace = figure.id ?? options.id;
   const width = options.width ?? 800, height = options.height ?? 520;
   if (
     !/^[a-zA-Z][\w-]*$/.test(options.id) ||
@@ -188,15 +133,8 @@ export function renderFreeformDrawing(
   ) throw new Error(`Freeform '${namespace}': invalid render options`);
   const scale = Math.min(width / SCENE_WIDTH, (height - 80) / SCENE_HEIGHT),
     tx = (width - SCENE_WIDTH * scale) / 2;
-  if (
-    child.elements.some((e) => e.type === "text" && sizes[e.size] * scale < 14)
-  ) {
-    console.warn(
-      `Freeform '${namespace}': allocation makes text smaller than 14 units`,
-    );
-  }
   const shapes = new Map(
-    child.elements.filter((e): e is ShapeElement =>
+    figure.elements.filter((e): e is ShapeElement =>
       ["rectangle", "ellipse", "marker"].includes(e.type)
     ).map((e) => [e.id, e]),
   );
@@ -213,20 +151,31 @@ export function renderFreeformDrawing(
   }
   const parts: ScenePart[] = [];
   const localTargets = new Map<string, RenderTarget>();
-  for (const e of child.elements) {
+  for (const e of figure.elements) {
     if (skipped.has(e.id)) continue;
     try {
       const ink = palette(e.color);
       let part: ScenePart;
       if (e.type === "text") {
-        const text = textPart(e.content, sizes[e.size], e.width, e.align);
+        // Compensate for the scene transform: text keeps its board-space role size.
+        const role = roles[e.size];
+        const text = textBlock(
+          e.content,
+          e.width,
+          TYPE_SCALE[role] / scale,
+          LINE_HEIGHT[role] / scale,
+          0,
+          0,
+          ink,
+          e.align,
+        );
         let x: number, y: number;
         if ("x" in e.position) {
           x = e.position.x;
           y = e.position.y;
         } else {
           const b = shapeBounds(shapes.get(e.position.target)!),
-            gap = e.position.gap ?? 8;
+            gap = (e.position.gap ?? SPACING.labelGap) / scale;
           x = b.x + (b.width - e.width) / 2;
           y = b.y + (b.height - text.height) / 2;
           if (e.position.side === "left") x = b.x - gap - e.width;
@@ -238,9 +187,9 @@ export function renderFreeformDrawing(
           markup:
             `<g fill="${ink}" transform="translate(${x} ${y})">${text.markup}</g>`,
           bounds: {
-            ...text.bounds,
-            x: text.bounds.x + x,
-            y: text.bounds.y + y,
+            ...text.bounds!,
+            x: text.bounds!.x + x,
+            y: text.bounds!.y + y,
           },
         };
       } else if (e.type === "line" || e.type === "arrow") {
@@ -389,7 +338,9 @@ export function renderFreeformDrawing(
   }
   const localObstacles = parts.flatMap((p) => p.obstacles ?? []);
   const containers = new Set(
-    child.elements.filter((e) => e.type === "rectangle" || e.type === "ellipse")
+    figure.elements.filter((e) =>
+      e.type === "rectangle" || e.type === "ellipse"
+    )
       .map((e) => `${namespace}.${e.id}.mark`),
   );
   for (const [id, target] of localTargets) {
@@ -443,35 +394,20 @@ export function renderFreeformDrawing(
         r: o.circle.r * scale,
       },
   }));
-  let title;
-  try {
-    title = textPart(child.title, 25, width - 32, "center");
-    if (title.height > 48) {
-      console.warn(`Freeform '${namespace}', title: Title must fit on one line`);
-    }
-  } catch (error) {
-    console.warn(
-      `Freeform '${namespace}', title: ${
-        error instanceof Error ? error.message : error
-      }`,
-    );
-    title = textPart(namespace, 25, width - 32, "center");
-  }
-  const titlePart = registerTarget(targets, `${namespace}.title`, {
-    markup:
-      `<g fill="${COLORS.ink}" transform="translate(16 8)">${title.markup}</g>`,
-    bounds: { ...title.bounds, x: 16 + title.bounds.x, y: 8 + title.bounds.y },
-  }, "text");
-  obstacles.push(...titlePart.obstacles ?? []);
   const focusBounds = transformBounds(sceneBounds);
-  return {
-    markup:
-      `<g style="${GRAPH_FONT_STYLE}">${titlePart.markup}<g transform="translate(${tx} ${ty}) scale(${scale})">${
-        parts.map((p) => p.markup).join("")
-      }</g></g>`,
-    bounds: unionBounds([titlePart.bounds, focusBounds]),
-    focusBounds,
-    targets,
-    obstacles,
-  };
+  return withFigureTitle(
+    {
+      markup:
+        `<g style="${GRAPH_FONT_STYLE}"><g transform="translate(${tx} ${ty}) scale(${scale})">${
+          parts.map((p) => p.markup).join("")
+        }</g></g>`,
+      bounds: focusBounds,
+      focusBounds,
+      targets,
+      obstacles,
+    },
+    figure.title,
+    namespace,
+    options,
+  );
 }

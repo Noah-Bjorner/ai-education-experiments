@@ -1,7 +1,7 @@
 {
   "spec": {
-    "layout": "single",
-    "children": [
+    "title": null,
+    "figures": [
       {
         "type": "xy_chart",
         "id": "motion",
@@ -58,13 +58,15 @@
             ],
             "content": "Highest point"
           }
-        ]
+        ],
+        "anchor": null,
+        "side": null
       }
     ]
   },
   "placements": [
     {
-      "childId": "motion",
+      "figureId": "motion",
       "annotationIndex": 0,
       "type": "bracket",
       "targetIds": [
@@ -107,7 +109,7 @@
       "usedGutter": true
     },
     {
-      "childId": "motion",
+      "figureId": "motion",
       "annotationIndex": 1,
       "type": "arrow",
       "targetIds": [

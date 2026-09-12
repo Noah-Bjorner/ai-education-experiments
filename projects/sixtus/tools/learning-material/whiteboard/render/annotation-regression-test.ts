@@ -1,8 +1,9 @@
+import { boardExample } from "./board-example.ts";
 import { assert, assertAlmostEquals, assertEquals } from "@std/assert";
 import type { WhiteboardSpec } from "../schema.ts";
-import { mathExpressions } from "../children/math-expressions.ts";
-import type { Geometry } from "../children/geometry.ts";
-import type { CoordinatePlot } from "../children/coordinate-plot.ts";
+import { mathExpressions } from "../figures/math-expressions.ts";
+import type { Geometry } from "../figures/geometry.ts";
+import type { CoordinatePlot } from "../figures/coordinate-plot.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
@@ -69,23 +70,20 @@ function distanceToSegment(p: Point, a: Point, b: Point) {
 }
 
 Deno.test("geometry and coordinate callouts terminate beside visible strokes, not empty bounding-box edges", () => {
-  for (const child of [geometry, ...plots]) {
-    const scene = child.type === "geometry"
-      ? renderGeometryDrawing(child, { id: "test" })
-      : renderCoordinatePlotDrawing(child, { id: "test" });
-    const target = `${child.id}.s.mark`;
+  for (const figure of [geometry, ...plots]) {
+    const scene = figure.type === "geometry"
+      ? renderGeometryDrawing(figure, { id: "test" })
+      : renderCoordinatePlotDrawing(figure, { id: "test" });
+    const target = `${figure.id}.s.mark`;
     const segments = scene.obstacles.filter((o) =>
       o.ownerId === target && o.segment
     ).map((o) => o.segment!);
     assert(segments.length > 0);
     for (const type of ["arrow", "line"] as const) {
-      const spec: WhiteboardSpec = {
-        layout: "single",
-        children: [{
-          ...child,
-          annotations: [{ type, targetIds: [target], content: "This shape" }],
-        }],
-      };
+      const spec: WhiteboardSpec = boardExample([{
+        ...figure,
+        annotations: [{ type, targetIds: [target], content: "This shape" }],
+      }]);
       const result = renderWhiteboardSvg(spec);
       const path = result.calloutPlacements[0].paths[0];
       const tip = path.at(-1)!, previous = path.at(-2)!;
@@ -94,7 +92,7 @@ Deno.test("geometry and coordinate callouts terminate beside visible strokes, no
       );
       assert(
         separation <= 28.01,
-        `${child.type}: tip is ${separation}px from the shape`,
+        `${figure.type}: tip is ${separation}px from the shape`,
       );
       // Extending the final connector leg must reach visible ink, even for
       // curves and disconnected branches whose bounding-box center is empty.
@@ -113,9 +111,9 @@ Deno.test("geometry and coordinate callouts terminate beside visible strokes, no
 });
 
 Deno.test("circling an equation encloses its bounds without reaching the title or adjacent equation", () => {
-  const child = mathExpressions.example.output;
-  const scene = renderMathExpressionsDrawing(child, { id: "test" });
-  for (const expression of child.expressions) {
+  const figure = mathExpressions.example.output;
+  const scene = renderMathExpressionsDrawing(figure, { id: "test" });
+  for (const expression of figure.expressions) {
     const targetId = `solve.${expression.id}.expression`;
     const annotations = [{
       type: "circle" as const,
@@ -124,7 +122,7 @@ Deno.test("circling an equation encloses its bounds without reaching the title o
     }];
     const result = renderEmphasisAnnotations(annotations, scene.targets, {
       id: "test",
-      childId: "solve",
+      figureId: "solve",
     });
     const oval = result.drawing.bounds!,
       target = scene.targets.get(targetId)!.bounds;
@@ -136,10 +134,9 @@ Deno.test("circling an equation encloses its bounds without reaching the title o
         assert(!overlaps(oval, other.bounds), `${targetId} overlaps ${id}`);
       }
     }
-    const board = renderWhiteboardSvg({
-      layout: "single",
-      children: [{ ...child, annotations }],
-    });
+    const board = renderWhiteboardSvg(
+      boardExample([{ ...figure, annotations }]),
+    );
     assert(board.svg.includes('data-annotation-type="circle"'));
   }
   // Wide text uses a tight box; extra width does not increase its height.
@@ -148,7 +145,7 @@ Deno.test("circling an equation encloses its bounds without reaching the title o
     renderEmphasisAnnotations(
       [{ type: "circle", targetIds: ["row"], content: null }],
       new Map([["row", { ...target, bounds: { ...target.bounds, width } }]]),
-      { id: "test", childId: "solve", roughness: 0 },
+      { id: "test", figureId: "solve", roughness: 0 },
     ).drawing.bounds!;
   assertAlmostEquals(measure(200).height, measure(600).height, 0.01);
   assertAlmostEquals(measure(600).height, target.bounds.height + 12, 0.01);

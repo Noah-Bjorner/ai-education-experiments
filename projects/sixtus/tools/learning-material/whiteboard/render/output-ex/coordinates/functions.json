@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "coordinate_plot",
       "id": "functions",
@@ -43,7 +43,9 @@
           "expression": "sqrt(x)",
           "label": "√x"
         }
-      ]
+      ],
+      "anchor": null,
+      "side": null
     }
   ]
 }

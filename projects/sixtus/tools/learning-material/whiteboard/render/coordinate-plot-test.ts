@@ -1,3 +1,4 @@
+import { boardExample } from "./board-example.ts";
 import {
   assert,
   assertAlmostEquals,
@@ -7,7 +8,7 @@ import {
 import {
   type CoordinatePlot,
   coordinatePlot,
-} from "../children/coordinate-plot.ts";
+} from "../figures/coordinate-plot.ts";
 import { WhiteboardOutput, whiteboardRequestSchema } from "../schema.ts";
 import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
 import { coordinateExamples } from "./coordinate-gallery.ts";
@@ -22,7 +23,7 @@ import {
   renderCoordinatePlotDrawing,
 } from "./coordinate-plot.ts";
 import { renderWhiteboardSvg } from "./index.ts";
-import { mathExpressions } from "../children/math-expressions.ts";
+import { mathExpressions } from "../figures/math-expressions.ts";
 
 const example = coordinatePlot.example.output;
 const draw = (plot: CoordinatePlot) =>
@@ -219,7 +220,7 @@ Deno.test("coordinate gallery integrates with schemas, prompts, annotations, and
     !WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("This definition is spec-only"),
   );
   for (const plot of coordinateExamples) {
-    const spec = { layout: "single" as const, children: [plot] };
+    const spec = boardExample([plot]);
     assertEquals(WhiteboardOutput.parse(spec), spec);
     assertEquals(whiteboardRequestSchema.parse(spec), spec);
     const before = JSON.stringify(spec), a = renderWhiteboardSvg(spec);
@@ -231,27 +232,22 @@ Deno.test("coordinate gallery integrates with schemas, prompts, annotations, and
       assert(Object.values(target.bounds).every(Number.isFinite), name);
     }
   }
-  const annotated = renderWhiteboardSvg({
-    layout: "single",
-    children: [coordinateExamples[5]],
-  });
+  const annotated = renderWhiteboardSvg(boardExample([coordinateExamples[5]]));
   assertEquals(annotated.calloutPlacements.length, 1);
   assert(annotated.stages.base.svg !== annotated.stages.callouts.svg);
 });
 
-Deno.test("mixed math/coordinate children render in split and stack layouts with unique definitions", () => {
-  for (const layout of ["split", "stack"] as const) {
-    const result = renderWhiteboardSvg({
-      layout,
-      children: [example, mathExpressions.example.output],
-    });
+Deno.test("mixed math/coordinate figures render with anchor placement with unique definitions", () => {
+  for (const side of ["right", "bottom"] as const) {
+    const result = renderWhiteboardSvg(
+      boardExample([example, mathExpressions.example.output], side),
+    );
     assert(result.svg.includes('id="slope.f.mark"'));
-    assertEquals(result.childPlacements.length, 2);
+    assertEquals(result.figurePlacements.length, 2);
   }
-  const result = renderWhiteboardSvg({
-    layout: "split",
-    children: [{ ...plane, id: "a" }, { ...plane, id: "b" }],
-  });
+  const result = renderWhiteboardSvg(
+    boardExample([{ ...plane, id: "a" }, { ...plane, id: "b" }], "right"),
+  );
   const ids = [...result.svg.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
   assertEquals(new Set(ids).size, ids.length);
 });

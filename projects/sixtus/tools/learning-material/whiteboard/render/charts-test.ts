@@ -1,3 +1,4 @@
+import { boardExample } from "./board-example.ts";
 import { assert, assertEquals } from "@std/assert";
 import { chartExamples } from "./charts-gallery.ts";
 import { type Graph, renderGraphSvg, renderXyGraphDrawing } from "./graphs.ts";
@@ -17,13 +18,10 @@ Deno.test("all six charts render reproducibly without mutations and support boar
     const target = chart.type === "xy_chart"
       ? `${chart.id}.a-0.mark`
       : `${chart.id}.fiction.mark`;
-    const board = renderWhiteboardSvg({
-      layout: "single",
-      children: [{
-        ...chart,
-        annotations: [{ type: "circle", targetIds: [target], content: null }],
-      }],
-    });
+    const board = renderWhiteboardSvg(boardExample([{
+      ...chart,
+      annotations: [{ type: "circle", targetIds: [target], content: null }],
+    }]));
     assert(board.svg.includes(`id="${target}"`));
     assert(board.stages.emphasis.svg !== board.stages.base.svg);
   }

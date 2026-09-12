@@ -1,4 +1,4 @@
-import type { WhiteboardSpec } from "../schema.ts";
+import type { WhiteboardFigureContent } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import { handwritten, renderHandwritten } from "./handwritten.ts";
 import {
@@ -15,20 +15,27 @@ import {
   rotateLabel,
   unionBounds,
 } from "./bounds.ts";
-import { COLORS, SERIES_COLORS as GRAPH_COLORS } from "./theme.ts";
+import {
+  COLORS,
+  LINE_HEIGHT,
+  SERIES_COLORS as GRAPH_COLORS,
+  SPACING,
+  TYPE_SCALE,
+} from "./theme.ts";
 import {
   registerTarget,
   type RenderTarget,
   type ScenePart,
   type TargetedDrawing,
 } from "./targets.ts";
+import { withFigureTitle } from "./titles.ts";
 
 export type XyChart = Extract<
-  WhiteboardSpec["children"][number],
+  WhiteboardFigureContent,
   { type: "xy_chart" }
 >;
 export type CircularChart = Extract<
-  WhiteboardSpec["children"][number],
+  WhiteboardFigureContent,
   { type: "pie_chart" }
 >;
 export type Graph = XyChart | CircularChart;
@@ -89,7 +96,7 @@ function text(
   value: string,
   x: number,
   y: number,
-  size = 14,
+  size: number = TYPE_SCALE.label,
   anchor = "start",
   color: string = INK,
   maxWidth = Infinity,
@@ -108,47 +115,37 @@ function text(
 }
 
 function group(
-  title: string,
+  title: string | null,
   parts: ScenePart[],
   width: number,
   namespace: string,
   targets: Map<string, RenderTarget>,
   focusBounds: Bounds,
+  pen: { id: string; seed: number; roughness: number },
 ): TargetedDrawing {
   const bodyBounds = unionBounds(parts.map((p) => p.bounds));
   if (!bodyBounds) throw new Error("A graph needs visible content.");
-  // Center over the actual chart and legend, not the unused allocation.
-  parts.unshift(
-    registerTarget(
-      targets,
-      `${namespace}.title`,
-      text(
-        title,
-        bodyBounds.x + bodyBounds.width / 2,
-        40,
-        25,
-        "middle",
-        INK,
-        width - 60,
-      ),
-      "text",
-    ),
-  );
+  const label = title ?? namespace;
   const markup = `<g style="${GRAPH_FONT_STYLE}" role="img" aria-label="${
-    escapeXml(title)
-  }"><title>${escapeXml(title)}</title>${
+    escapeXml(label)
+  }"><title>${escapeXml(label)}</title>${
     parts.map((p) => p.markup).join("\n")
   }</g>`;
-  return {
-    markup,
-    bounds: unionBounds(parts.map((p) => p.bounds)),
-    targets,
-    focusBounds,
-    obstacles: parts.flatMap((p) =>
-      p.obstacles ??
-        (p.bounds ? [{ bounds: p.bounds, kind: "shape" as const }] : [])
-    ),
-  };
+  return withFigureTitle(
+    {
+      markup,
+      bounds: unionBounds(parts.map((p) => p.bounds)),
+      targets,
+      focusBounds,
+      obstacles: parts.flatMap((p) =>
+        p.obstacles ??
+          (p.bounds ? [{ bounds: p.bounds, kind: "shape" as const }] : [])
+      ),
+    },
+    title,
+    namespace,
+    { ...pen, width },
+  );
 }
 
 /** Round axis limits to readable steps such as 5, 10, or 20 million. */
@@ -242,11 +239,17 @@ export function renderXyGraphDrawing(
   ];
 
   // Pack measured entries like a wrapping flex row instead of fixed columns.
-  const legendGap = 64;
+  const legendGap = SPACING.legendItemGap;
+  const legendRowHeight = LINE_HEIGHT.label + SPACING.legendRowGap;
+  const legendLabelOffset = 23 + SPACING.labelGap;
   let legendX = 0;
   let legendRow = 0;
   const legendEntries = series.map((s) => {
-    const width = 33 + measureGraphText(fitGraphText(s.name, 13, 155), 13);
+    const width = legendLabelOffset +
+      measureGraphText(
+        fitGraphText(s.name, TYPE_SCALE.label, 155),
+        TYPE_SCALE.label,
+      );
     if (legendX > 0 && legendX + width > c.width - 134) {
       legendX = 0;
       legendRow++;
@@ -260,7 +263,7 @@ export function renderXyGraphDrawing(
     left: 92,
     right: c.width - 42,
     top: 90,
-    bottom: c.height - 88 - legendRows * 26,
+    bottom: c.height - 88 - legendRows * legendRowHeight,
   };
   if (plot.bottom - plot.top < 150) {
     throw new Error("Increase graph height to fit the series legend.");
@@ -330,7 +333,7 @@ export function renderXyGraphDrawing(
         numberLabel(tick, true),
         plot.left - 14,
         y(tick) + 5,
-        13,
+        TYPE_SCALE.supporting,
         "end",
         MUTED,
       ),
@@ -343,7 +346,7 @@ export function renderXyGraphDrawing(
         isBar ? String(tick) : numberLabel(Number(tick)),
         x(tick),
         plot.bottom + 25,
-        13,
+        TYPE_SCALE.supporting,
         "middle",
         MUTED,
         isBar ? band - 8 : Infinity,
@@ -360,7 +363,7 @@ export function renderXyGraphDrawing(
         chart.xLabel,
         (plot.left + plot.right) / 2,
         plot.bottom + 58,
-        16,
+        TYPE_SCALE.label,
         "middle",
         INK,
         c.width - 150,
@@ -373,7 +376,15 @@ export function renderXyGraphDrawing(
       targets,
       `${namespace}.y-label`,
       rotateLabel(
-        text(chart.yLabel, 0, 0, 16, "middle", INK, plot.bottom - plot.top),
+        text(
+          chart.yLabel,
+          0,
+          0,
+          TYPE_SCALE.label,
+          "middle",
+          INK,
+          plot.bottom - plot.top,
+        ),
         25,
         (plot.top + plot.bottom) / 2,
       ),
@@ -478,7 +489,8 @@ export function renderXyGraphDrawing(
       );
     }
     const lx = 92 + legendEntries[i].x;
-    const ly = c.height - 24 - (legendRows - 1 - legendEntries[i].row) * 26;
+    const ly = c.height - 24 -
+      (legendRows - 1 - legendEntries[i].row) * legendRowHeight;
     if (chart.chartStyle === "scatter") {
       parts.push({
         markup: `<circle cx="${lx + 12}" cy="${
@@ -508,7 +520,15 @@ export function renderXyGraphDrawing(
       registerTarget(
         targets,
         s.id ? `${namespace}.${s.id}.legend-label` : undefined,
-        text(s.name, lx + 33, ly, 13, "start", INK, 155),
+        text(
+          s.name,
+          lx + legendLabelOffset,
+          ly,
+          TYPE_SCALE.label,
+          "start",
+          INK,
+          155,
+        ),
         "text",
       ),
     );
@@ -518,7 +538,7 @@ export function renderXyGraphDrawing(
     y: plot.top,
     width: plot.right - plot.left,
     height: plot.bottom - plot.top,
-  });
+  }, { id: c.id, seed: c.seed, roughness: c.roughness });
 }
 
 /** Pie angles stay exact; the pen effect is applied to fills and borders. */
@@ -699,7 +719,7 @@ export function renderCircularGraphDrawing(
                 Math.sin(mid) *
                   (innerRadius ? (innerRadius + outerRadius) / 2 : r * 0.66) +
                 5,
-              16,
+              TYPE_SCALE.label,
               "middle",
             ),
             "text",
@@ -707,7 +727,10 @@ export function renderCircularGraphDrawing(
         );
       }
       const lx = c.width * 0.6;
-      const ly = cy - entries.length * 24 + i * 48 + 12;
+      const legendRowHeight = LINE_HEIGHT.label + LINE_HEIGHT.detail +
+        SPACING.legendRowGap;
+      const ly = cy - entries.length * legendRowHeight / 2 +
+        i * legendRowHeight + TYPE_SCALE.detail;
       parts.push(
         renderHandwritten({
           type: "rectangle",
@@ -731,9 +754,9 @@ export function renderCircularGraphDrawing(
           slice.id ? `${namespace}.${slice.id}.legend-label` : undefined,
           text(
             slice.label,
-            lx + 30,
+            lx + 18 + SPACING.labelGap,
             ly,
-            15,
+            TYPE_SCALE.label,
             "start",
             INK,
             c.width - lx - 60,
@@ -744,9 +767,9 @@ export function renderCircularGraphDrawing(
       parts.push(
         text(
           `${slice.value.toLocaleString("en-US")} · ${percent}`,
-          lx + 30,
-          ly + 18,
-          12,
+          lx + 18 + SPACING.labelGap,
+          ly + LINE_HEIGHT.label,
+          TYPE_SCALE.detail,
           "start",
           MUTED,
           c.width - lx - 60,
@@ -784,7 +807,7 @@ export function renderCircularGraphDrawing(
     y: cy - r,
     width: 2 * r,
     height: 2 * r,
-  });
+  }, { id: c.id, seed: c.seed, roughness: c.roughness });
 }
 
 /** Standalone export helper for demos; group renderers also work in a board. */
@@ -796,9 +819,9 @@ export function renderGraphSvg(chart: Graph, options: GraphOptions) {
   const bounds = exportBounds(drawing.bounds);
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}" role="img" aria-label="${
-      escapeXml(chart.title)
+      escapeXml(chart.title ?? chart.id ?? "chart")
     }"><title>${
-      escapeXml(chart.title)
+      escapeXml(chart.title ?? chart.id ?? "chart")
     }</title>${GRAPH_FONT_DEFS}${drawing.markup}</svg>`;
   return { svg, width: bounds.width, height: bounds.height };
 }

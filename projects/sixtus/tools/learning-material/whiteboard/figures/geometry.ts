@@ -1,9 +1,9 @@
 import { z } from "@zod";
 import {
-  childAnnotationsField,
-  childTitleField,
+  figureAnnotationsField,
+  figureTitleField,
   elementIdField as id,
-  type WhiteboardChildDefinition,
+  type WhiteboardFigureDefinition,
 } from "./shared.ts";
 import { resolveGeometry } from "./geometry-resolver.ts";
 
@@ -94,8 +94,8 @@ const marking = z.union([
 const geometryShape = z.object({
   type: z.literal("geometry"),
   id: id.optional(),
-  title: childTitleField,
-  annotations: childAnnotationsField.optional(),
+  title: figureTitleField,
+  annotations: figureAnnotationsField.optional(),
   unit: z.string().trim().min(1).max(30).optional(),
   points: z.array(point).min(1).max(128),
   objects: z.array(object).min(1).max(128),
@@ -128,7 +128,7 @@ Use for 2D geometry: shapes, circle geometry, constructions, angle relationships
 - type: always "geometry". title, id, annotations follow shared rules.
 - unit: optional common length unit. One coordinate unit equals one unit of length.
 - points, objects, labels, markings: arrays; labels and markings may be empty.
-- All points, objects, labels, and markings require stable IDs, unique together within this child. Group names on angle markings are matching-style keys, not element IDs.
+- All points, objects, labels, and markings require stable IDs, unique together within this figure. Group names on angle markings are matching-style keys, not element IDs.
 - Coordinates are mathematical (positive Y upward), never pixels. The renderer preserves aspect ratio, fits the figure, and places labels automatically. No axes or grid are implied.
 
 ### Points
@@ -165,7 +165,7 @@ Use for 2D geometry: shapes, circle geometry, constructions, angle relationships
 
 Unknown/wrong-kind references, duplicate IDs, cyclic dependencies, degenerate objects, impossible intersections, self-crossing polygons, and contradictory mathematical markings are errors. This is deterministic construction, not a constraint solver. It does not interpret mathematical assertions in free-form LaTeX labels.
 
-Annotation targets: <childId>.title, <childId>.<pointId>.mark, <childId>.<objectId>.mark, <childId>.<markingId>.mark, and <childId>.<labelId>.label. An angle marking with latex also exposes <childId>.<markingId>.label. Only text targets support underline/strikethrough.`,
+Annotation targets: <figureId>.title (only when title is not null), <figureId>.<pointId>.mark, <figureId>.<objectId>.mark, <figureId>.<markingId>.mark, and <figureId>.<labelId>.label. An angle marking with latex also exposes <figureId>.<markingId>.label. Only text targets support underline/strikethrough.`,
   example: {
     goal:
       "Show a triangle's base and perpendicular height without revealing measurements.",
@@ -191,4 +191,4 @@ Annotation targets: <childId>.title, <childId>.<pointId>.mark, <childId>.<object
       markings: [{ id: "foot", kind: "right-angle", points: ["a", "d", "c"] }],
     },
   },
-} satisfies WhiteboardChildDefinition<typeof geometrySchema>;
+} satisfies WhiteboardFigureDefinition<typeof geometrySchema>;

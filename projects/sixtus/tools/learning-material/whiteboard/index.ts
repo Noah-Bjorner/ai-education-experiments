@@ -13,7 +13,6 @@ import {
   WHITEBOARD_GOAL_WRAPPER_PROMPT,
   WHITEBOARD_SPEC_SYSTEM_PROMPT,
 } from "./prompt.ts";
-import { cerebras } from "../../../../../lib/cerebras.ts";
 import { uploadImage } from "../../../../../lib/cloudflare.ts";
 import { renderWhiteboardSvg } from "./render/index.ts";
 
@@ -61,20 +60,28 @@ export const whiteboardSpec = async (
   const useFastModel = input.mode === "fast";
 
   try {
-    const { output } = await generateText({
-      ...(useFastModel ? {
-        model: cerebras("qwen-3.8-27b"),
-        providerOptions: { cerebras: { reasoningEffort: "medium" } }
-      } : { model: "openai/gpt-5.6-sol", reasoning: "medium" }),
+    const { output, usage, finalStep } = await generateText({
+      model: useFastModel ? "alibaba/qwen3.8-27b" : "openai/gpt-5.6-sol",
+      reasoning: useFastModel ? "medium" : "medium",
+      ...(useFastModel
+        ? {
+          providerOptions: {
+            gateway: { only: ["cerebras"] },
+          },
+        }
+        : {}),
       system,
       prompt,
       output: Output.object({
         schema: WhiteboardOutput,
         name: "whiteboard_spec",
         description:
-          "Layout and child visualization specs that accomplish the whiteboard's educational or communication goal.",
+          "Anchored figure visualization specs that accomplish the whiteboard's educational or communication goal.",
       }),
     });
+
+    console.log("usage:", usage);
+    console.log("cost USD:", finalStep?.providerMetadata?.gateway?.cost);
 
     if (!output) {
       throw new Error(

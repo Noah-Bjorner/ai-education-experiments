@@ -1,7 +1,7 @@
 {
   "spec": {
-    "layout": "single",
-    "children": [
+    "title": null,
+    "figures": [
       {
         "type": "xy_chart",
         "id": "motion",
@@ -64,13 +64,15 @@
             ],
             "content": "Start at ground level"
           }
-        ]
+        ],
+        "anchor": null,
+        "side": null
       }
     ]
   },
   "placements": [
     {
-      "childId": "motion",
+      "figureId": "motion",
       "annotationIndex": 2,
       "type": "arrow",
       "targetIds": [
@@ -118,7 +120,7 @@
       "usedGutter": false
     },
     {
-      "childId": "motion",
+      "figureId": "motion",
       "annotationIndex": 0,
       "type": "arrow",
       "targetIds": [
@@ -166,7 +168,7 @@
       "usedGutter": false
     },
     {
-      "childId": "motion",
+      "figureId": "motion",
       "annotationIndex": 1,
       "type": "line",
       "targetIds": [

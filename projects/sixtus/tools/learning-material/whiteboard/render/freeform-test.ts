@@ -1,3 +1,4 @@
+import { boardExample } from "./board-example.ts";
 import {
   assert,
   assertAlmostEquals,
@@ -9,14 +10,14 @@ import {
   freeform,
   type FreeformElement,
   freeformSchema,
-} from "../children/freeform.ts";
+} from "../figures/freeform.ts";
 import { WhiteboardOutput } from "../schema.ts";
 import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
 import { renderFreeformDrawing, wrapFreeformText } from "./freeform.ts";
 import { freeformExamples } from "./freeform-examples.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 import { SERIES_COLORS } from "./theme.ts";
-import { xyChart } from "../children/xy-chart.ts";
+import { xyChart } from "../figures/xy-chart.ts";
 const spec = (elements: FreeformElement[]): Freeform => ({
   type: "freeform",
   id: "test",
@@ -56,10 +57,7 @@ const captureWarnings = (fn: () => void): string[] => {
 };
 
 Deno.test("freeform registers schema, instructions, and example", () => {
-  WhiteboardOutput.parse({
-    layout: "single",
-    children: [freeform.example.output],
-  });
+  WhiteboardOutput.parse(boardExample([freeform.example.output]));
   assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("## freeform"));
   assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes('"Sending a message"'));
   assert(
@@ -140,7 +138,7 @@ Deno.test("freeform renders examples deterministically with bounded semantic tar
         t.bounds.y + t.bounds.height <= d.bounds!.y + d.bounds!.height + 1e-8,
       );
     }
-    renderWhiteboardSvg({ layout: "single", children: [s] });
+    renderWhiteboardSvg(boardExample([s]));
   }
 });
 Deno.test("freeform wraps without losing content, preserves newlines and escapes XML", () => {
@@ -176,14 +174,18 @@ Deno.test("freeform supports four label sides and uniform scaling", () => {
   const t = renderFreeformDrawing(s, { id: "scaled", width: 640, height: 480 })
     .targets.get("test.circle.mark")!;
   assertAlmostEquals(t.bounds.width, t.bounds.height);
-  const tiny = captureWarnings(() =>
-    renderFreeformDrawing(spec([label]), {
-      id: "small",
-      width: 200,
-      height: 200,
-    })
+  const shortLabel = { ...label, content: "A" };
+  const small = renderFreeformDrawing(spec([shortLabel]), {
+    id: "small",
+    width: 400,
+    height: 300,
+  });
+  const normal = draw(spec([shortLabel]));
+  // A one-line label retains its physical glyph height when the scene shrinks.
+  assertAlmostEquals(
+    small.targets.get("test.label.label")!.bounds.height,
+    normal.targets.get("test.label.label")!.bounds.height,
   );
-  assert(tiny.some((w) => w.includes("14 units")));
 });
 Deno.test("freeform warns on collisions, skips damaged elements, and allows containment", () => {
   const emoji = captureWarnings(() =>
@@ -296,7 +298,7 @@ Deno.test("freeform annotations use the first accent against an ink diagram", ()
     targetIds: ["message.sender.mark"],
     content: null,
   }];
-  const result = renderWhiteboardSvg({ layout: "single", children: [s] });
+  const result = renderWhiteboardSvg(boardExample([s]));
   assert(result.stages.emphasis.svg.includes(SERIES_COLORS[0]));
   assert(!result.stages.base.svg.includes(SERIES_COLORS[0]));
 });
@@ -312,22 +314,18 @@ Deno.test("freeform composes with charts and shared annotations without duplicat
     targetIds: ["message.sender-label.label"],
     content: null,
   }];
-  for (const layout of ["split", "stack"] as const) {
-    const result = renderWhiteboardSvg({
-      layout,
-      children: [s, xyChart.example.output],
-    });
+  for (const side of ["right", "bottom"] as const) {
+    const result = renderWhiteboardSvg(
+      boardExample([s, xyChart.example.output], side),
+    );
     assert(result.stages.emphasis.svg.length > result.stages.base.svg.length);
-    assertEquals(result.childPlacements.length, 2);
+    assertEquals(result.figurePlacements.length, 2);
   }
   const first = structuredClone(freeformExamples[2]);
   first.annotations = [];
   const second = structuredClone(first);
   second.id = "other";
-  const result = renderWhiteboardSvg({
-    layout: "split",
-    children: [first, second],
-  });
+  const result = renderWhiteboardSvg(boardExample([first, second], "right"));
   const ids = [...result.svg.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
   assertEquals(new Set(ids).size, ids.length);
 });
@@ -357,16 +355,16 @@ Deno.test("freeform validates options, titles, gaps and diagonal ellipse endpoin
       hatchGap: 0,
     }]
   ) {
-  assertThrows(
-    () => renderFreeformDrawing(spec([box]), { id: "invalid", ...options }),
+    assertThrows(
+      () => renderFreeformDrawing(spec([box]), { id: "invalid", ...options }),
       Error,
       "options",
     );
   }
-  const longTitle = captureWarnings(() =>
-    draw({ ...spec([box]), title: "Too long ".repeat(100) })
-  );
-  assert(longTitle.some((w) => w.includes("title")));
+  const longTitle = draw({ ...spec([box]), title: "Too long ".repeat(100) });
+  const titleBounds = longTitle.targets.get("test.title")!.bounds;
+  assert(titleBounds.height > 34);
+  assert(titleBounds.y + titleBounds.height < longTitle.focusBounds.y);
   const d = draw(
     spec([box, {
       ...label,

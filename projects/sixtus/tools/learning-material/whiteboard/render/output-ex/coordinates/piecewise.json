@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "coordinate_plot",
       "id": "piecewise",
@@ -46,7 +46,9 @@
           "endpointMarkers": true,
           "label": "x + 1 for x ≥ 0"
         }
-      ]
+      ],
+      "anchor": null,
+      "side": null
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "coordinate_plot",
       "id": "independent",
@@ -25,7 +25,9 @@
           "expression": "10*x",
           "label": "d = 10t"
         }
-      ]
+      ],
+      "anchor": null,
+      "side": null
     }
   ]
 }

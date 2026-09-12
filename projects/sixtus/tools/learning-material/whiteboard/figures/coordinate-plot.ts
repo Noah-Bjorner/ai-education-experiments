@@ -1,9 +1,9 @@
 import { z } from "@zod";
 import {
-  childAnnotationsField,
-  childTitleField,
+  figureAnnotationsField,
+  figureTitleField,
   elementIdField,
-  type WhiteboardChildDefinition,
+  type WhiteboardFigureDefinition,
 } from "./shared.ts";
 import { parseCoordinateExpression } from "./coordinate-expression.ts";
 
@@ -178,8 +178,8 @@ export const coordinateElementSchema = z.union([
 export const coordinatePlotSchema = z.strictObject({
   type: z.literal("coordinate_plot"),
   id: elementIdField.optional(),
-  title: childTitleField,
-  annotations: childAnnotationsField.optional(),
+  title: figureTitleField,
+  annotations: figureAnnotationsField.optional(),
   axes: z.strictObject({
     x: axis,
     y: axis,
@@ -204,14 +204,14 @@ export const coordinatePlotSchema = z.strictObject({
       ctx.addIssue({
         code: "custom",
         path: ["id"],
-        message: "Annotated plots require an explicit child ID.",
+        message: "Annotated plots require an explicit figure ID.",
       });
     }
     const targets = new Set([
-      `${value.id}.title`,
       `${value.id}.x-label`,
       `${value.id}.y-label`,
     ]);
+    if (value.title !== null) targets.add(`${value.id}.title`);
     for (const element of value.elements) {
       targets.add(`${value.id}.${element.id}.mark`);
       if (element.label) targets.add(`${value.id}.${element.id}.label`);
@@ -265,7 +265,7 @@ Use for functions and coordinate geometry on one Cartesian plane. Use xy_chart f
 
 ### Labels, annotations, and rendering contract
 
-- Annotation targets: <childId>.title, <childId>.x-label, <childId>.y-label, <childId>.<elementId>.mark, and <childId>.<elementId>.label (only with an explicit label). Annotated plots require a child id. A mark means the entire element; add a point to target a specific location. Use text emphasis only on text targets.
+- Annotation targets: <figureId>.title (only when title is not null), <figureId>.x-label, <figureId>.y-label, <figureId>.<elementId>.mark, and <figureId>.<elementId>.label (only with an explicit label). Annotated plots require a figure id. A mark means the entire element; add a point to target a specific location. Use text emphasis only on text targets.
 - Geometry is clipped to the window. The renderer owns typography, colors, sampling, and label placement. Labels and annotations must not imply visibility for entirely clipped elements.
 - Supply explicit coordinates for intersections, tangent lines, and other constructions; the renderer is not a symbolic solver.
 - Rendering uses bounded adaptive numerical sampling, not symbolic analysis. Extremely rapid oscillations or tiny features can require a narrower window. Unsupported numerical ranges, excessive ticks, and invisible annotation targets produce explicit errors.`,
@@ -303,4 +303,4 @@ Use for functions and coordinate geometry on one Cartesian plane. Use xy_chart f
       annotations: [],
     },
   },
-} satisfies WhiteboardChildDefinition<typeof coordinatePlotSchema>;
+} satisfies WhiteboardFigureDefinition<typeof coordinatePlotSchema>;

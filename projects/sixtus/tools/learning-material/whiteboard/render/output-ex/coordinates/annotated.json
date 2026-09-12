@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "coordinate_plot",
       "id": "annotated",
@@ -40,7 +40,9 @@
           ],
           "content": "Here, y = 0"
         }
-      ]
+      ],
+      "anchor": null,
+      "side": null
     }
   ]
 }

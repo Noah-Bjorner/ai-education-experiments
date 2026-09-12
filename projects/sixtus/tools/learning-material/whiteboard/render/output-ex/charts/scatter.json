@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "xy_chart",
       "id": "scatter",
@@ -61,7 +61,9 @@
             }
           ]
         }
-      ]
+      ],
+      "anchor": null,
+      "side": null
     }
   ]
 }

@@ -1,5 +1,7 @@
 import { escapeXml } from "./svg.ts";
-import metrics from "./fonts/shantell-sans-math-metrics.json" with { type: "json" };
+import metrics from "./fonts/shantell-sans-math-metrics.json" with {
+  type: "json",
+};
 import { type Bounds, unionBounds } from "./bounds.ts";
 
 export const GRAPH_FONT_FAMILY = "Shantell Sans Math";
@@ -7,7 +9,9 @@ export const GRAPH_FONT_FAMILY = "Shantell Sans Math";
 // Module initialization runs once per server process/isolate. All graph renders
 // reuse these bytes and the resulting markup; no network requests at runtime.
 const [fontBytes, license] = await Promise.all([
-  Deno.readFile(new URL("./fonts/ShantellSansMath-Medium.woff2", import.meta.url)),
+  Deno.readFile(
+    new URL("./fonts/ShantellSansMath-Medium.woff2", import.meta.url),
+  ),
   Deno.readTextFile(new URL("./fonts/OFL.txt", import.meta.url)),
 ]);
 const base64 = btoa(
@@ -99,4 +103,38 @@ export function fitGraphText(
     width += nextWidth;
   }
   return result + ellipsis;
+}
+
+/** Word wrapping retains whitespace and explicit blank lines; long tokens split by glyph. */
+export function wrapGraphText(
+  value: string,
+  size: number,
+  width: number,
+): string[] {
+  const lines: string[] = [];
+  for (const paragraph of value.normalize("NFC").split("\n")) {
+    let line = "";
+    for (const token of paragraph.match(/\s+|\S+/g) ?? []) {
+      if (measureGraphText(line + token, size) <= width) {
+        line += token;
+        continue;
+      }
+      if (line) {
+        lines.push(line);
+        line = "";
+      }
+      for (const ch of token) {
+        if (measureGraphText(ch, size) > width) {
+          throw new Error("Text width is narrower than a glyph");
+        }
+        if (measureGraphText(line + ch, size) > width) {
+          lines.push(line);
+          line = "";
+        }
+        line += ch;
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
 }

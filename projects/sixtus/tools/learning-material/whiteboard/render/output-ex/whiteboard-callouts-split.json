@@ -1,7 +1,7 @@
 {
   "spec": {
-    "layout": "split",
-    "children": [
+    "title": null,
+    "figures": [
       {
         "type": "xy_chart",
         "id": "motion",
@@ -64,7 +64,9 @@
             ],
             "content": "Start at ground level"
           }
-        ]
+        ],
+        "anchor": null,
+        "side": null
       },
       {
         "type": "xy_chart",
@@ -114,13 +116,15 @@
             ],
             "content": "Compare the same maximum"
           }
-        ]
+        ],
+        "anchor": "motion",
+        "side": "right"
       }
     ]
   },
   "placements": [
     {
-      "childId": "motion",
+      "figureId": "motion",
       "annotationIndex": 2,
       "type": "arrow",
       "targetIds": [
@@ -168,7 +172,7 @@
       "usedGutter": false
     },
     {
-      "childId": "motion",
+      "figureId": "motion",
       "annotationIndex": 0,
       "type": "arrow",
       "targetIds": [
@@ -216,7 +220,7 @@
       "usedGutter": false
     },
     {
-      "childId": "motion",
+      "figureId": "motion",
       "annotationIndex": 1,
       "type": "line",
       "targetIds": [
@@ -250,7 +254,7 @@
       "usedGutter": false
     },
     {
-      "childId": "comparison",
+      "figureId": "comparison",
       "annotationIndex": 0,
       "type": "line",
       "targetIds": [

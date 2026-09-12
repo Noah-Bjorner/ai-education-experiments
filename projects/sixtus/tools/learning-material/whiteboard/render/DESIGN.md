@@ -1,6 +1,6 @@
 # Whiteboard visualization design
 
-First draft. Read this before implementing a new visualization type in this
+Read this before implementing a new visualization type in this
 directory. The aim is a clear educational diagram drawn with a light pen: warm,
 simple, and readable, with accurate geometry beneath the handwritten treatment.
 
@@ -10,17 +10,20 @@ system-font defaults into new whiteboard types.
 
 ## Sources of truth
 
-- `theme.ts`: shared color values and fill opacity constants. Import these
-  instead of adding hex literals to renderers. Update this guide when changing a
-  color's role or palette order.
+- `theme.ts`: `TYPE_SCALE`, `LINE_HEIGHT`, and `SPACING` are the typography and
+  relationship-spacing source of truth, alongside colors and fill constants.
+  Import semantic roles rather than repeating their numbers in renderers.
+- `text-block.ts`: shared multiline text measurement, wrapping, and alignment.
+- `titles.ts`: shared wrapped figure headings, underline/box decoration, and
+  measured heading-to-content spacing.
 - `font.ts`: Shantell Sans Math, embedded font definitions, and text measurement.
 - `handwritten.ts`: reusable pen outlines and hatch fills.
 - `hatching.ts`: stroke intersections, sector geometry, and fill variation.
 - `bounds.ts`: shared painted bounds, curve extrema, and export sizing.
 - `graphs.ts`: XY and circular chart renderers, not a universal layout engine.
 - `index.ts`: shared staged board renderer with base, emphasis, and callout snapshots.
-- `layout.ts`: single, split, and stack child allocations.
-- `targets.ts`: semantic SVG IDs and measured child-local annotation targets.
+- `figure-placement.ts`: measured figure placement by anchor ID and side.
+- `targets.ts`: semantic SVG IDs and measured figure-local annotation targets.
 - `annotations.ts`: emphasis rendering and a queue for message callouts.
 - `callouts.ts`: measured messages, candidate placement, brackets, and connectors.
 - `placement.ts`: geometric collision checks and connector routing.
@@ -68,22 +71,57 @@ annotations, and text inside diagram nodes.
   glyphs absent from the font; a system fallback cannot be measured reliably.
   Font metrics and math outlines must be regenerated together when extending it.
 
-Starting sizes in SVG viewBox units, based on the current 800 × 520 chart:
+All figure renderers use these semantic roles from `theme.ts`. Sizes and line
+heights are in board SVG units; line height means baseline-to-baseline distance,
+not an extra gap below the glyphs.
 
-| Role                           |  Size | Color              | Placement                     |
-| ------------------------------ | ----: | ------------------ | ----------------------------- |
-| Chart title                    |    25 | `COLORS.ink`       | Centered at the top           |
-| Axis labels / prominent values |    16 | `COLORS.ink`       | Close to what they describe   |
-| Node labels / body labels      | 14–16 | `COLORS.ink`       | Inside or beside their shape  |
-| Legend labels                  | 13–15 | `COLORS.ink`       | Aligned with their indicators |
-| Tick labels                    |    13 | `COLORS.textMuted` | Outside the plot area         |
-| Supporting values              |    12 | `COLORS.textMuted` | Secondary line below a label  |
+| Role | Size | Line height | Consumers |
+| --- | ---: | ---: | --- |
+| `boardTitle` | 32 | 42 | Uppercase, boxed board heading |
+| `figureTitle` | 25 | 34 | Every figure's underlined heading |
+| `body` | 22 | 30 | Text cards and freeform normal text |
+| `label` | 16 | 22 | Axes, legends, coordinate/geometry labels, freeform small text |
+| `supporting` | 13 | 18 | Tick values |
+| `detail` | 12 | 16 | Secondary values below pie legend labels |
+| `annotation` | 16 | 22 | Callout messages and annotation numbers |
+| `prominent` | 28 | 38 | Explicitly prominent freeform content |
+| `mathDisplay` | 36 | 48 | Main equations; actual math rows use measured ascent/descent |
 
-These are starting values, not instructions to force every type into the same
-canvas. Avoid going below 12 units. Check the SVG at its intended display size:
-scaling an 800-unit chart to 400 CSS pixels halves its visible text sizes. Wrap
-or allocate more space before shrinking important text. Never truncate an axis
-value into something ambiguous or drop a meaningful unit.
+The primary content of a figure (a displayed equation or prominent freeform
+statement) may be larger than its identifying heading. Equivalent labels use the
+same role across figure types. In freeform, choose small for object labels,
+normal for explanatory body text, and large for deliberate prominence.
+Do not introduce figure-specific font families,
+font weights, or copies of these values. Match measurement to the same role used
+for drawing; changing a legend font must also change its measured packing width.
+
+`textBlock()` preserves explicit newlines and whitespace, splits long tokens by
+glyph, accounts for overhang, and returns both painted bounds and layout height.
+Use it for titles, text cards, freeform text, and messages. Empty visible text or
+an allocation narrower than a glyph fails explicitly. Single-line ticks and
+chart labels still use the shared font helpers; existing truncation and tick
+validation rules apply. These are explicit content-fitting policies, not
+permission to shrink fonts to hide an allocation problem.
+
+`withFigureTitle()` wraps the full title at the figure allocation width, centers
+its painted text over the complete base drawing, and places the underline's
+painted bottom `SPACING.figureTitleGap` above that drawing. It preserves body
+geometry, focus bounds, and existing targets, and adds a measured title target
+and decoration obstacles before teaching annotations. A null title adds nothing.
+Long headings grow the export upward rather than colliding with the drawing.
+Board headings similarly wrap at the board width (with a 128-unit minimum wrap
+width), and their complete box is separated by `SPACING.boardTitleGap`.
+
+Text sizes remain fixed in board coordinates when allocations change. Freeform
+geometry scales uniformly, but text sizes, line heights, and attachment gaps are
+compensated for that transform. Text widths still follow the scene and may cause
+more wrapping. Equation rows keep the display size and grow vertically; an
+expression too wide at that size fails with an instruction to widen or split it.
+MathJax still controls fractions, subscripts, superscripts, and stretchy symbols.
+
+The final SVG may still be scaled by its viewer: displaying an 800-unit figure at
+400 CSS pixels halves visible sizes. Check mixed figures at intended display
+widths; renderer units cannot enforce a CSS-pixel minimum in an external viewer.
 
 ## Color
 
@@ -127,23 +165,23 @@ and a contrasting second pen for teaching annotations.
 
 ### Annotation color
 
-Emphasis and callouts use one color per child, chosen by the board compositor
+Emphasis and callouts use one color per figure, chosen by the board compositor
 in `index.ts`. The spec and the model do not pick it.
 
 The rule is contrast with the base drawing, not a fixed annotation hue:
 
-- When the child is drawn in ink — math expressions, and freeform scenes that
+- When the figure is drawn in ink — math expressions, and freeform scenes that
   omit element color — annotations use `SERIES_COLORS[0]` (blue). Circles,
   underlines, numbers, brackets, and message arrows then read as a second pen
   on top of the black work.
-- When the child already spends the accent palette on data or categories — XY
+- When the figure already spends the accent palette on data or categories — XY
   charts, pie and donut charts, coordinate plots, geometry with filled regions
   — annotations use `COLORS.ink`. Blue would collide with the first series or
   slice and look like another category rather than a teaching mark.
 
 Do not color an annotation from its target's stroke, and do not mix annotation
-colors within one child. A split or stack board may mix the two modes because
-each child is decided independently.
+colors within one figure. A multi-figure board may mix the two modes because
+each figure is decided independently.
 
 When adding a type, pick the side that matches its base drawing: ink-only
 content gets blue annotations; anything that already uses `SERIES_COLORS` for
@@ -162,23 +200,40 @@ const seriesColor = SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
 
 Design each visualization in its own local coordinate system, starting at
 `(0, 0)`. A parent compositor places that group using a translation. Do not
-hardcode a child's position on the board into its drawing logic.
+hardcode a figure's position on the board into its drawing logic.
 
-- Prefer a 4-unit spacing rhythm: 4, 8, 12, 16, 24, 32, 48. Calculated
-  positions, font baselines, and data coordinates need not be multiples of four.
-- Export with **zero outer padding**. The client supplies padding around the
-  finished SVG. Use a 24–32-unit gap between children when composing a board;
-  this is internal spacing, not padding around the export.
-- Give distinct sections 24–32 units of separation. Use 8–12 units between a
-  small indicator and its label, and 4–8 between tightly related text lines.
-- Derive spacing from measured text and content bounds when possible. Do not use
-  repeated trial offsets as a substitute for a layout calculation.
-- Reserve title and legend space before allocating the main drawing area.
-  Increase the canvas or reject an allocation that cannot fit; avoid silent
-  clipping and overlapping labels.
-- Derive the final width, height, and `viewBox` from the rendered content
-  bounds, including titles, labels, legends, and complete pen strokes. Scale the
-  complete SVG consistently; avoid nonuniform stretching.
+Use semantic relationship values from `SPACING`, with a 4-unit rhythm for normal
+layout. Calculated baselines, pen offsets, collision searches, and mathematical
+coordinates need not be multiples of four.
+
+| Relationship | Default | Measurement |
+| --- | ---: | --- |
+| `boardTitleGap` | 32 | Complete title box to complete figure union |
+| `figureGap` | 32 | Complete figures including teaching annotations |
+| `figureTitleGap` | 24 | Underline's painted bottom to base drawing's painted top |
+| `cardPadding` | 16 | Text layout to the card's nominal border |
+| `labelGap` | 8 | Object/indicator to attached label layout |
+| `labelClearance` | 4 | Minimum collision clearance for placed labels |
+| `legendItemGap` | 32 | Between adjacent chart legend entries |
+| `legendRowGap` | 8 | Added to measured role line heights for legend rows |
+| `sectionGap` | 24 | Separate sections and initial callout search distance |
+| `mathRowGap` | 24 | Previous row descent to next row ascent |
+
+`titleUnderlineGap` (3) and `titleBoxPadding` (5) are optical decoration values.
+Different relationships may share a number but remain separate settings: changing
+`figureGap` must not change the board heading gap. `PlacementOptions.gap` can
+override inter-figure spacing without affecting other relationships.
+
+- Export with zero outer padding; the client supplies presentation padding.
+- Measure titles, multiline text, and legend widths before positioning them.
+  Font and line-height changes must flow into measurement and rendering together.
+- Keep each renderer's mathematical geometry and necessary chart margins local.
+  A chart's axis reservation is not a universal padding token. Candidate label
+  placement may search multiples of the preferred gap to avoid collisions.
+- The shared title is composed above measured body bounds. Title size or wrapping
+  never scales the body or requires a separate hardcoded title baseline per type.
+- Retain the complete painted union, including decorations, as export bounds;
+  cropping must not conceal overflow or collisions.
 
 Current graph defaults are 800 × 520, with a minimum allocation of 600 × 400.
 These are internal layout constraints, not the exported size. `renderGraphSvg()`
@@ -187,17 +242,32 @@ units from the left and 90 from the top, with 42 on the right and reserved
 bottom space for axes and legend. Those larger insets serve chart labels; they
 are not general-purpose padding tokens.
 
-Board layouts:
+Board placement:
 
-- `single`: one child with its content bounds becoming the board bounds.
-- `split`: two children side by side with a consistent gap.
-- `stack`: two or more children vertically with consistent gaps.
+- The board has a nullable `title` drawn centered above the union of all
+  figures, always in uppercase, with a handwritten box matching annotation
+  emphasis, and a `figures` array. There is no `layout` field. Figure titles
+  are nullable; when present they sit above that figure with a handwritten
+  underline matching annotation emphasis. When null, no `<id>.title` target is
+  registered and tight export trims the vacated space.
+- Every figure has a unique required `id` and flat `anchor` and `side` fields.
+- The first figure is the only root, with `anchor: null` and `side: null`.
+- Later figures anchor to an earlier ID with side `top`, `left`, `right`, or
+  `bottom`. Validation rejects missing IDs, duplicate IDs, extra roots, missing
+  sides, and unknown, self, or forward anchors.
+- Figures are centered along the shared edge. Spacing is renderer-controlled
+  (`gap`, default 32); the spec has no alignment, size, or gap controls.
 
-Each renderer must receive its allocated size. Merely scaling a side-by-side SVG
-down will not turn it into a mobile stack; a different arrangement requires a
-different layout render. Final board placement increases inter-child spacing
-when completed annotations extend beyond their original allocations. It moves
-complete child groups without scaling or regenerating their base geometry.
+Each renderer receives its own allocation (`width` and `height` options now apply
+per figure, default 800 × 520). Render base content, emphasis, and callouts locally
+before measuring their complete union. Place each complete figure against its
+anchor's final measured bounds. If it would overlap another figure, move it
+farther along the requested side axis until all earlier figures are clear.
+Descendants anchor to that resolved position. Base, emphasis, and final exports
+reuse the same translations, preserving geometry between stages. Returned
+`figurePlacements.x/y` are local-to-board translations; `width/height` are the
+complete measured extents. No scaling, regeneration, or post-hoc gutter expansion
+is needed. Changing the arrangement requires a new render.
 
 ### Tight export bounds
 
@@ -339,7 +409,7 @@ wobble for every new visualization type.
 
 ## Adding a new visualization type
 
-1. Read this guide and the existing child schemas. Define the content contract
+1. Read this guide and the existing figure schemas. Define the content contract
    and validation independently of appearance.
 2. Implement the renderer in the appropriate family module. Return a local SVG
    group; leave board placement, root font embedding, and uploading to their
@@ -367,11 +437,11 @@ wobble for every new visualization type.
   calculate those bounds. Future primitives must supply their own painted
   bounds.
 - Implemented board processing: `renderWhiteboardSvg(spec, options)` first
-  renders base child groups with target geometry, then appends emphasis groups,
+  renders base figure groups with target geometry, then appends emphasis groups,
   places callouts, and exports the complete SVG. It returns `svg`, dimensions,
   bounds, and `stages.base`, `stages.emphasis`, and `stages.callouts` snapshots.
   The current final SVG is the callout snapshot. `calloutPlacements` describes
-  each label and connector in child-local coordinates; `childPlacements` gives
+  each label and connector in figure-local coordinates; `figurePlacements` gives
   final board translations. The renderer does not write files;
   `../local-test.ts` saves base, emphasis, and final SVG files under `output-ex/`
   and logs the chosen callout sides and outside-gutter placements.
@@ -382,12 +452,12 @@ wobble for every new visualization type.
   palette, `SERIES_COLORS[0]` on ink-only types (`math_expressions`, `freeform`).
   Number placement is deterministic; collision avoidance and repositioning
   around other annotations are not implemented.
-- Base targets use the IDs documented in the child schemas. Geometry remains
-  local to the child; base and emphasis share its board translation. XY point
+- Base targets use the IDs documented in the figure schemas. Geometry remains
+  local to the figure; base and emphasis share its board translation. XY point
   IDs survive sorting. Missing targets (including omitted tiny-slice percentage
   labels), duplicate content IDs, and invalid text targets fail explicitly.
 - Arrow and line callouts measure and wrap complete messages at 15 units, with
-  21-unit line spacing and a 190-unit maximum line width. Explicit newlines and
+  22-unit line spacing and a 190-unit maximum line width. Explicit newlines and
   long words are preserved. There is no truncation or opaque text backing.
 - All visible base text and shapes, data strokes, and emphasis reserve space.
   Grid lines and hatching do not. Pie disks reserve their circular area for
@@ -406,7 +476,7 @@ wobble for every new visualization type.
   may use a slightly larger gap.
 - Brackets evaluate both sides of vertical groups and above/below horizontal
   spans, reserving their caps and optional label. They can move outside the
-  child's painted extent when nearby sides are occupied.
+  figure's painted extent when nearby sides are occupied.
 - This is a deterministic, bounded placement search, not a guarantee that every
   possible annotation set has a non-overlapping solution. If no clear candidate
   can be routed, a fallback placement is used and a warning is logged; only
@@ -450,7 +520,7 @@ endpoint still returns its existing fixed demo URL; this gallery and
 - Areas fill to zero, including negative values. Multiple series overlap;
   stacking and interpolation are not implemented. Flat zero areas and single
   points retain their line/markers without manufacturing a filled region.
-- The family definition lives in `../children/circular-chart.ts`, alongside
+- The family definition lives in `../figures/circular-chart.ts`, alongside
   `xy-chart.ts`. Its exported type and renderer names use `CircularChart` and
   `renderCircularGraph` because the family includes both pie and donut styles.
 - Circular charts retain `type: "pie_chart"` for compatibility. Optional
@@ -464,8 +534,8 @@ Run `deno test --allow-read *test.ts` for chart and annotation behavior checks.
 
 ## Math expressions
 
-`math-expressions.ts` lays out the child defined in
-`../children/math-expressions.ts`. `latex.ts` uses MathJax 4.0.0 with only the
+`math-expressions.ts` lays out the figure defined in
+`../figures/math-expressions.ts`. `latex.ts` uses MathJax 4.0.0 with only the
 base, AMS, and textmacros configurations, preserving synchronous rendering.
 It accepts Greek letters, common operators, fractions, roots, scripts, limits,
 matrices, cases, and aligned equations. One surrounding pair of math-mode
@@ -482,13 +552,13 @@ calligraphic/Fraktur alphabets are unavailable and double-struck C/N/P/Q/R/Z use
 dedicated glyphs. Rendering produces self-contained paths with no glyph-cache
 IDs, so equations compose without collisions. The parser resets between rows.
 
-Each expression is one centered row. Lay out fractions and scripts relative to a
-baseline, retain painted bounds through translations and scaling, and reserve
-row bounds as annotation obstacles. Uniformly shrink the expressions to the
-child allocation only while the base size stays at least 18 units; otherwise ask
-for more space or less content through a clear rendering error. Titles use the
-standard 25-unit font. Expose `<childId>.<expressionId>.expression` as a target for
-the whole row and `<childId>.title` for the title. Individual terms are not
+Each expression is one centered row at `TYPE_SCALE.mathDisplay`. Lay out fractions
+and scripts relative to a baseline and reserve row bounds as annotation obstacles.
+Use `SPACING.mathRowGap` between measured row extents, without scaling the gap or
+font. More rows grow the export vertically; expressions wider than the allocation
+minus two section gaps fail explicitly. The optional title uses `withFigureTitle()`.
+ Expose `<figureId>.<expressionId>.expression` as a target for
+the whole row and `<figureId>.title` for the title (only when title is not null). Individual terms are not
 addressable yet. The original LaTeX remains in the spec for subsequent editing.
 
 To run the focused tests and regenerate the standalone example from the repo root:
@@ -504,7 +574,7 @@ the resulting SVG through the shared whiteboard execution path.
 
 ## Geometry diagrams
 
-`geometry.ts` renders the `geometry` child after the shared construction resolver
+`geometry.ts` renders the `geometry` figure after the shared construction resolver
 validates its points, objects, and mathematical markings. Geometry is registered
 in the parent schema, generation prompt, and staged renderer.
 
@@ -526,7 +596,7 @@ in the parent schema, generation prompt, and staged renderer.
   punched clearance holes.
 - Register all documented point, object, marking, label, and title target IDs.
   These feed the shared emphasis and callout stages. Internal clip IDs use the
-  parent's unique renderer prefix so split and stack boards remain independent.
+  parent's unique renderer prefix so multi-figure boards remain independent.
 - Reject labels or markings that cannot fit legibly. Ask for a larger allocation,
   shorter labels, or a simpler diagram rather than silently clipping content.
 
@@ -540,15 +610,15 @@ The gallery is written to `render/output-ex/geometry/index.html`. Fixtures in
 `geometry-examples.ts` cover an annotated altitude, circle/tangent construction,
 equality and parallel markings, minor/reflex angles, equal angles, and shaded
 regions with math labels. `geometry-test.ts` exercises the same figures through
-both the child renderer and the parent pipeline.
+both the figure renderer and the parent pipeline.
 
 ## Coordinate plots
 
 `coordinate-plot.ts` renders the five `coordinate_plot` elements: functions,
 points, lines (including segments and rays), circles, and polygon outlines.
-The child registry connects this definition to the parent output/request schemas,
+The figure registry connects this definition to the parent output/request schemas,
 generation instructions, and `renderWhiteboardSvg()` dispatch. The existing
-`executeWhiteboard()` path renders and uploads its SVG like the other children.
+`executeWhiteboard()` path renders and uploads its SVG like the other figures.
 
 - Axes describe a visible mathematical window. Equal unit scale is the default;
   fit the plane's aspect ratio within its allocation without changing the ranges.
@@ -585,8 +655,8 @@ generation instructions, and `renderWhiteboardSvg()` dispatch. The existing
   when needed. Register element `.mark` and explicit `.label` targets, plus the
   title and axis labels. Entirely clipped elements have no visual targets or
   labels; annotations targeting them fail clearly.
-- All geometry retains child-local bounds and obstacles for the shared emphasis,
-  callout, and split/stack layout stages. Multiple coordinate children can coexist
+- All geometry retains figure-local bounds and obstacles for the shared emphasis,
+  callout, and figure placement stages. Multiple coordinate figures can coexist
   with charts, geometry diagrams, and math expressions.
 
 Regenerate the eight classroom examples and their JSON specs with:
@@ -598,12 +668,12 @@ deno run --allow-read --allow-write projects/sixtus/tools/learning-material/whit
 The gallery is `render/output-ex/coordinates/index.html`. Focused verification:
 
 ```sh
-deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/children/coordinate-plot-test.ts projects/sixtus/tools/learning-material/whiteboard/render/coordinate-plot-test.ts
+deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/figures/coordinate-plot-test.ts projects/sixtus/tools/learning-material/whiteboard/render/coordinate-plot-test.ts
 ```
 
 ## Freeform scenes
 
-The `freeform` child is generated in the existing spec call and rendered by
+The `freeform` figure is generated in the existing spec call and rendered by
 `renderFreeformDrawing`. It supports text, rectangles, ellipses (equal radii for
 circles), solid/dashed lines and arrows, and X/O/dot markers. No SVG input, images,
 rotation, arbitrary paths, or additional model calls are involved.
@@ -625,30 +695,30 @@ rotation, arbitrary paths, or additional model calls are involved.
   positions and attachments stable. X/O markers are outlined; dots are solid.
   Thin outline obstacles allow annotations inside container shapes.
 - Text specifies content, width, alignment, and small/normal/large size
-  (18/22/28 logical units). Explicit positions locate the top-left layout box.
+  (shared label/body/prominent roles: 16/22/28 board units). Explicit positions locate the top-left layout box.
   Attached positions reference a rectangle, ellipse, or marker with a side and
-  gap (8 by default). Text wraps using shared font advances, splits oversized
+  gap (`SPACING.labelGap`, 8 board units by default). Text wraps using shared font advances, splits oversized
   words at glyph boundaries, and preserves whitespace and explicit newlines.
-  Painted bounds use shared glyph metrics. Text is never truncated. Allocations
-  that reduce scene text below 14 units, and titles that wrap past one line,
-  warn and still render. Titles remain 25 units.
+  Painted bounds use shared glyph metrics. Text is never truncated or shrunk.
+  Smaller allocations rewrap at the shared size; impossible glyph widths retain
+  the freeform warning/skip policy. Titles use the same wrapping and measured
+  separation as all other figure types.
 - Arrow endpoints accept explicit points or shape references, including forward
   references. Referenced endpoints meet the shape boundary toward the opposite
   endpoint. X attachment uses the actual two round-capped strokes. Arrows are
   straight, with a 10-unit maximum head. No automatic routing or scene repair is
   attempted; shared annotation callouts retain their existing routing behavior.
-- Targets are `<child>.title`, `<child>.<text>.label`, and
-  `<child>.<element>.mark` for other primitives. Targets, painted bounds, and
-  obstacles are transformed together into child-local allocation coordinates.
+- Targets are `<figure>.title` (only when title is not null), `<figure>.<text>.label`, and
+  `<figure>.<element>.mark` for other primitives. Targets, painted bounds, and
+  obstacles are transformed together into figure-local allocation coordinates.
   Parent composition owns the final translation and embedded font.
 - Reject invalid references, duplicate IDs, and invalid render sizes/options.
   Absurd geometry is skipped before any fill generation. Other layout problems
   warn and still render: stacked labels, lines or arrows that cross text,
-  unreadably small allocations, wrapping titles, degenerate attached
-  connectors, and individual elements whose painted bounds are invalid or
+  degenerate attached connectors, and individual elements whose painted bounds are invalid or
   exceed the 10k safety extent (those elements are skipped). Rectangle and
   ellipse outlines are containers: labels may sit inside them or meet their
-  border. Warnings identify the child and involved elements. Intentional shape
+  border. Warnings identify the figure and involved elements. Intentional shape
   overlap remains supported; hatch strokes are not text collision obstacles.
   Ellipse collision outlines use 256 segments.
 
@@ -665,3 +735,78 @@ markers and a passing arrow, a sender/receiver diagram with attached labels, and
 an experiment diagram with wrapped text, fills, and a shared message callout.
 These are deterministic drawing fixtures, not evaluations of model-generated
 scene quality.
+
+## Text figures
+
+`../figures/text.ts` defines `type: "text"` with a nonempty plain `text` string
+and a required `role`: `note`, `question`, or `takeaway`. It uses the shared
+figure ID, nullable title, annotations, and board-level anchor/side fields.
+`text.ts` renders it through the normal staged whiteboard pipeline.
+
+- All roles use the same maximum width (800 by default), 22-unit body text,
+  30-unit line spacing, 16-unit padding, and 2-unit dashed border. Text wraps at
+  the maximum inner width, then the border hugs the longest measured line plus
+  padding. Short messages do not stretch to fill the allocation. The card's
+  height grows to retain all wrapped content, even beyond the initial height
+  allocation. No text is shrunk, truncated, or clipped. Titles also wrap at
+  the shared figure-title size and retain the shared handwritten underline.
+  Titles center over the resulting card without widening its border.
+- Borders use the shared handwritten rectangle path with subtle seeded wobble,
+  rounded dash ends, and one outline pass. Dash lengths are 8 units with 6-unit
+  gaps. The faint retraced pass is disabled for text borders so it cannot fill
+  their gaps; existing annotations retain their two solid passes. Export and
+  obstacle bounds include the complete curved outline and stroke width.
+- `TEXT_FIGURE_STYLE` in `theme.ts` maps notes to gray borders and ink text,
+  questions to orange borders and ink text, and takeaways to green borders
+  and green text. These are semantic text roles, using existing palette colors.
+  Borders have no fill and the export stays transparent. Annotations use ink.
+- Coordinates start locally at `(0, 0)`; the optional title moves the card
+  downward. Bounds include glyph overhangs and the full border stroke. The
+  shared `wrapGraphText` helper preserves whitespace, explicit blank lines,
+  and complete long tokens. Unsupported glyphs and unusably narrow widths
+  fail explicitly. No external fonts or assets are loaded.
+- Targets are `<id>.text` for the complete body and `<id>.title` only when a
+  title exists. The border and body reserve space for shared callouts. There
+  are no per-word or border annotation targets; these are planned only if a
+  future contract calls for them.
+- On mixed boards, schema validation requires questions immediately before
+  their answering visualization, which anchors below the question. Consecutive
+  questions can form a bottom-anchored chain ending in the answer. Notes and
+  takeaways must anchor below an earlier visualization, directly or through
+  its other notes/takeaways. A subsequent question starts a new group below
+  an earlier figure. Text-only boards use a root and bottom-anchored text.
+  The spec model chooses the semantically related visualization; validation
+  enforces these structural links and the renderer preserves their order.
+
+Run the focused tests and regenerate the normal/hard examples and equal-content
+role comparisons from the repository root:
+
+```sh
+deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/render/text-test.ts
+deno run --allow-read --allow-write=projects/sixtus/tools/learning-material/whiteboard/render/output-ex/text projects/sixtus/tools/learning-material/whiteboard/render/text-gallery.ts
+```
+
+The review gallery is `render/output-ex/text/index.html`, with complete JSON
+specs and SVGs. Tests cover role styling, shared sizing, full text preservation,
+painted bounds, annotation targets, invalid input, and reading order through
+`renderWhiteboardSvg()`. The gallery remains subject to the user's visual review.
+
+## Design-system verification
+
+Run the renderer regression suite after changing shared roles or spacing:
+
+```sh
+deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/render/*-test.ts
+```
+
+`design-system-test.ts` verifies every figure's heading, measured title clearance,
+body geometry preservation, role sizes across allocations, fixed equation sizing,
+and board-title gap independence. `design-system-gallery.ts` generates a mixed
+board and individual figures at common display scales for browser review:
+
+```sh
+deno run --allow-read --allow-write=/tmp/whiteboard-design-system projects/sixtus/tools/learning-material/whiteboard/render/design-system-gallery.ts
+```
+
+Review long titles, absent titles, dense equation rows, wrapping text, annotation
+targets, and label/legend readability at both natural and reduced display sizes.

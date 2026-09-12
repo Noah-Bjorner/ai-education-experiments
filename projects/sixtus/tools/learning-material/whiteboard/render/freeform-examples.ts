@@ -1,4 +1,4 @@
-import { type Freeform, freeform } from "../children/freeform.ts";
+import { type Freeform, freeform } from "../figures/freeform.ts";
 
 export const freeformExamples: Freeform[] = [
   {

@@ -1,16 +1,16 @@
 import { z } from "@zod";
 import {
-  childAnnotationsField,
-  childTitleField,
+  figureAnnotationsField,
+  figureTitleField,
   elementIdField,
-  type WhiteboardChildDefinition,
+  type WhiteboardFigureDefinition,
 } from "./shared.ts";
 
 export const mathExpressionsSchema = z.object({
   type: z.literal("math_expressions"),
   id: elementIdField.optional(),
-  title: childTitleField,
-  annotations: childAnnotationsField.optional(),
+  title: figureTitleField,
+  annotations: figureAnnotationsField.optional(),
   expressions: z.array(z.object({
     id: elementIdField,
     latex: z.string().trim().min(1).max(2000).describe(
@@ -37,9 +37,9 @@ Use for equations, formulas, or a short sequence of algebra steps. Each expressi
 - Use braces around multi-character script arguments. Prefer math source without dollar signs or display wrappers (one surrounding pair is accepted).
 - The board uses Shantell Sans Math Medium everywhere. Equations use paths extracted from that same font; structural bars are drawn by the layout engine. Ordinary bold/italic styles use Medium. Calligraphic/Fraktur alphabets and unbundled symbols are unavailable; do not replace them with a different mathematical meaning. Double-struck letters supported: C, N, P, Q, R, Z.
 - This is math-mode LaTeX, not a full document compiler. No document preambles, package loading, user-defined macros, HTML, or external content. Unsupported commands or missing glyphs produce explicit errors.
-- No styling or coordinates are supplied by the agent.
+- No styling or coordinates are supplied by the agent. Expressions retain the shared display size; keep rows short enough to fit. More rows grow the figure vertically rather than shrinking the text.
 - JSON must escape each LaTeX backslash: "\\frac{1}{2}".
-- Annotation targets: <childId>.title and <childId>.<expressionId>.expression. The latter covers the whole row and supports text emphasis and callouts. Individual terms are not targets yet.`,
+- Annotation targets: <figureId>.title (only when title is not null) and <figureId>.<expressionId>.expression. The latter covers the whole row and supports text emphasis and callouts. Individual terms are not targets yet.`,
   example: {
     goal: "Show the steps for solving x/2 + 3 = 7.",
     output: {
@@ -54,4 +54,4 @@ Use for equations, formulas, or a short sequence of algebra steps. Each expressi
       ],
     },
   },
-} satisfies WhiteboardChildDefinition<typeof mathExpressionsSchema>;
+} satisfies WhiteboardFigureDefinition<typeof mathExpressionsSchema>;

@@ -1,0 +1,64 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "text",
+      "id": "question",
+      "title": null,
+      "annotations": [],
+      "role": "question",
+      "text": "How many more oranges than apples are there?",
+      "anchor": null,
+      "side": null
+    },
+    {
+      "type": "xy_chart",
+      "id": "fruit",
+      "title": "Fruit counts",
+      "annotations": [],
+      "chartStyle": "bar",
+      "xLabel": "Fruit",
+      "yLabel": "Count",
+      "series": [
+        {
+          "id": "quantity",
+          "name": "Quantity",
+          "points": [
+            {
+              "id": "apples",
+              "x": "Apples",
+              "y": 4
+            },
+            {
+              "id": "oranges",
+              "x": "Oranges",
+              "y": 6
+            }
+          ]
+        }
+      ],
+      "anchor": "question",
+      "side": "bottom"
+    },
+    {
+      "type": "text",
+      "id": "note",
+      "title": null,
+      "annotations": [],
+      "role": "note",
+      "text": "Compare the heights of the two bars.",
+      "anchor": "fruit",
+      "side": "bottom"
+    },
+    {
+      "type": "text",
+      "id": "takeaway",
+      "title": null,
+      "annotations": [],
+      "role": "takeaway",
+      "text": "There are 2 more oranges than apples.",
+      "anchor": "note",
+      "side": "bottom"
+    }
+  ]
+}

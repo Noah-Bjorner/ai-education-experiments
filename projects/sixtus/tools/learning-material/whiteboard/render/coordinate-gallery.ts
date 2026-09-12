@@ -1,7 +1,8 @@
+import { boardExample } from "./board-example.ts";
 import {
   type CoordinatePlot,
   coordinatePlot,
-} from "../children/coordinate-plot.ts";
+} from "../figures/coordinate-plot.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 import { escapeXml } from "./svg.ts";
 
@@ -151,7 +152,7 @@ if (import.meta.main) {
   const directory = new URL("./output-ex/coordinates/", import.meta.url);
   await Deno.mkdir(directory, { recursive: true });
   for (const example of coordinateExamples) {
-    const board = { layout: "single" as const, children: [example] };
+    const board = boardExample([example]);
     const result = renderWhiteboardSvg(board);
     await Deno.writeTextFile(
       new URL(`${example.id}.svg`, directory),
@@ -167,7 +168,7 @@ if (import.meta.main) {
     `<!doctype html><meta charset="utf-8"><title>Coordinate plot gallery</title><style>body{font:16px system-ui;background:#f7f6f3;margin:24px;color:#111}main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}figure{margin:0;padding:24px;background:white}figure:nth-child(even){background:#eef5fc}img{display:block;width:100%;height:auto}figcaption{margin-top:16px}a{color:#2459ae}</style><h1>Coordinate plots</h1><main>${
       coordinateExamples.map((e) =>
         `<figure><img src="${e.id}.svg" alt="${
-          escapeXml(e.title)
+          escapeXml(e.title ?? e.id ?? "plot")
         }"><figcaption><a href="${e.id}.json">${e.id} spec</a> · <a href="${e.id}.svg">SVG</a></figcaption></figure>`
       ).join("")
     }</main>`,

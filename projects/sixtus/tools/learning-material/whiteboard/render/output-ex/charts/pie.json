@@ -1,6 +1,6 @@
 {
-  "layout": "single",
-  "children": [
+  "title": null,
+  "figures": [
     {
       "type": "pie_chart",
       "id": "pie",
@@ -17,7 +17,9 @@
           "label": "Nonfiction",
           "value": 8
         }
-      ]
+      ],
+      "anchor": null,
+      "side": null
     }
   ]
 }

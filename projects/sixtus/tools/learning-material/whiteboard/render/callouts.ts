@@ -5,7 +5,8 @@ import {
   type Point,
   unionBounds,
 } from "./bounds.ts";
-import { GRAPH_FONT_STYLE, graphTextBounds, measureGraphText } from "./font.ts";
+import { GRAPH_FONT_STYLE } from "./font.ts";
+import { textBlock } from "./text-block.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import type { PendingCallout } from "./annotations.ts";
 import type {
@@ -13,7 +14,7 @@ import type {
   RenderTarget,
   TargetedDrawing,
 } from "./targets.ts";
-import { COLORS } from "./theme.ts";
+import { COLORS, LINE_HEIGHT, SPACING, TYPE_SCALE } from "./theme.ts";
 import {
   center,
   clearRoute,
@@ -26,7 +27,7 @@ import {
   routeScore,
 } from "./placement.ts";
 
-const FONT_SIZE = 15, LINE_HEIGHT = 21, LABEL_WIDTH = 190;
+const LABEL_WIDTH = 190;
 const directions = [
   { side: "right", x: 1, y: 0 },
   { side: "bottom-right", x: Math.SQRT1_2, y: Math.SQRT1_2 },
@@ -39,7 +40,7 @@ const directions = [
 ];
 
 export type CalloutPlacement = {
-  childId: string;
+  figureId: string;
   annotationIndex: number;
   type: "arrow" | "line" | "bracket";
   targetIds: string[];
@@ -49,7 +50,7 @@ export type CalloutPlacement = {
   side: string;
   usedGutter: boolean;
 };
-type Label = { lines: string[]; bounds: Bounds };
+type Label = Drawing & { bounds: Bounds };
 type Candidate = {
   label: Bounds | null;
   side: string;
@@ -67,52 +68,27 @@ type Job = {
   candidates: Candidate[];
 };
 
-/** Wrap without truncation, including explicit newlines and overlong words. */
+/** Callouts share the same wrapping and glyph measurement as other text. */
 function measureLabel(content: string): Label {
-  const lines: string[] = [];
-  for (const paragraph of content.normalize("NFC").split(/\r?\n/)) {
-    let line = "";
-    for (const word of paragraph.trim().split(/\s+/).filter(Boolean)) {
-      const joined = line ? `${line} ${word}` : word;
-      if (measureGraphText(joined, FONT_SIZE) <= LABEL_WIDTH) {
-        line = joined;
-        continue;
-      }
-      if (line) {
-        lines.push(line);
-        line = "";
-      }
-      for (const char of word) {
-        if (line && measureGraphText(line + char, FONT_SIZE) > LABEL_WIDTH) {
-          lines.push(line);
-          line = "";
-        }
-        line += char;
-      }
-    }
-    lines.push(line);
-  }
-  const bounds = unionBounds(
-    lines.map((line, i) =>
-      graphTextBounds(line, FONT_SIZE, 0, i * LINE_HEIGHT)
-    ),
+  const block = textBlock(
+    content,
+    LABEL_WIDTH,
+    TYPE_SCALE.annotation,
+    LINE_HEIGHT.annotation,
+    0,
+    0,
+    "currentColor",
   );
-  if (!bounds) throw new Error("Callout text must contain visible characters.");
-  return { lines, bounds };
+  return { ...block, bounds: block.bounds! };
 }
 
 function labelDrawing(label: Label, box: Bounds, color: string): Drawing {
-  const x = box.x - label.bounds.x, y = box.y - label.bounds.y;
   return {
-    markup: `<g data-callout-label="true">${
-      label.lines.map((line, i) =>
-        `<text x="${x}" y="${
-          y + i * LINE_HEIGHT
-        }" font-size="${FONT_SIZE}" fill="${escapeXml(color)}">${
-          escapeXml(line)
-        }</text>`
-      ).join("\n")
-    }</g>`,
+    markup: `<g data-callout-label="true" color="${
+      escapeXml(color)
+    }" transform="translate(${box.x - label.bounds.x} ${
+      box.y - label.bounds.y
+    })">${label.markup}</g>`,
     bounds: box,
   };
 }
@@ -126,7 +102,14 @@ function directionPenalty(job: Job, box: Bounds) {
 function nearbyCandidates(job: Job): Candidate[] {
   const { width: w, height: h } = job.label!.bounds;
   const result: Candidate[] = [];
-  for (const gap of [24, 48, 80, 120]) {
+  for (
+    const gap of [
+      SPACING.sectionGap,
+      SPACING.sectionGap * 2,
+      SPACING.sectionGap * 3,
+      SPACING.sectionGap * 5,
+    ]
+  ) {
     for (const dir of directions) {
       const reach = job.targets[0].anchor
         ? 0
@@ -407,22 +390,22 @@ export function renderCallouts(
       detailed: boolean,
       relaxed = false,
     ) => {
-      const ranked = (relaxed
-        ? [...candidates]
-        : candidates.filter((c) =>
-          !c.label ||
-          obstacles.every((o) => !obstacleHitsBox(o, c.label!, clearance))
-        )).sort((a, b) => {
-          const cost = (c: Candidate) =>
-            (relaxed && c.label
-              ? obstacles.filter((o) =>
-                (o.kind === "text" || o.kind === "annotation") &&
-                obstacleHitsBox(o, c.label!, clearance)
-              ).length * 1000
-              : 0) +
-            c.score + (c.label ? distance(center(c.label), job.anchor) : 0);
-          return cost(a) - cost(b);
-        });
+      const ranked = (relaxed ? [...candidates] : candidates.filter((c) =>
+        !c.label ||
+        obstacles.every((o) =>
+          !obstacleHitsBox(o, c.label!, clearance)
+        )
+      )).sort((a, b) => {
+        const cost = (c: Candidate) =>
+          (relaxed && c.label
+            ? obstacles.filter((o) =>
+              (o.kind === "text" || o.kind === "annotation") &&
+              obstacleHitsBox(o, c.label!, clearance)
+            ).length * 1000
+            : 0) +
+          c.score + (c.label ? distance(center(c.label), job.anchor) : 0);
+        return cost(a) - cost(b);
+      });
       for (const candidate of detailed ? ranked.slice(0, 8) : ranked) {
         let paths: Point[][] | undefined;
         let endpointPenalty = 0;
@@ -541,7 +524,7 @@ export function renderCallouts(
         : [...gutterCandidates(job, occupiedBounds(), jobs.length), ...nearby];
       select(fallback, false, true);
       const where =
-        `${type} annotation ${job.item.annotationIndex} in '${job.item.childId}'`;
+        `${type} annotation ${job.item.annotationIndex} in '${job.item.figureId}'`;
       if (selected) {
         console.warn(
           `Could not place ${where} without overlapping content; using a fallback placement.`,
@@ -593,7 +576,7 @@ export function renderCallouts(
       bounds,
     });
     placements.push({
-      childId: job.item.childId,
+      figureId: job.item.figureId,
       annotationIndex: job.item.annotationIndex,
       type,
       targetIds: [...job.item.annotation.targetIds],

@@ -2,7 +2,7 @@ import {
   type CoordinateElement,
   type CoordinatePlot,
   coordinatePlotSchema,
-} from "../children/coordinate-plot.ts";
+} from "../figures/coordinate-plot.ts";
 import type { Bounds, Point } from "./bounds.ts";
 import { expandBounds, unionBounds } from "./bounds.ts";
 import { fitGraphText, GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
@@ -14,7 +14,14 @@ import {
   type ScenePart,
   type TargetedDrawing,
 } from "./targets.ts";
-import { COLORS, SERIES_COLORS } from "./theme.ts";
+import {
+  COLORS,
+  LINE_HEIGHT,
+  SERIES_COLORS,
+  SPACING,
+  TYPE_SCALE,
+} from "./theme.ts";
+import { withFigureTitle } from "./titles.ts";
 import { escapeXml } from "./svg.ts";
 import { segmentHitsBox } from "./placement.ts";
 import {
@@ -119,7 +126,7 @@ export function renderCoordinatePlotDrawing(
     value: string,
     x: number,
     y: number,
-    size = 14,
+    size: number = TYPE_SCALE.label,
     anchor = "start",
     color: string = COLORS.ink,
     maxWidth = width - 32,
@@ -222,7 +229,7 @@ export function renderCoordinatePlotDrawing(
       t.label,
       p.x,
       origin.y + 22,
-      13,
+      TYPE_SCALE.supporting,
       "middle",
       COLORS.textMuted,
       Infinity,
@@ -253,7 +260,7 @@ export function renderCoordinatePlotDrawing(
       t.label,
       origin.x - 9,
       p.y + 4,
-      13,
+      TYPE_SCALE.supporting,
       "end",
       COLORS.textMuted,
       Infinity,
@@ -269,14 +276,26 @@ export function renderCoordinatePlotDrawing(
     if (part.bounds) yTickBoxes.push(part.bounds);
     addText(part);
   }
-  addText(text(plot.title, width / 2, 36, 25, "middle"), `${id}.title`);
+
   // Names sit at the positive tips, still horizontal so math stays upright.
   addText(
-    text(xAxis.label ?? "x", box.x + box.width + 12, origin.y + 6, 16, "start"),
+    text(
+      xAxis.label ?? "x",
+      box.x + box.width + SPACING.labelGap,
+      origin.y + 6,
+      TYPE_SCALE.label,
+      "start",
+    ),
     `${id}.x-label`,
   );
   addText(
-    text(yAxis.label ?? "y", origin.x, box.y - 14, 16, "middle"),
+    text(
+      yAxis.label ?? "y",
+      origin.x,
+      box.y - SPACING.labelGap,
+      TYPE_SCALE.label,
+      "middle",
+    ),
     `${id}.y-label`,
   );
 
@@ -497,22 +516,27 @@ export function renderCoordinatePlotDrawing(
     let chosen: ScenePart | undefined;
     for (const p of anchors) {
       for (
-        const [dx, dy, anchor] of [[10, -10, "start"], [-10, -10, "end"], [
-          10,
-          24,
-          "start",
-        ], [-10, 24, "end"]] as const
+        const [dx, dy, anchor] of [
+          [SPACING.labelGap, -SPACING.labelGap, "start"],
+          [-SPACING.labelGap, -SPACING.labelGap, "end"],
+          [
+            SPACING.labelGap,
+            LINE_HEIGHT.label,
+            "start",
+          ],
+          [-SPACING.labelGap, LINE_HEIGHT.label, "end"],
+        ] as const
       ) {
         const candidate = text(
           element.label!,
           p.x + dx,
           p.y + dy,
-          14,
+          TYPE_SCALE.label,
           anchor,
           color,
           Math.min(240, box.width),
         );
-        const b = expandBounds(candidate.bounds, 4);
+        const b = expandBounds(candidate.bounds, SPACING.labelClearance);
         if (
           !b || !inside({ x: b.x, y: b.y }, box) ||
           !inside({ x: b.x + b.width, y: b.y + b.height }, box)
@@ -530,30 +554,22 @@ export function renderCoordinatePlotDrawing(
       if (chosen) break;
     }
     if (!chosen) {
-      const y = box.y + box.height + 88 + legendRow++ * 24;
+      const y = box.y + box.height + 88 +
+        legendRow++ * (LINE_HEIGHT.label + SPACING.legendRowGap);
       labels.push(
         stroke({ x: box.x, y: y - 5 }, { x: box.x + 20, y: y - 5 }, color, 2.5),
       );
       chosen = text(
         element.label!,
-        box.x + 30,
+        box.x + 20 + SPACING.labelGap,
         y,
-        14,
+        TYPE_SCALE.label,
         "start",
         color,
         width - box.x - 50,
       );
     }
     addText(chosen, `${id}.${element.id}.label`);
-  }
-  for (const annotation of plot.annotations ?? []) {
-    for (const target of annotation.targetIds) {
-      if (!targets.has(target)) {
-        throw new Error(
-          `Coordinate annotation target '${target}' is outside the visible window.`,
-        );
-      }
-    }
   }
   const defs = `<defs><clipPath id="${clipId}"><rect x="${box.x - 5}" y="${
     box.y - 5
@@ -570,18 +586,33 @@ export function renderCoordinatePlotDrawing(
       `<circle cx="${fmt(p.x)}" cy="${fmt(p.y)}" r="4" fill="black"/>`
     ).join("")
   }</mask></defs>`;
-  return {
-    markup:
-      `<g style="${GRAPH_FONT_STYLE}" stroke-linecap="round" stroke-linejoin="round">${defs}<g mask="url(#${maskId})">${
-        furniture.map((p) => p.markup).join("")
-      }</g><g clip-path="url(#${clipId})">${
-        marks.map((p) => p.markup).join("")
-      }</g>${labels.map((p) => p.markup).join("")}</g>`,
-    bounds: unionBounds(
-      [...furniture, ...marks, ...labels].map((p) => p.bounds),
-    ),
-    targets,
-    obstacles,
-    focusBounds: box,
-  };
+  const drawing = withFigureTitle(
+    {
+      markup:
+        `<g style="${GRAPH_FONT_STYLE}" stroke-linecap="round" stroke-linejoin="round">${defs}<g mask="url(#${maskId})">${
+          furniture.map((p) => p.markup).join("")
+        }</g><g clip-path="url(#${clipId})">${
+          marks.map((p) => p.markup).join("")
+        }</g>${labels.map((p) => p.markup).join("")}</g>`,
+      bounds: unionBounds(
+        [...furniture, ...marks, ...labels].map((p) => p.bounds),
+      ),
+      targets,
+      obstacles,
+      focusBounds: box,
+    },
+    plot.title,
+    id,
+    options,
+  );
+  for (const annotation of plot.annotations ?? []) {
+    for (const target of annotation.targetIds) {
+      if (!targets.has(target)) {
+        throw new Error(
+          `Coordinate annotation target '${target}' is outside the visible window.`,
+        );
+      }
+    }
+  }
+  return drawing;
 }
