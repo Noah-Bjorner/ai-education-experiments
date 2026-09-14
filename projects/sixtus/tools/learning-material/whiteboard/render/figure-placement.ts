@@ -1,6 +1,9 @@
 import { SPACING } from "./theme.ts";
-import type { WhiteboardSpec } from "../schema.ts";
+import type { WhiteboardOrientation, WhiteboardSpec } from "../schema.ts";
 import { type Bounds, type Drawing, exportBounds } from "./bounds.ts";
+
+/** Visualizations per landscape row. Text figures always occupy their own row. */
+export const LANDSCAPE_ROW_SIZE = 3;
 
 export type PlacementOptions = {
   /** Allocation per figure; exports trim to the complete painted bounds. */
@@ -8,6 +11,11 @@ export type PlacementOptions = {
   height?: number;
   /** Minimum spacing between complete figures. Defaults to 32. */
   gap?: number;
+  /**
+   * When set, ignore spec sides and pack by orientation: portrait is one
+   * column; landscape wraps after {@link LANDSCAPE_ROW_SIZE} visualizations.
+   */
+  orientation?: WhiteboardOrientation;
 };
 
 /** x/y translate figure-local SVG coordinates; width/height are measured extents. */
@@ -32,10 +40,100 @@ export function placeFigures(
   drawings: Drawing[],
   options: PlacementOptions = {},
 ): FigurePlacement[] {
-  const { gap } = figureAllocation(options);
   if (drawings.length !== spec.figures.length) {
     throw new Error("Each figure needs a complete drawing before placement.");
   }
+  if (options.orientation != null) {
+    return packFigures(spec, drawings, options, options.orientation);
+  }
+  return placeAnchoredFigures(spec, drawings, options);
+}
+
+function orientationRows(
+  spec: WhiteboardSpec,
+  orientation: WhiteboardOrientation,
+): number[][] {
+  if (orientation === "portrait") {
+    return spec.figures.map((_, i) => [i]);
+  }
+  const rows: number[][] = [];
+  let current: number[] = [];
+  const flush = () => {
+    if (current.length > 0) {
+      rows.push(current);
+      current = [];
+    }
+  };
+  for (const [i, figure] of spec.figures.entries()) {
+    if (figure.type === "text") {
+      flush();
+      rows.push([i]);
+      continue;
+    }
+    if (current.length >= LANDSCAPE_ROW_SIZE) flush();
+    current.push(i);
+  }
+  flush();
+  return rows;
+}
+
+function packFigures(
+  spec: WhiteboardSpec,
+  drawings: Drawing[],
+  options: PlacementOptions,
+  orientation: WhiteboardOrientation,
+): FigurePlacement[] {
+  const { gap } = figureAllocation(options);
+  const rows = orientationRows(spec, orientation);
+  const boxes: Bounds[] = new Array(spec.figures.length);
+  let rowBottom = -Infinity;
+  for (const [rowIndex, row] of rows.entries()) {
+    let rowTop = 0;
+    for (const [col, figureIndex] of row.entries()) {
+      const local = exportBounds(drawings[figureIndex].bounds);
+      const box = {
+        x: local.x,
+        y: local.y,
+        width: local.width,
+        height: local.height,
+      };
+      if (rowIndex > 0 || col > 0) {
+        if (col === 0) {
+          const origin = boxes[0];
+          box.x = orientation === "portrait"
+            ? origin.x + (origin.width - box.width) / 2
+            : origin.x;
+          box.y = rowBottom + gap;
+        } else {
+          const prev = boxes[row[col - 1]];
+          box.x = prev.x + prev.width + gap;
+          box.y = rowTop;
+        }
+      }
+      if (col === 0) rowTop = box.y;
+      boxes[figureIndex] = box;
+    }
+    rowBottom = Math.max(...row.map((i) => boxes[i].y + boxes[i].height));
+  }
+  return spec.figures.map((_, figureIndex) => {
+    const local = exportBounds(drawings[figureIndex].bounds);
+    const box = boxes[figureIndex];
+    return {
+      figureIndex,
+      x: box.x - local.x,
+      y: box.y - local.y,
+      width: local.width,
+      height: local.height,
+    };
+  });
+}
+
+function placeAnchoredFigures(
+  spec: WhiteboardSpec,
+  drawings: Drawing[],
+  options: PlacementOptions,
+): FigurePlacement[] {
+  const { gap } = figureAllocation(options);
   const placed = new Map<string, Bounds>();
   return spec.figures.map((figure, figureIndex) => {
     const local = exportBounds(drawings[figureIndex].bounds);

@@ -23,13 +23,19 @@ Deno.test("math figure is registered in input, output and generation instruction
       domain: "math",
       mode: "fast",
       format: "svg",
+      orientation: "landscape",
     }),
     {
       goal: "Solve an equation",
       domain: "math",
       mode: "fast",
       format: "svg",
+      orientation: "landscape",
     },
+  );
+  assertEquals(
+    whiteboardInputSchema.parse({ goal: "Solve an equation" }).orientation,
+    undefined,
   );
   assertEquals(
     WhiteboardOutput.parse(boardExample([figure])).figures[0],

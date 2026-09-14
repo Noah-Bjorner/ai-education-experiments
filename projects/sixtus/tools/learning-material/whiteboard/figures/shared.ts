@@ -67,6 +67,8 @@ export const figureAnnotationsField = z.array(annotationSchema).describe(
 export type WhiteboardFigureDefinition<S extends z.ZodType<{ type: string }>> = {
   type: z.infer<S>["type"];
   schema: S;
+  /** One-line planner routing: what it draws, variants under this type, nearest wrong neighbor. */
+  useWhen: string;
   instructions: string;
   example: {
     goal: string;

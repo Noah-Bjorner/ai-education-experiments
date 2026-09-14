@@ -11,7 +11,7 @@ import {
 } from "./schema.ts";
 import {
   WHITEBOARD_GOAL_WRAPPER_PROMPT,
-  WHITEBOARD_SPEC_SYSTEM_PROMPT,
+  whiteboardSpecSystemPrompt,
 } from "./prompt.ts";
 import { uploadImage } from "../../../../../lib/cloudflare.ts";
 import { renderWhiteboardSvg } from "./render/index.ts";
@@ -34,6 +34,7 @@ export {
   WHITEBOARD_DOMAINS,
   WHITEBOARD_FORMATS,
   WHITEBOARD_MODES,
+  WHITEBOARD_ORIENTATIONS,
   whiteboardInputSchema,
   whiteboardResultSchema,
 } from "./schema.ts";
@@ -43,6 +44,7 @@ export type {
   WhiteboardFormat,
   WhiteboardInput,
   WhiteboardMode,
+  WhiteboardOrientation,
   WhiteboardRequest,
   WhiteboardResult,
   WhiteboardSpec,
@@ -52,8 +54,9 @@ export const whiteboardSpec = async (
   input: WhiteboardInput,
 ): Promise<WhiteboardSpec> => {
   const { goal } = input;
+  const orientation = input.orientation ?? "portrait";
 
-  const system = WHITEBOARD_SPEC_SYSTEM_PROMPT;
+  const system = whiteboardSpecSystemPrompt(orientation);
   console.log("system.length: ", system.length);
   const prompt = WHITEBOARD_GOAL_WRAPPER_PROMPT(goal);
 
@@ -121,7 +124,12 @@ export const executeWhiteboard = async (
   input: WhiteboardRequest,
 ): Promise<WhiteboardResult> => {
   const spec = await resolveWhiteboardSpec(input);
-  const { svg } = renderWhiteboardSvg(spec);
+  const { svg } = renderWhiteboardSvg(
+    spec,
+    "goal" in input
+      ? { orientation: input.orientation ?? "portrait" }
+      : {},
+  );
   if ("format" in input && input.format === "svg") {
     return { svg };
   }

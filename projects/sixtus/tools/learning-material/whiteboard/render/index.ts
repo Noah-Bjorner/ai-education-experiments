@@ -7,6 +7,7 @@ import {
 } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import {
+  balanceAround,
   type Bounds,
   type Drawing,
   exportBounds,
@@ -62,6 +63,8 @@ export type WhiteboardRenderResult = SvgRenderStage & {
   };
   calloutPlacements: CalloutPlacement[];
   figurePlacements: FigurePlacement[];
+  /** Painted union before optical centering; `bounds` is the shared viewBox. */
+  contentBounds: Bounds;
 };
 
 type Figure = WhiteboardFigureContent;
@@ -116,12 +119,14 @@ function compose(
 function renderBoardTitle(
   title: string,
   figures: Drawing,
+  center: Drawing,
   options: { id: string; roughness?: number; seed?: number },
 ): Drawing {
   const union = exportBounds(figures.bounds);
+  const focus = exportBounds(center.bounds);
   const titleText = textBlock(
     boardTitleDisplay(title),
-    Math.max(union.width, TYPE_SCALE.boardTitle * 4),
+    Math.max(focus.width, TYPE_SCALE.boardTitle * 4),
     TYPE_SCALE.boardTitle,
     LINE_HEIGHT.boardTitle,
     0,
@@ -134,7 +139,7 @@ function renderBoardTitle(
     id: `${options.id}-box`,
   });
   const b = boxed.bounds!;
-  const dx = union.x + union.width / 2 -
+  const dx = focus.x + focus.width / 2 -
     (titleText.bounds!.x + titleText.bounds!.width / 2);
   const dy = union.y - SPACING.boardTitleGap - (b.y + b.height);
   return {
@@ -152,8 +157,12 @@ function withBoardTitle(drawing: Drawing, boardTitle: Drawing | null): Drawing {
   };
 }
 
-function exportSvg(drawing: Drawing, title: string): SvgRenderStage {
-  const bounds = exportBounds(drawing.bounds);
+function exportSvg(
+  drawing: Drawing,
+  title: string,
+  frame: Bounds,
+): SvgRenderStage {
+  const bounds = exportBounds(frame);
   return {
     svg:
       `<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}" role="img" aria-label="${
@@ -264,39 +273,39 @@ export function renderWhiteboardSvg(
   }));
   // 4. Place complete measured figures once, then reuse translations in every stage.
   const figurePlacements = placeFigures(spec, completeFigures, options);
+  const baseComposed = compose(baseFigures, figurePlacements, figureIds);
+  const emphasisComposed = compose(
+    emphasizedFigures,
+    figurePlacements,
+    figureIds,
+  );
   const completeComposed = compose(
     completeFigures,
     figurePlacements,
     figureIds,
   );
   const boardTitle = spec.title !== null
-    ? renderBoardTitle(spec.title, completeComposed, {
+    ? renderBoardTitle(spec.title, completeComposed, baseComposed, {
       id: `${options.id ?? "whiteboard"}-board-title`,
       roughness: options.roughness ?? 1.5,
       seed: options.seed ?? 10,
     })
     : null;
-  const base = exportSvg(
-    withBoardTitle(
-      compose(baseFigures, figurePlacements, figureIds),
-      boardTitle,
-    ),
-    title,
+  const baseDrawing = withBoardTitle(baseComposed, boardTitle);
+  const emphasisDrawing = withBoardTitle(emphasisComposed, boardTitle);
+  const completeDrawing = withBoardTitle(completeComposed, boardTitle);
+  const contentBounds = exportBounds(completeDrawing.bounds);
+  const frame = balanceAround(
+    exportBounds(baseDrawing.bounds),
+    contentBounds,
   );
-  const emphasis = exportSvg(
-    withBoardTitle(
-      compose(emphasizedFigures, figurePlacements, figureIds),
-      boardTitle,
-    ),
-    title,
-  );
+  const base = exportSvg(baseDrawing, title, frame);
+  const emphasis = exportSvg(emphasisDrawing, title, frame);
   // Future asset processing belongs before this final composition/export.
-  const callouts = exportSvg(
-    withBoardTitle(completeComposed, boardTitle),
-    title,
-  );
+  const callouts = exportSvg(completeDrawing, title, frame);
   return {
     ...callouts,
+    contentBounds,
     stages: { base, emphasis, callouts },
     calloutPlacements: calloutResults.flatMap((r) => r.placements),
     figurePlacements,

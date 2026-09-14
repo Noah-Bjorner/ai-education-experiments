@@ -83,12 +83,14 @@ const imageBranchSchema = imageInputSchema.extend({
 const WHITEBOARD_CHAT_INPUT = {
   mode: "fast",
   format: "url",
+  orientation: "portrait",
 } as const;
 
 const whiteboardBranchSchema = whiteboardInputSchema
   .omit({
     mode: true,
     format: true,
+    orientation: true,
   })
   .extend({
     materialType: z.literal("whiteboard"),

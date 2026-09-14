@@ -2,26 +2,26 @@ import { z } from "@zod";
 import { whiteboardFigures } from "./figures/index.ts";
 import { elementIdField } from "./figures/shared.ts";
 
-export const WHITEBOARD_DOMAINS = ["auto", "math", "data"] as const;
 export const WHITEBOARD_MODES = ["smart", "fast"] as const;
 export const WHITEBOARD_FORMATS = ["url", "svg"] as const;
+export const WHITEBOARD_ORIENTATIONS = ["portrait", "landscape"] as const;
 
-export type WhiteboardDomain = typeof WHITEBOARD_DOMAINS[number];
 export type WhiteboardMode = typeof WHITEBOARD_MODES[number];
 export type WhiteboardFormat = typeof WHITEBOARD_FORMATS[number];
+export type WhiteboardOrientation = typeof WHITEBOARD_ORIENTATIONS[number];
 
 export const whiteboardInputSchema = z.object({
   goal: z.string().min(1).describe(
     "The educational or communication task the whiteboard should accomplish: what the audience should understand or take away. Include relevant audience context, supplied facts or data, and constraints so the goal is self-contained.",
-  ),
-  domain: z.enum(WHITEBOARD_DOMAINS).optional().describe(
-    "Which visual language to use. auto infers from the goal. math covers equations, geometry, and coordinate plots. data covers charts of quantities.",
   ),
   mode: z.enum(WHITEBOARD_MODES).optional().describe(
     "Use smart for more careful spec generation, or fast for lower latency.",
   ),
   format: z.enum(WHITEBOARD_FORMATS).optional().describe(
     "How to return the whiteboard: a hosted URL, or the SVG source.",
+  ),
+  orientation: z.enum(WHITEBOARD_ORIENTATIONS).optional().describe(
+    "How figures pack on the board. portrait stacks every figure in one column. landscape places at most three figures in a row, then wraps. Defaults to portrait.",
   ),
 });
 
@@ -42,12 +42,18 @@ const placementFields = {
     "Side of the anchor to place this figure on, centered along the shared edge. Null only for the root. The renderer controls spacing.",
   ),
 };
+type PlacedWhiteboardFigure = WhiteboardFigureContent & {
+  id: z.infer<typeof elementIdField>;
+  anchor: z.infer<typeof elementIdField> | null;
+  side: "top" | "left" | "right" | "bottom" | null;
+};
 // z.union emits anyOf. z.discriminatedUnion emits oneOf, which OpenAI
 // response_format rejects on array items. safeExtend preserves figure refinements.
+// `.map()` collapses the figure tuple, so assert the placed union (including text).
 const whiteboardFigureSchema = z.union([
   firstFigure.schema.safeExtend(placementFields),
   ...otherFigures.map((figure) => figure.schema.safeExtend(placementFields)),
-]);
+]) as z.ZodType<PlacedWhiteboardFigure>;
 
 export const WhiteboardOutput = z.object({
   title: z.string().min(1).nullable().describe(

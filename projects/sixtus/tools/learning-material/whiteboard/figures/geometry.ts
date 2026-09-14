@@ -119,6 +119,7 @@ export const geometrySchema = geometryShape.superRefine((spec, ctx) => {
 export const geometry = {
   type: "geometry",
   schema: geometrySchema,
+  useWhen: "2D shapes and constructions without axes; not data plots or equations.",
   instructions: String.raw`### When to use it
 
 Use for 2D geometry: shapes, circle geometry, constructions, angle relationships, and proofs. Use xy_chart for data or function plots and math_expressions for equations.

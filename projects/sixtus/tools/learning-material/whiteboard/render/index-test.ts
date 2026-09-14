@@ -5,7 +5,12 @@ import type { WhiteboardFigureContent } from "../schema.ts";
  * Demo:  deno run --allow-read=fonts --allow-write=output-ex index-test.ts
  * Uses saved sample data; no LLM call or credentials needed.
  */
-import { assert, assertEquals, assertThrows } from "@std/assert";
+import {
+  assert,
+  assertAlmostEquals,
+  assertEquals,
+  assertThrows,
+} from "@std/assert";
 import { mathExpressions } from "../figures/math-expressions.ts";
 import { WhiteboardOutput, type WhiteboardSpec } from "../schema.ts";
 import { coordinateExamples } from "./coordinate-gallery.ts";
@@ -107,7 +112,9 @@ Deno.test("base and emphasis are retained before callout placement", () => {
   const withoutAnnotations = renderWhiteboardSvg(
     boardExample([{ ...books, annotations: [] }]),
   );
-  assertEquals(result.stages.base.svg, withoutAnnotations.svg);
+  const stripFrame = (svg: string) =>
+    svg.replace(/ width="[^"]+" height="[^"]+" viewBox="[^"]+"/, "");
+  assertEquals(stripFrame(result.stages.base.svg), stripFrame(withoutAnnotations.svg));
 });
 
 Deno.test("all five emphasis types render, including numbering and rotated text", () => {
@@ -152,8 +159,18 @@ Deno.test("emphasis follows resized targets and enlarges tight export bounds", (
     width: 1000,
     height: 600,
   });
-  assert(small.bounds.y < small.stages.base.bounds.y);
-  assert(large.bounds.y < large.stages.base.bounds.y);
+  const smallPlain = renderWhiteboardSvg(
+    boardExample([{ ...figure, annotations: [] }]),
+    { width: 600, height: 400 },
+  );
+  const largePlain = renderWhiteboardSvg(
+    boardExample([{ ...figure, annotations: [] }]),
+    { width: 1000, height: 600 },
+  );
+  assert(small.bounds.y < smallPlain.bounds.y);
+  assert(large.bounds.y < largePlain.bounds.y);
+  assert(small.bounds.height > smallPlain.bounds.height);
+  assert(large.bounds.height > largePlain.bounds.height);
   assert(small.svg !== large.svg);
   for (const result of [small, large]) {
     assert(
@@ -201,6 +218,60 @@ Deno.test("anchored figures translate complete content and share font definition
       assert(ids.includes(match[1]));
     }
   }
+});
+
+Deno.test("export balances annotation overflow so the base stays centered", () => {
+  const figure = {
+    type: "math_expressions" as const,
+    id: "combine",
+    title: "Combine like terms",
+    annotations: [{
+      type: "arrow" as const,
+      targetIds: ["combine.group.expression"],
+      content: "Constants: 5 - 1 = 4, not -4",
+    }],
+    expressions: [
+      { id: "start", latex: "3x + 5 + 2x - 1" },
+      { id: "group", latex: "(3x + 2x) + (5 - 1)" },
+      { id: "answer", latex: "5x + 4" },
+    ],
+  };
+  const annotated = renderWhiteboardSvg(boardExample([figure]));
+  const plain = renderWhiteboardSvg(
+    boardExample([{ ...figure, annotations: [] }]),
+  );
+  for (const stage of Object.values(annotated.stages)) {
+    assertEquals(stage.bounds, annotated.bounds);
+  }
+  const subject = plain.bounds;
+  const frame = annotated.bounds;
+  assertAlmostEquals(
+    subject.x - frame.x,
+    frame.x + frame.width - (subject.x + subject.width),
+  );
+  assertAlmostEquals(
+    subject.y - frame.y,
+    frame.y + frame.height - (subject.y + subject.height),
+  );
+  assert(frame.width > subject.width);
+  assert(annotated.contentBounds.width <= frame.width);
+  assert(annotated.contentBounds.height <= frame.height);
+  const titled = renderWhiteboardSvg({
+    title: "Combine like terms",
+    figures: boardExample([figure]).figures,
+  });
+  const titledPlain = renderWhiteboardSvg({
+    title: "Combine like terms",
+    figures: boardExample([{ ...figure, annotations: [] }]).figures,
+  });
+  const titleX = (svg: string) => {
+    const match = svg.match(
+      /data-board-title=""[^>]*transform="translate\(([^ ]+) /,
+    );
+    assert(match);
+    return Number(match[1]);
+  };
+  assertAlmostEquals(titleX(titled.svg), titleX(titledPlain.svg));
 });
 
 Deno.test("invalid references, duplicate IDs, and unsupported text targets fail clearly", () => {
@@ -294,7 +365,7 @@ Deno.test("board figures require explicit IDs and placement; legacy layout is re
   );
 });
 
-Deno.test("board title is uppercase, boxed, centered on the figure union, and shared across stages", () => {
+Deno.test("board title is uppercase, boxed, centered on the base figures, and shared across stages", () => {
   const figures = boardExample([{ ...books, annotations: [] }]).figures;
   const untitled = renderWhiteboardSvg({ title: null, figures });
   const titled = renderWhiteboardSvg({

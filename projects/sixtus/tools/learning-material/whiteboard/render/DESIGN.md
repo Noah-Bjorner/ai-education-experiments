@@ -225,6 +225,10 @@ Different relationships may share a number but remain separate settings: changin
 override inter-figure spacing without affecting other relationships.
 
 - Export with zero outer padding; the client supplies presentation padding.
+  The one exception is optical centering: if teaching annotations overflow the
+  base on one side, the export viewBox gets that same extra space on the
+  opposite side so the base stays centered. That empty gutter is not client
+  chrome.
 - Measure titles, multiline text, and legend widths before positioning them.
   Font and line-height changes must flow into measurement and rendering together.
 - Keep each renderer's mathematical geometry and necessary chart margins local.
@@ -244,9 +248,11 @@ are not general-purpose padding tokens.
 
 Board placement:
 
-- The board has a nullable `title` drawn centered above the union of all
-  figures, always in uppercase, with a handwritten box matching annotation
-  emphasis, and a `figures` array. There is no `layout` field. Figure titles
+- The board has a nullable `title` drawn centered above the **base** figures,
+  always in uppercase, with a handwritten box matching annotation emphasis.
+  It sits above the complete painted union (including teaching annotations) so
+  a top callout cannot overlap it, but its horizontal center and wrap width
+  follow the base, not side notes. There is no `layout` field. Figure titles
   are nullable; when present they sit above that figure with a handwritten
   underline matching annotation emphasis. When null, no `<id>.title` target is
   registered and tight export trims the vacated space.
@@ -257,6 +263,15 @@ Board placement:
   sides, and unknown, self, or forward anchors.
 - Figures are centered along the shared edge. Spacing is renderer-controlled
   (`gap`, default 32); the spec has no alignment, size, or gap controls.
+- Goal generation takes `orientation`: `portrait` or `landscape` (default
+  `portrait`). The spec system prompt's placement section is written from that
+  value. The agent learning-material tool omits `orientation` and always packs
+  `portrait`. Direct spec renders without `orientation` still follow `anchor` /
+  `side`.
+- When `orientation` is passed to the renderer, it ignores spec sides and packs
+  measured figures: portrait is one centered column; landscape places at most
+  three visualizations in a row, then wraps. Text figures always occupy their
+  own row.
 
 Each renderer receives its own allocation (`width` and `height` options now apply
 per figure, default 800 × 520). Render base content, emphasis, and callouts locally
@@ -282,6 +297,10 @@ Separate two steps:
    composition. Keep intentional internal gaps and meaningful plot areas.
 2. **Export:** measure the final painted bounds and use their union as the SVG's
    outer rectangle. This trims unused margins without changing the layout.
+   Then expand that rectangle with `balanceAround(base, complete)` so teaching
+   annotations that hang off one side get matching empty space on the other.
+   Base, emphasis, and callout stages share this viewBox so a staged reveal
+   does not jump. A board with no overflow keeps tight bounds.
 
 Implement this through shared bounds helpers used by every renderer, rather than
 per-chart hardcoded crop values. `renderXyGraphDrawing()` and
@@ -292,7 +311,8 @@ applies each group's transform to its bounds, unions the results, and sets the
 root viewBox to `"minX minY width height"`. Set the root width and height to
 those same dimensions so its intrinsic aspect ratio matches the content. A
 nonzero viewBox origin is valid; translating all content to `(0, 0)` is
-optional.
+optional. `WhiteboardRenderResult.bounds` is this viewBox; `contentBounds` is
+the painted union before optical centering.
 
 Bounds must cover the actual drawing:
 

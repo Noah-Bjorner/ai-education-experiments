@@ -130,6 +130,8 @@ export type FreeformElement = Freeform["elements"][number];
 export const freeform = {
   type: "freeform",
   schema: freeformSchema,
+  useWhen:
+    "schematics from text, shapes, and arrows when no specialized type fits.",
   instructions:
     `Use freeform for schematic explanations that do not fit a specialized chart, geometry, or math figure. Generate the complete scene in this spec; no prompt or SVG fields.
 Lay out the scene in an 800 by 440 logical area, beneath an automatically drawn title. X increases rightward, Y downward. Keep the main diagram inside that area so scale stays consistent; inset large containers so labels fit beside them. A label that spills past an edge is drawn (the export grows) rather than cropped. Labels may sit in or on rectangles and ellipses. Do not stack labels on each other or run connectors through text. Elements render in array order.

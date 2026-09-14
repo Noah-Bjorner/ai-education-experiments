@@ -24,6 +24,7 @@ export type MathExpressions = z.infer<typeof mathExpressionsSchema>;
 export const mathExpressions = {
   type: "math_expressions",
   schema: mathExpressionsSchema,
+  useWhen: "formulas or a short algebra sequence; not diagram labels or prose.",
   instructions: String.raw`### When to use it
 
 Use for equations, formulas, or a short sequence of algebra steps. Each expression is a separate centered row, in supplied order.

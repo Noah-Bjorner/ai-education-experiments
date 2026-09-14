@@ -1,10 +1,40 @@
 import { whiteboardFigures } from "./figures/index.ts";
+import type { WhiteboardOrientation } from "./schema.ts";
 
 function formatJsonExample(value: unknown): string {
   return ["```json", JSON.stringify(value, null, 2), "```"].join("\n");
 }
 
-export const WHITEBOARD_SPEC_SYSTEM_PROMPT = `# Task
+function placingFiguresSection(orientation: WhiteboardOrientation): string {
+  const packing = orientation === "portrait"
+    ? `- The board is viewed in portrait. Stack every figure in a single column from top to bottom. Never use side "left" or "right", even for comparisons.
+- Every later figure anchors to the previous figure with side "bottom".`
+    : `- The board is viewed in landscape. Place at most three figures side by side in a row. A fourth figure starts a new row underneath the first figure of the previous row.
+- Within a row, anchor each next figure to the previous with side "right".
+- To start a new row, anchor to the first figure of the previous row with side "bottom", then continue that row with side "right".
+- Never place a fourth figure in the same row.
+- Text questions, notes, and takeaways still use side "bottom" and sit on their own row, not beside a visualization.`;
+
+  return `# Placing figures
+
+- Use one figure by default. Its \`anchor\` and \`side\` must both be null.
+- Every figure must have a unique \`id\` and flat \`anchor\` and \`side\` fields.
+- The first figure is the only root: \`anchor: null, side: null\`.
+- Every later figure sets \`anchor\` to an earlier figure's ID and \`side\` to "top", "left", "right", or "bottom".
+- Anchor to any earlier figure, not necessarily the previous one. Do not use forward references or self references.
+${packing}
+- The renderer packs figures for this orientation and adds space for all content, including annotations.
+- Placement uses only anchor and side. Do not include layout, alignment, size, gap, or board coordinates.
+- Text reading order: questions precede their answering visualization, which anchors below the question with side "bottom". Notes and takeaways follow their visualization, anchored below it or chained below its other notes/takeaways. See the text figure rules for text-only boards and question groups.
+
+Prefer combining related content into one figure when that is clearer than using separate figures.
+Prefer the simplest figure types and arrangement that accomplish the educational or communication goal.`;
+}
+
+export function whiteboardSpecSystemPrompt(
+  orientation: WhiteboardOrientation = "portrait",
+): string {
+  return `# Task
 
 Create a whiteboard spec that accomplishes the user's educational or communication goal.
 The goal describes what the audience should understand or take away.
@@ -71,20 +101,7 @@ This example demonstrates the output structure.
 Choose the placements, figure types, and content for the actual goal.
 Return only the JSON object, without Markdown fences or explanations.
 
-# Placing figures
-
-- Use one figure by default. Its \`anchor\` and \`side\` must both be null.
-- Every figure must have a unique \`id\` and flat \`anchor\` and \`side\` fields.
-- The first figure is the only root: \`anchor: null, side: null\`.
-- Every later figure sets \`anchor\` to an earlier figure's ID and \`side\` to "top", "left", "right", or "bottom".
-- Anchor to any earlier figure, not necessarily the previous one. Do not use forward references or self references.
-- For a horizontal comparison, anchor the second figure to the first with side "right". For a vertical sequence, anchor each next figure to its predecessor with side "bottom".
-- The renderer centers figures along the shared edge and adds space for all content, including annotations. If figures collide, it moves the later one farther along its side direction.
-- Placement uses only anchor and side. Do not include layout, alignment, size, gap, or board coordinates.
-- Text reading order: questions precede their answering visualization, which anchors below the question with side "bottom". Notes and takeaways follow their visualization, anchored below it or chained below its other notes/takeaways. See the text figure rules for text-only boards and question groups.
-
-Prefer combining related content into one figure when that is clearer than using separate figures.
-Prefer the simplest figure types and arrangement that accomplish the educational or communication goal.
+${placingFiguresSection(orientation)}
 
 # Titles
 
@@ -153,6 +170,9 @@ Before returning the JSON, check that:
 - The visual content makes the intended takeaway clear and serves the goal.
 - Values and labels agree with the facts and constraints supplied with the goal.
 - Illustrative values are clearly identified.`;
+}
+
+export const WHITEBOARD_SPEC_SYSTEM_PROMPT = whiteboardSpecSystemPrompt();
 
 export const WHITEBOARD_GOAL_WRAPPER_PROMPT = (goal: string) =>
   `## Goal

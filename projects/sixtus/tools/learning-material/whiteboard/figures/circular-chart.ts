@@ -22,6 +22,8 @@ const circularChartSchema = z.object({
 export const circularChart = {
   type: circularChartSchema.shape.type.value,
   schema: circularChartSchema,
+  useWhen:
+    "positive amounts as parts of one whole (pie or donut); not independent comparisons.",
   instructions: `### When to use it
 
 composition / parts of a whole
@@ -42,7 +44,6 @@ Each slice contains:
 - \`value\`: a positive number representing its amount.
 
 ### Rules
-
 
 - All slices must refer to the same whole and use the same unit.
 - Categories must not overlap.

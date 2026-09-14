@@ -242,7 +242,7 @@ Deno.test("all gallery boards render through the parent pipeline in visual readi
       renderWhiteboardSvg({
         title: null,
         figures: [{ ...figure, anchor: null, side: null }],
-      }).bounds
+      }).contentBounds
     );
     for (let i = 1; i < board.figures.length; i++) {
       const above = result.figurePlacements[i - 1],

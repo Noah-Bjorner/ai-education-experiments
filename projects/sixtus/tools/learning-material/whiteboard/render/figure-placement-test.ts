@@ -5,9 +5,14 @@ import {
   assertThrows,
 } from "@std/assert";
 import { z } from "@zod";
-import { WhiteboardOutput, type WhiteboardSpec } from "../schema.ts";
+import {
+  type WhiteboardOrientation,
+  WhiteboardOutput,
+  type WhiteboardSpec,
+} from "../schema.ts";
 import { type Bounds, type Drawing } from "./bounds.ts";
 import { figureAllocation, placeFigures } from "./figure-placement.ts";
+import { whiteboardSpecSystemPrompt } from "../prompt.ts";
 
 type Side = NonNullable<WhiteboardSpec["figures"][number]["side"]>;
 const figure = (
@@ -23,9 +28,28 @@ const figure = (
   annotations: [],
   expressions: [{ id: "value", latex: "x=1" }],
 });
+const note = (
+  id: string,
+  anchor: string | null = null,
+  side: Side | null = null,
+) => ({
+  type: "text" as const,
+  id,
+  anchor,
+  side,
+  title: null,
+  annotations: [],
+  role: "note" as const,
+  text: "Note",
+});
 const drawing = (bounds: Bounds): Drawing => ({ markup: "", bounds });
-const boardBounds = (spec: WhiteboardSpec, drawings: Drawing[], gap = 32) =>
-  placeFigures(spec, drawings, { gap }).map((p, i) => ({
+const boardBounds = (
+  spec: WhiteboardSpec,
+  drawings: Drawing[],
+  gap = 32,
+  orientation?: WhiteboardOrientation,
+) =>
+  placeFigures(spec, drawings, { gap, orientation }).map((p, i) => ({
     ...drawings[i].bounds!,
     x: drawings[i].bounds!.x + p.x,
     y: drawings[i].bounds!.y + p.y,
@@ -188,4 +212,62 @@ Deno.test("allocation is per figure and rejects invalid renderer options", () =>
   ) {
     assertThrows(() => figureAllocation(options), Error, "finite positive");
   }
+});
+
+Deno.test("portrait packs a side-by-side spec into one centered column", () => {
+  const spec = {
+    title: null,
+    figures: [figure("a"), figure("b", "a", "right"), figure("c", "a", "right")],
+  };
+  const drawings = [
+    drawing({ x: 0, y: 0, width: 200, height: 100 }),
+    drawing({ x: 0, y: 0, width: 80, height: 60 }),
+    drawing({ x: 0, y: 0, width: 120, height: 40 }),
+  ];
+  const boxes = boardBounds(spec, drawings, 20, "portrait");
+  assertAlmostEquals(boxes[1].x + boxes[1].width / 2, boxes[0].x + 100);
+  assertAlmostEquals(boxes[2].x + boxes[2].width / 2, boxes[0].x + 100);
+  assertEquals(boxes[1].y, boxes[0].y + boxes[0].height + 20);
+  assertEquals(boxes[2].y, boxes[1].y + boxes[1].height + 20);
+  for (let i = 1; i < boxes.length; i++) {
+    assert(separated(boxes[i], boxes[i - 1], 20));
+  }
+});
+
+Deno.test("landscape wraps after three visualizations and keeps text on its own row", () => {
+  const spec = {
+    title: null,
+    figures: [
+      figure("a"),
+      figure("b", "a", "bottom"),
+      figure("c", "b", "bottom"),
+      figure("d", "c", "bottom"),
+      note("n", "d", "bottom"),
+    ],
+  };
+  const drawings = spec.figures.map(() =>
+    drawing({ x: 0, y: 0, width: 100, height: 50 })
+  );
+  const boxes = boardBounds(spec, drawings, 10, "landscape");
+  assertEquals(boxes[1].x, boxes[0].x + 110);
+  assertEquals(boxes[1].y, boxes[0].y);
+  assertEquals(boxes[2].x, boxes[1].x + 110);
+  assertEquals(boxes[3].x, boxes[0].x);
+  assertEquals(boxes[3].y, boxes[0].y + 60);
+  assertEquals(boxes[4].x, boxes[0].x);
+  assertEquals(boxes[4].y, boxes[3].y + 60);
+  for (let i = 1; i < boxes.length; i++) {
+    for (let j = 0; j < i; j++) assert(separated(boxes[i], boxes[j], 10));
+  }
+});
+
+Deno.test("spec system prompt placement rules follow orientation", () => {
+  const portrait = whiteboardSpecSystemPrompt("portrait");
+  const landscape = whiteboardSpecSystemPrompt("landscape");
+  assert(portrait.includes("viewed in portrait"));
+  assert(portrait.includes('Never use side "left" or "right"'));
+  assert(!portrait.includes("at most three figures"));
+  assert(landscape.includes("viewed in landscape"));
+  assert(landscape.includes("at most three figures"));
+  assert(!landscape.includes('Never use side "left" or "right"'));
 });

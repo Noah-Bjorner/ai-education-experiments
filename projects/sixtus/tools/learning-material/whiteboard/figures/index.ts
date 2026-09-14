@@ -17,12 +17,14 @@ export { geometry, geometrySchema } from "./geometry.ts";
 export type { Geometry } from "./geometry.ts";
 export { resolveGeometry } from "./geometry-resolver.ts";
 
+export const whiteboardFigureCategories = {
+  charts: [xyChart, circularChart],
+  math: [mathExpressions, coordinatePlot, geometry],
+  miscellaneous: [freeform, textFigure],
+} as const;
+
 export const whiteboardFigures = [
-  xyChart,
-  circularChart,
-  mathExpressions,
-  coordinatePlot,
-  geometry,
-  freeform,
-  textFigure,
+  ...whiteboardFigureCategories.charts,
+  ...whiteboardFigureCategories.math,
+  ...whiteboardFigureCategories.miscellaneous,
 ] as const;

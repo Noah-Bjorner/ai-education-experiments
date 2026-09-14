@@ -235,14 +235,14 @@ Deno.test("complete annotated figures never overlap on any anchor side", () => {
     const first = renderWhiteboardSvg(boardExample([chart]));
     const next = renderWhiteboardSvg(boardExample([second]));
     const a = {
-      ...first.bounds,
-      x: first.bounds.x + result.figurePlacements[0].x,
-      y: first.bounds.y + result.figurePlacements[0].y,
+      ...first.contentBounds,
+      x: first.contentBounds.x + result.figurePlacements[0].x,
+      y: first.contentBounds.y + result.figurePlacements[0].y,
     };
     const b = {
-      ...next.bounds,
-      x: next.bounds.x + result.figurePlacements[1].x,
-      y: next.bounds.y + result.figurePlacements[1].y,
+      ...next.contentBounds,
+      x: next.contentBounds.x + result.figurePlacements[1].x,
+      y: next.contentBounds.y + result.figurePlacements[1].y,
     };
     assert(!overlaps(inflate(a, 15), inflate(b, 15)));
   }
