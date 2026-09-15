@@ -24,26 +24,23 @@ export type MathExpressions = z.infer<typeof mathExpressionsSchema>;
 export const mathExpressions = {
   type: "math_expressions",
   schema: mathExpressionsSchema,
-  summary: "Typeset formulas or a short algebra sequence.",
-  useWhen: "the content is equations, not diagram labels or prose",
-  instructions: String.raw`### When to use it
-
-Use for equations, formulas, or a short sequence of algebra steps. Each expression is a separate centered row, in supplied order.
-
-### Fields and supported LaTeX
-
-- type: always "math_expressions".
-- title, id, annotations: follow the shared rules.
-- expressions: 1-8 objects with a unique stable id and a latex string (at most 2000 characters).
+  summary:
+    "Mathematical expressions, formulas, or equations displayed in rows.",
+  useWhen:
+    "the learner needs to read mathematical notation or follow a calculation or algebra sequence, such as substituting values into a formula, simplifying an expression, or solving an equation",
+  rules: String.raw`- Each expression is a separate centered row, in supplied order.
 - Supports MathJax base and AMS math: Greek letters, operators and relations, fractions, roots, scripts, sums/products/integrals with limits, \sin and other functions, \text{...}, \mathbb{R}, \left...\right delimiters, matrices, cases, and aligned equations.
 - Use braces around multi-character script arguments. Prefer math source without dollar signs or display wrappers (one surrounding pair is accepted).
 - The board uses Shantell Sans Math Medium everywhere. Equations use paths extracted from that same font; structural bars are drawn by the layout engine. Ordinary bold/italic styles use Medium. Calligraphic/Fraktur alphabets and unbundled symbols are unavailable; do not replace them with a different mathematical meaning. Double-struck letters supported: C, N, P, Q, R, Z.
 - This is math-mode LaTeX, not a full document compiler. No document preambles, package loading, user-defined macros, HTML, or external content. Unsupported commands or missing glyphs produce explicit errors.
 - No styling or coordinates are supplied by the agent. Expressions retain the shared display size; keep rows short enough to fit. More rows grow the figure vertically rather than shrinking the text.
-- JSON must escape each LaTeX backslash: "\\frac{1}{2}".
-- Annotation targets: <figureId>.title (only when title is not null) and <figureId>.<expressionId>.expression. The latter covers the whole row and supports text emphasis and callouts. Individual terms are not targets yet.`,
+- JSON must escape each LaTeX backslash: "\\frac{1}{2}".`,
+  annotationTargets: [
+    "<figureId>.title — only when title is not null",
+    "<figureId>.<expressionId>.expression — the whole row; text emphasis and callouts allowed. Individual terms are not targets yet.",
+  ],
   example: {
-    goal: "Show the steps for solving x/2 + 3 = 7.",
+    instructions: "Show the steps for solving x/2 + 3 = 7.",
     output: {
       type: "math_expressions",
       id: "solve",

@@ -1,7 +1,7 @@
 import { z } from "@zod";
 
 export const figureTitleField = z.string().min(1).nullable().describe(
-  "Short learner-facing title shown above this figure. Null when the figure speaks for itself or the board title already names it.",
+  "Short learner-facing title identifying what this figure shows only when its content does not already make that clear. Default to null; do not repeat the board title, labels, or a framing question supplied in the instructions.",
 );
 
 export const elementIdField = z.string().regex(/^[a-z][a-z0-9-]*$/).describe(
@@ -67,13 +67,16 @@ export const figureAnnotationsField = z.array(annotationSchema).describe(
 export type WhiteboardFigureDefinition<S extends z.ZodType<{ type: string }>> = {
   type: z.infer<S>["type"];
   schema: S;
-  /** One-line planner identity: what this figure is / what it draws. */
+
+  // planner catalog only — not in the figure prompt
   summary: string;
-  /** One-line planner routing: when to pick it, variants, nearest wrong neighbor. */
   useWhen: string;
-  instructions: string;
+
+  // figure-generator grammar
+  rules: string;
+  annotationTargets: string[];
   example: {
-    goal: string;
+    instructions: string;
     output: z.infer<S>;
   };
 };

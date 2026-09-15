@@ -28,8 +28,9 @@ export function expandBounds(b: Bounds | null, amount: number): Bounds | null {
 }
 
 /**
- * Expand `content` so `subject` stays the optical center. Teaching annotations
- * that hang off one side get matching empty space on the opposite side.
+ * Expand `content` horizontally so `subject` stays the optical center.
+ * Left/right annotation overflow gets matching empty space on the opposite
+ * side. Top and bottom stay a tight crop around the painted union.
  */
 export function balanceAround(subject: Bounds, content: Bounds): Bounds {
   const left = Math.max(0, subject.x - content.x);
@@ -37,19 +38,16 @@ export function balanceAround(subject: Bounds, content: Bounds): Bounds {
     0,
     content.x + content.width - (subject.x + subject.width),
   );
-  const top = Math.max(0, subject.y - content.y);
-  const bottom = Math.max(
-    0,
-    content.y + content.height - (subject.y + subject.height),
-  );
   const padX = Math.max(left, right);
-  const padY = Math.max(top, bottom);
-  return {
-    x: subject.x - padX,
-    y: subject.y - padY,
-    width: subject.width + 2 * padX,
-    height: subject.height + 2 * padY,
-  };
+  return unionBounds([
+    content,
+    {
+      x: subject.x - padX,
+      y: subject.y,
+      width: subject.width + 2 * padX,
+      height: subject.height,
+    },
+  ])!;
 }
 
 /** Round outward at subpixel precision, without adding presentation padding. */

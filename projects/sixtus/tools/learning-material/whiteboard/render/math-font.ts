@@ -1,3 +1,4 @@
+import { renderError } from "./issues.ts";
 import type { LiteElement } from "@mathjax/src/js/adaptors/lite/Element.js";
 import type { LiteText } from "@mathjax/src/js/adaptors/lite/Text.js";
 import type { LiteDocument } from "@mathjax/src/js/adaptors/lite/Document.js";
@@ -121,7 +122,7 @@ export class ShantellMathFont extends SvgFontData {
     n = aliases[n] ?? n;
     if (variant === "double-struck" && n < 128) {
       if (!blackboard[n]) {
-        throw new Error(
+        throw renderError("UNSUPPORTED_GLYPH", 
           `Shantell Sans Math has no double-struck glyph for '${
             String.fromCodePoint(n)
           }'.`,
@@ -133,7 +134,7 @@ export class ShantellMathFont extends SvgFontData {
       variant.includes("fraktur") || variant.includes("calligraphic") ||
       variant === "script" || variant === "bold-script"
     ) {
-      throw new Error(
+      throw renderError("UNSUPPORTED_GLYPH", 
         "Shantell Sans Math does not include calligraphic or Fraktur alphabets.",
       );
     }
@@ -142,7 +143,7 @@ export class ShantellMathFont extends SvgFontData {
     // are layout-only. MathJax's own font maps them to empty metrics.
     if (/\p{Cf}|\p{Cc}/u.test(character)) return EMPTY_GLYPH;
     if (!Object.hasOwn(outlines, n)) {
-      throw new Error(
+      throw renderError("UNSUPPORTED_GLYPH", 
         `Shantell Sans Math has no glyph for '${character}' (U+${
           n.toString(16).toUpperCase()
         }).`,

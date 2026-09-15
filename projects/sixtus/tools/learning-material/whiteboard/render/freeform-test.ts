@@ -12,7 +12,7 @@ import {
   freeformSchema,
 } from "../figures/freeform.ts";
 import { WhiteboardOutput } from "../schema.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
 import { renderFreeformDrawing, wrapFreeformText } from "./freeform.ts";
 import { freeformExamples } from "./freeform-examples.ts";
 import { renderWhiteboardSvg } from "./index.ts";
@@ -96,7 +96,9 @@ Deno.test("freeform validates attachments and resolves forward references", () =
     to: { target: "box" },
   };
   const d = draw(spec([arrow, box]));
-  const outline = d.targets.get("test.arrow.mark")!.outline!;
+  const attachment = d.targets.get("test.arrow.mark")!.attachment;
+  assert(attachment.type === "segments");
+  const outline = attachment.segments;
   assertAlmostEquals(outline[0].b.x, 240);
   assertAlmostEquals(outline[0].b.y, 284);
   assertThrows(
@@ -279,7 +281,9 @@ Deno.test("freeform elliptical and marker attachments meet their actual outlines
         to: { target: "shape" },
       }, shape]),
     );
-    const b = d.targets.get("test.arrow.mark")!.outline![0].b;
+    const attachment = d.targets.get("test.arrow.mark")!.attachment;
+    assert(attachment.type === "segments");
+    const b = attachment.segments[0].b;
     assertAlmostEquals(b.y, 264);
     assertAlmostEquals(
       b.x,
@@ -399,7 +403,9 @@ Deno.test("freeform validates options, titles, gaps and diagonal ellipse endpoin
       to: { x: 680, y: 360 },
     }]),
   );
-  const a = diagonal.targets.get("test.diagonal.mark")!.outline![0].a;
+  const attachment = diagonal.targets.get("test.diagonal.mark")!.attachment;
+  assert(attachment.type === "segments");
+  const a = attachment.segments[0].a;
   assertAlmostEquals(
     ((a.x - 400) / 100) ** 2 + ((a.y - 64 - 220) / 50) ** 2,
     1,

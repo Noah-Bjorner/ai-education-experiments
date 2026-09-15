@@ -5,7 +5,7 @@ import {
   mathExpressionsSchema,
 } from "../figures/math-expressions.ts";
 import { whiteboardInputSchema, WhiteboardOutput } from "../schema.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
 import { normalizeMathLatex, renderMathLatex } from "./latex.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderWhiteboardSvg } from "./index.ts";
@@ -20,14 +20,12 @@ Deno.test("math figure is registered in input, output and generation instruction
   assertEquals(
     whiteboardInputSchema.parse({
       goal: "Solve an equation",
-      domain: "math",
       mode: "fast",
       format: "svg",
       orientation: "landscape",
     }),
     {
       goal: "Solve an equation",
-      domain: "math",
       mode: "fast",
       format: "svg",
       orientation: "landscape",

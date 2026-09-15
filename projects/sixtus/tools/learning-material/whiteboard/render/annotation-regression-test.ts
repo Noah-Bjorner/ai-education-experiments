@@ -8,7 +8,9 @@ import { renderGeometryDrawing } from "./geometry.ts";
 import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderWhiteboardSvg } from "./index.ts";
-import { renderEmphasisAnnotations } from "./annotations.ts";
+import { resolveAnnotations } from "./annotations.ts";
+import { renderEmphasis } from "./emphasis.ts";
+import type { ResolvedEmphasis } from "./annotation-types.ts";
 import { overlaps } from "./placement.ts";
 import type { Point } from "./bounds.ts";
 
@@ -120,10 +122,17 @@ Deno.test("circling an equation encloses its bounds without reaching the title o
       targetIds: [targetId],
       content: null,
     }];
-    const result = renderEmphasisAnnotations(annotations, scene.targets, {
-      id: "test",
-      figureId: "solve",
-    });
+    const result = renderEmphasis(
+      resolveAnnotations(
+        annotations,
+        scene.targets,
+        "solve",
+      ) as ResolvedEmphasis[],
+      {
+        id: "test",
+        figureId: "solve",
+      },
+    );
     const oval = result.drawing.bounds!,
       target = scene.targets.get(targetId)!.bounds;
     assert(oval.x < target.x && oval.y < target.y);
@@ -142,9 +151,12 @@ Deno.test("circling an equation encloses its bounds without reaching the title o
   // Wide text uses a tight box; extra width does not increase its height.
   const target = scene.targets.get("solve.answer.expression")!;
   const measure = (width: number) =>
-    renderEmphasisAnnotations(
-      [{ type: "circle", targetIds: ["row"], content: null }],
-      new Map([["row", { ...target, bounds: { ...target.bounds, width } }]]),
+    renderEmphasis(
+      resolveAnnotations(
+        [{ type: "circle", targetIds: ["row"], content: null }],
+        new Map([["row", { ...target, bounds: { ...target.bounds, width } }]]),
+        "solve",
+      ) as ResolvedEmphasis[],
       { id: "test", figureId: "solve", roughness: 0 },
     ).drawing.bounds!;
   assertAlmostEquals(measure(200).height, measure(600).height, 0.01);

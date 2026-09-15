@@ -1,10 +1,11 @@
-import { renderFreeformDrawing } from "./freeform.ts";
-import { renderTextFigureDrawing } from "./text.ts";
 import {
-  type WhiteboardFigureContent,
-  WhiteboardOutput,
-  type WhiteboardSpec,
-} from "../schema.ts";
+  figureOptionsKey,
+  type PreparedFigure,
+  prepareFigure,
+} from "./prepare.ts";
+import type { FigureRenderOptions } from "./options.ts";
+import { contextualize, renderError } from "./issues.ts";
+import { WhiteboardOutput, type WhiteboardSpec } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import {
   balanceAround,
@@ -15,29 +16,14 @@ import {
 } from "./bounds.ts";
 import { GRAPH_FONT_DEFS, GRAPH_FONT_STYLE } from "./font.ts";
 import {
-  type GraphOptions,
-  renderCircularGraphDrawing,
-  renderXyGraphDrawing,
-} from "./graphs.ts";
-import {
   figureAllocation,
   type FigurePlacement,
   placeFigures,
   type PlacementOptions,
 } from "./figure-placement.ts";
-import { renderEmphasisAnnotations } from "./annotations.ts";
-import { type CalloutPlacement, renderCallouts } from "./callouts.ts";
-import { renderMathExpressionsDrawing } from "./math-expressions.ts";
-import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
-import { renderGeometryDrawing } from "./geometry.ts";
-import type { TargetedDrawing } from "./targets.ts";
-import {
-  COLORS,
-  LINE_HEIGHT,
-  SERIES_COLORS,
-  SPACING,
-  TYPE_SCALE,
-} from "./theme.ts";
+import type { AnnotationDiagnostic } from "./annotation-types.ts";
+import { type CalloutPlacement } from "./callouts.ts";
+import { COLORS, LINE_HEIGHT, SPACING, TYPE_SCALE } from "./theme.ts";
 import { textBlock } from "./text-block.ts";
 import { boardTitleDisplay, withTitleBox } from "./titles.ts";
 
@@ -62,37 +48,11 @@ export type WhiteboardRenderResult = SvgRenderStage & {
     callouts: SvgRenderStage;
   };
   calloutPlacements: CalloutPlacement[];
+  annotationDiagnostics: AnnotationDiagnostic[];
   figurePlacements: FigurePlacement[];
   /** Painted union before optical centering; `bounds` is the shared viewBox. */
   contentBounds: Bounds;
 };
-
-type Figure = WhiteboardFigureContent;
-
-/** Dispatch base content by family; future diagram and asset types belong here. */
-function renderBaseFigure(
-  figure: Figure,
-  options: GraphOptions,
-): TargetedDrawing {
-  switch (figure.type) {
-    case "text":
-      return renderTextFigureDrawing(figure, options);
-    case "freeform":
-      return renderFreeformDrawing(figure, options);
-    case "xy_chart":
-      return renderXyGraphDrawing(figure, options);
-    case "pie_chart":
-      return renderCircularGraphDrawing(figure, options);
-    case "geometry":
-      return renderGeometryDrawing(figure, options);
-    case "math_expressions":
-      return renderMathExpressionsDrawing(figure, options);
-    case "coordinate_plot":
-      return renderCoordinatePlotDrawing(figure, options);
-    default:
-      throw new Error("Unsupported whiteboard figure type.");
-  }
-}
 
 function compose(
   figures: Drawing[],
@@ -185,92 +145,42 @@ export function renderWhiteboardSvg(
   options: WhiteboardRenderOptions = {},
 ): WhiteboardRenderResult {
   const spec = WhiteboardOutput.parse(input);
-  const allocation = figureAllocation(options);
-  for (const figure of spec.figures) {
-    const content = figure.type === "pie_chart"
-      ? figure.slices
-      : figure.type === "xy_chart"
-      ? figure.series.flatMap((s) => [s, ...s.points])
-      : figure.type === "geometry"
-      ? [
-        ...figure.points,
-        ...figure.objects,
-        ...figure.labels,
-        ...figure.markings,
-      ]
-      : (figure.type === "coordinate_plot" || figure.type === "freeform")
-      ? figure.elements
-      : figure.type === "text"
-      ? []
-      : figure.expressions;
-    const ids = content.flatMap((element) => element.id ? [element.id] : []);
-    if (new Set(ids).size !== ids.length) {
-      throw new Error(
-        `Duplicate element ID in figure '${figure.id}'.`,
-      );
-    }
+  const prepared = spec.figures.map((figure, i) => {
+    const { anchor: _anchor, side: _side, ...content } = figure;
+    const result = prepareFigure(content, figureOptions(options, i));
+    if (!result.ok) throw result.error;
+    return result.figure;
+  });
+  return composeWhiteboard(spec, prepared, options);
+}
+
+/** Compose drawings prepared with the same figure order/options in this request. */
+export function composeWhiteboard(
+  input: WhiteboardSpec,
+  prepared: PreparedFigure[],
+  options: WhiteboardRenderOptions = {},
+): WhiteboardRenderResult {
+  const spec = WhiteboardOutput.parse(input);
+  if (
+    prepared.length !== spec.figures.length || prepared.some((p, i) => {
+      const { anchor: _anchor, side: _side, ...content } = spec.figures[i];
+      return p.source !== JSON.stringify(content) ||
+        p.optionsKey !== figureOptionsKey(figureOptions(options, i));
+    })
+  ) {
+    throw renderError(
+      "INVALID_OPTIONS",
+      "Prepared figures must match the board content, order, and rendering options.",
+      { stage: "composition" },
+    );
   }
   const figureIds = spec.figures.map((figure) => figure.id);
-  const graphOptions = spec.figures.map((_, i): GraphOptions => ({
-    id: `${options.id ?? "whiteboard"}-figure-${i}`,
-    width: allocation.width,
-    height: allocation.height,
-    roughness: options.roughness ?? 1.5,
-    hatchGap: options.hatchGap ?? 9,
-    seed: options.seed ?? 10,
-  }));
   const title = spec.title ??
-    (spec.figures.map((figure) => figure.title).filter((
-      value,
-    ): value is string => value !== null).join("; ") || "Whiteboard");
-
-  // 1. Build the complete base SVG and retain figure-local target geometry.
-  const baseFigures = spec.figures.map((
-    { anchor: _anchor, side: _side, ...figure },
-    i,
-  ) =>
-    renderBaseFigure(
-      figure,
-      graphOptions[i],
-    )
-  );
-
-  const annotationOptions = graphOptions.map((options, i) => ({
-    ...options,
-    color: spec.figures[i].type === "math_expressions" ||
-        spec.figures[i].type === "freeform"
-      ? SERIES_COLORS[0]
-      : COLORS.ink,
-  }));
-
-  // 2. Add emphasis without changing or regenerating the base drawing.
-  const emphasisResults = baseFigures.map((drawing, i) =>
-    renderEmphasisAnnotations(
-      spec.figures[i].annotations ?? [],
-      drawing.targets,
-      {
-        ...annotationOptions[i],
-        figureId: figureIds[i],
-      },
-    )
-  );
-  const emphasizedFigures = baseFigures.map((drawing, i): Drawing => ({
-    markup: drawing.markup + emphasisResults[i].drawing.markup,
-    bounds: unionBounds([drawing.bounds, emphasisResults[i].drawing.bounds]),
-  }));
-  // 3. Place messages and route connectors around base content and emphasis.
-  const calloutResults = baseFigures.map((drawing, i) =>
-    renderCallouts(
-      emphasisResults[i].pendingCallouts,
-      drawing,
-      emphasisResults[i].obstacles,
-      annotationOptions[i],
-    )
-  );
-  const completeFigures = emphasizedFigures.map((drawing, i): Drawing => ({
-    markup: drawing.markup + calloutResults[i].drawing.markup,
-    bounds: unionBounds([drawing.bounds, calloutResults[i].drawing.bounds]),
-  }));
+    (spec.figures.map((figure) => figure.title).filter(Boolean).join("; ") ||
+      "Whiteboard");
+  const baseFigures = prepared.map((figure) => figure.base);
+  const emphasizedFigures = prepared.map((figure) => figure.emphasis);
+  const completeFigures = prepared.map((figure) => figure.complete);
   // 4. Place complete measured figures once, then reuse translations in every stage.
   const figurePlacements = placeFigures(spec, completeFigures, options);
   const baseComposed = compose(baseFigures, figurePlacements, figureIds);
@@ -285,7 +195,7 @@ export function renderWhiteboardSvg(
     figureIds,
   );
   const boardTitle = spec.title !== null
-    ? renderBoardTitle(spec.title, completeComposed, baseComposed, {
+    ? prepareBoardTitle(spec.title, completeComposed, baseComposed, {
       id: `${options.id ?? "whiteboard"}-board-title`,
       roughness: options.roughness ?? 1.5,
       seed: options.seed ?? 10,
@@ -307,7 +217,35 @@ export function renderWhiteboardSvg(
     ...callouts,
     contentBounds,
     stages: { base, emphasis, callouts },
-    calloutPlacements: calloutResults.flatMap((r) => r.placements),
+    calloutPlacements: prepared.flatMap((figure) => figure.calloutPlacements),
+    annotationDiagnostics: prepared.flatMap((figure) =>
+      figure.annotationDiagnostics
+    ),
     figurePlacements,
+  };
+}
+
+function prepareBoardTitle(
+  ...args: Parameters<typeof renderBoardTitle>
+): Drawing {
+  try {
+    return renderBoardTitle(...args);
+  } catch (error) {
+    throw contextualize(error, { stage: "title", path: ["title"] });
+  }
+}
+
+export function figureOptions(
+  options: WhiteboardRenderOptions,
+  index: number,
+): FigureRenderOptions {
+  const { width, height } = figureAllocation(options);
+  return {
+    id: `${options.id ?? "whiteboard"}-figure-${index}`,
+    width,
+    height,
+    roughness: options.roughness,
+    hatchGap: options.hatchGap,
+    seed: options.seed,
   };
 }

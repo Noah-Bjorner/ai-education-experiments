@@ -130,18 +130,24 @@ export type FreeformElement = Freeform["elements"][number];
 export const freeform = {
   type: "freeform",
   schema: freeformSchema,
-  summary: "A schematic from text, shapes, and arrows.",
-  useWhen: "no specialized type fits",
-  instructions:
-    `Use freeform for schematic explanations that do not fit a specialized chart, geometry, or math figure. Generate the complete scene in this spec; no prompt or SVG fields.
+  summary:
+    "A custom diagram assembled from text, simple shapes, lines, and arrows.",
+  useWhen:
+    "the learner needs a process, relationship, or grouping that the specialized figure types cannot express, such as a flowchart, a sender-to-receiver diagram, or objects grouped inside containers",
+  rules:
+    `Generate the complete scene in this spec; no prompt or SVG fields.
 Lay out the scene in an 800 by 440 logical area, beneath an automatically drawn title. X increases rightward, Y downward. Keep the main diagram inside that area so scale stays consistent; inset large containers so labels fit beside them. A label that spills past an edge is drawn (the export grows) rather than cropped. Labels may sit in or on rectangles and ellipses. Do not stack labels on each other or run connectors through text. Elements render in array order.
 Every element has id and optional color (ink or accent-1 through accent-6). Omit color so the base scene draws in ink; teaching annotations use accent-1. Use accent-2 through accent-6 only when categories must be distinguished, and never color the main diagram with accent-1. Rectangle: x,y at top left, width,height, optional fill boolean. Ellipse: x,y at center, rx,ry, optional fill; equal radii make a circle. Marker: x,y at center, radius, variant x/o/dot. Line: from/to {x,y}, optional dashed. Arrow: from/to each {x,y} or {target: elementId}, optional dashed. Arrow attachments use shape boundaries; arrows are straight and must avoid text.
 Text: content, width (maximum line width), align left/center/right, size small/normal/large (shared label/body/prominent typography), position {x,y} at the top-left of its text layout box or {target,side,gap?}. Attached text sits outside a rectangle, ellipse, or marker on top/right/bottom/left with a shared default gap. Text size and attachment gaps stay consistent when the renderer resizes the scene. References may point forward but only to these three shape types. Text wraps without truncation; allow enough height. Explicit newlines are preserved.
 Use small for object labels so they match labels in charts and geometry; normal for explanatory body text; large only for deliberately prominent content.
-Use the fewest objects needed. Keep labels short, repeated objects equally sized, related objects aligned, and colors consistent in meaning. Prefer an 8-unit spacing rhythm without altering meaningful positions. Use arrows only for meaningful direction or relationships. Do not stack labels or cross text with lines or arrows. Intentional shape containment and overlap are allowed. No images, arbitrary paths, rotation, or styling beyond these fields.
-Targets: <figureId>.title (only when title is not null); <figureId>.<textId>.label for text; <figureId>.<elementId>.mark for all other elements. Shared annotations may address these targets. Prefer specialized figures whenever they express the goal directly.`,
+Use the fewest objects needed. Keep labels short, repeated objects equally sized, related objects aligned, and colors consistent in meaning. Prefer an 8-unit spacing rhythm without altering meaningful positions. Use arrows only for meaningful direction or relationships. Do not stack labels or cross text with lines or arrows. Intentional shape containment and overlap are allowed. No images, arbitrary paths, rotation, or styling beyond these fields.`,
+  annotationTargets: [
+    "<figureId>.title — only when title is not null",
+    "<figureId>.<textId>.label — text elements",
+    "<figureId>.<elementId>.mark — all other elements",
+  ],
   example: {
-    goal: "Show a message moving from a sender to a receiver.",
+    instructions: "Show a message moving from a sender to a receiver.",
     output: {
       type: "freeform",
       id: "message",

@@ -7,7 +7,7 @@ import {
 } from "@std/assert";
 import { type Geometry, geometry } from "../figures/geometry.ts";
 import { WhiteboardOutput, whiteboardRequestSchema } from "../schema.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import { geometryExamples } from "./geometry-examples.ts";
 import { renderWhiteboardSvg } from "./index.ts";
@@ -67,7 +67,7 @@ Deno.test("all geometry examples render deterministically with semantic targets 
 Deno.test("geometry is available in generation and direct requests and composes with math and charts", () => {
   assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("## geometry"));
   assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("mathematical coordinates"));
-  assert(!geometry.instructions.includes("not implemented"));
+  assert(!geometry.rules.includes("not implemented"));
   const input = boardExample([geometryExamples[0], {
     type: "math_expressions",
     id: "area",

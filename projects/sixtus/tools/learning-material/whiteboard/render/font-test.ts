@@ -1,9 +1,15 @@
-import { assert, assertEquals } from "@std/assert";
+import { assert, assertEquals, assertThrows } from "@std/assert";
 import original from "./fonts/shantell-sans-metrics.json" with { type: "json" };
 import extended from "./fonts/shantell-sans-math-metrics.json" with {
   type: "json",
 };
-import { GRAPH_FONT_DEFS, GRAPH_FONT_FAMILY, graphTextBounds } from "./font.ts";
+import {
+  fitGraphText,
+  GRAPH_FONT_DEFS,
+  GRAPH_FONT_FAMILY,
+  graphTextBounds,
+  sanitizeGraphText,
+} from "./font.ts";
 import { renderMathLatex } from "./latex.ts";
 
 Deno.test("the extended whiteboard font preserves existing spacing and ink bounds", async () => {
@@ -45,4 +51,22 @@ Deno.test("all 93 added glyphs work in both whiteboard labels and math", () => {
     assert(math.markup.includes("<path"), character);
     assert(!math.markup.includes('d="MM'), character);
   }
+});
+
+Deno.test("plain text remaps or drops combining accents the font cannot paint", () => {
+  assertEquals(sanitizeGraphText("v\u20D7"), "v→");
+  assertEquals(fitGraphText("v\u20D7", 16, 200), "v→");
+  assertEquals(
+    graphTextBounds("v\u20D7", 16, 0, 0),
+    graphTextBounds("v→", 16, 0, 0),
+  );
+  assertEquals(sanitizeGraphText("x\u0302"), "x\u0302");
+  assert(graphTextBounds("x\u0302", 16, 0, 0));
+  assertEquals(sanitizeGraphText("x\u0305"), "x¯");
+  assertEquals(sanitizeGraphText("x\u20D6"), "x");
+  assertThrows(
+    () => graphTextBounds("🦄", 16, 0, 0),
+    Error,
+    "has no glyph",
+  );
 });

@@ -29,39 +29,14 @@ export const xyChart = {
   type: xyChartSchema.shape.type.value,
   schema: xyChartSchema,
   summary:
-    "Supplied data on X/Y: bars for categories, line or area for trends, scatter for pairs.",
-  useWhen: "the values are tabulated, not expression-defined functions",
-  instructions: `### When to use it
-
-trends, comparisons, or distributions on X/Y (line, bar, scatter, or area)
-Use for supplied values plotted against categories or a numeric X axis. Use coordinate_plot for expression-defined functions, domains, and coordinate geometry.
-Choose \`chartStyle\` according to the relationship:
+    "A bar, line, area, or scatter chart built from explicit data points, with one or more series.",
+  useWhen:
+    "the learner needs to compare categories (bar), follow trends over time or another numeric variable (line or area), or see relationships between measurements (scatter). Use coordinate_plot for functions defined by formulas",
+  rules: `Choose \`chartStyle\` according to the relationship:
 - \`line\`: change over an ordered numeric axis, such as time or an input variable.
 - \`bar\`: comparisons between categories.
 - \`area\`: magnitude over an ordered numeric axis, filled to zero (multiple series overlap, not stack).
 - \`scatter\`: relationships between paired numeric observations.
-
-### Fields
-
-- \`type\`: always "xy_chart".
-- \`title\`: the chart's title.
-- \`id\` and \`annotations\`: follow the shared annotation rules.
-- \`chartStyle\`: "line", "bar", "scatter", or "area".
-- \`xLabel\`: the horizontal axis label, including units when they help a learner read the values.
-- \`yLabel\`: the vertical axis label, including units when they help a learner read the values.
-- \`series\`: an array of series.
-
-Each series contains:
-- \`id\`: a stable ID, unique among all series and points in this figure.
-- \`name\`: a short label identifying the series.
-- \`points\`: an array of objects containing \`x\` and \`y\`.
-
-Each point contains:
-- \`id\`: a stable ID, unique among all series and points in this figure.
-- \`x\`: a number for a numeric axis, or a string for a category.
-- \`y\`: a number.
-
-### Rules
 
 - Use numeric X values for line, area, and scatter charts.
 - For category comparisons, use bar charts with category names as X values.
@@ -69,10 +44,17 @@ Each point contains:
 - Order line- and area-chart points by ascending X value.
 - Give each series a distinct, meaningful name.
 - All series share the chart's axis labels and units.
-- Annotation targets: \`<figureId>.title\` (only when title is not null), \`<figureId>.x-label\`, \`<figureId>.y-label\`, \`<figureId>.<seriesId>.legend-label\`, and \`<figureId>.<pointId>.mark\`. Point marks mean the plotted point or bar; do not invent separate point-label targets.
-- Use multiple series in one XY chart when they share axes and comparing them together is clearer than using separate figures.`,
+- Use multiple series in one XY chart when they share axes and comparing them together is clearer than using separate figures.
+- Point marks mean the plotted point or bar; do not invent separate point-label targets.`,
+  annotationTargets: [
+    "<figureId>.title — only when title is not null",
+    "<figureId>.x-label",
+    "<figureId>.y-label",
+    "<figureId>.<seriesId>.legend-label",
+    "<figureId>.<pointId>.mark — the plotted point or bar",
+  ],
   example: {
-    goal:
+    instructions:
       "Help a learner understand that y = 2x increases by 2 for every increase of 1 in x, using x = 0, 1, 2, and 3.",
     output: {
       "type": "xy_chart",

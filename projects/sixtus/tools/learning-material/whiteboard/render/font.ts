@@ -1,3 +1,4 @@
+import { renderError } from "./issues.ts";
 import { escapeXml } from "./svg.ts";
 import metrics from "./fonts/shantell-sans-math-metrics.json" with {
   type: "json",
@@ -37,6 +38,42 @@ export const GRAPH_FONT_STYLE =
 const advances: Record<string, number> = metrics.advances;
 const glyphBounds: Record<string, number[] | null> = metrics.glyphBounds;
 
+/** Combining accents MathJax already remaps; labels get the same spacing stand-ins. */
+const GLYPH_ALIASES: Record<number, number> = {
+  0x302: 94, // ̂ → ^
+  0x303: 126, // ̃ → ~
+  0x304: 175, // ̄ → ¯
+  0x305: 175, // ̅ → ¯
+  0x20d7: 0x2192, // ⃗ → →
+};
+
+function hasGlyph(code: number): boolean {
+  return String(code) in glyphBounds;
+}
+
+/**
+ * Keep NFC letters, replace a few math accents with painted stand-ins, and
+ * drop other combining marks the font cannot measure.
+ */
+export function sanitizeGraphText(value: string): string {
+  let result = "";
+  for (const character of value.normalize("NFC")) {
+    const code = character.codePointAt(0)!;
+    if (hasGlyph(code)) {
+      result += character;
+      continue;
+    }
+    const aliased = GLYPH_ALIASES[code];
+    if (aliased !== undefined && hasGlyph(aliased)) {
+      result += String.fromCodePoint(aliased);
+      continue;
+    }
+    if (/\p{M}/u.test(character)) continue;
+    result += character;
+  }
+  return result;
+}
+
 /** Painted letter extents, not advance widths (which also include whitespace). */
 export function graphTextBounds(
   value: string,
@@ -45,7 +82,7 @@ export function graphTextBounds(
   y: number,
   anchor = "start",
 ): Bounds | null {
-  const normalized = value.normalize("NFC");
+  const normalized = sanitizeGraphText(value);
   const width = measureGraphText(normalized, fontSize);
   const origin = x -
     (anchor === "middle" ? width / 2 : anchor === "end" ? width : 0);
@@ -56,7 +93,7 @@ export function graphTextBounds(
     const key = String(character.codePointAt(0));
     if (!(key in glyphBounds)) {
       // Unknown system fallback glyphs cannot be measured reliably on the server.
-      throw new Error(
+      throw renderError("UNSUPPORTED_GLYPH", 
         `${GRAPH_FONT_FAMILY} has no glyph for '${character}'; provide font metrics before exporting tight bounds.`,
       );
     }
@@ -77,7 +114,7 @@ export function graphTextBounds(
 /** Supported glyphs use real font advances. Other scripts use a fallback estimate. */
 export function measureGraphText(value: string, fontSize: number): number {
   let width = 0;
-  for (const character of value.normalize("NFC")) {
+  for (const character of sanitizeGraphText(value)) {
     width += advances[String(character.codePointAt(0))] ??
       metrics.fallbackAdvance;
   }
@@ -90,7 +127,7 @@ export function fitGraphText(
   fontSize: number,
   maxWidth: number,
 ): string {
-  const normalized = value.normalize("NFC");
+  const normalized = sanitizeGraphText(value);
   if (measureGraphText(normalized, fontSize) <= maxWidth) return normalized;
   const ellipsis = "…";
   let width = measureGraphText(ellipsis, fontSize);
@@ -112,7 +149,7 @@ export function wrapGraphText(
   width: number,
 ): string[] {
   const lines: string[] = [];
-  for (const paragraph of value.normalize("NFC").split("\n")) {
+  for (const paragraph of sanitizeGraphText(value).split("\n")) {
     let line = "";
     for (const token of paragraph.match(/\s+|\S+/g) ?? []) {
       if (measureGraphText(line + token, size) <= width) {
@@ -125,7 +162,7 @@ export function wrapGraphText(
       }
       for (const ch of token) {
         if (measureGraphText(ch, size) > width) {
-          throw new Error("Text width is narrower than a glyph");
+          throw renderError("CONTENT_DOES_NOT_FIT", "Text width is narrower than a glyph");
         }
         if (measureGraphText(line + ch, size) > width) {
           lines.push(line);

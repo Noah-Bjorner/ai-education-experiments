@@ -1,3 +1,7 @@
+import { drawingBuilder } from "./drawing.ts";
+import { textLabel } from "./label.ts";
+import { contextualize, renderError } from "./issues.ts";
+import { resolveFigureOptions } from "./options.ts";
 import type { WhiteboardFigureContent } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import { handwritten, renderHandwritten } from "./handwritten.ts";
@@ -23,7 +27,6 @@ import {
   TYPE_SCALE,
 } from "./theme.ts";
 import {
-  registerTarget,
   type RenderTarget,
   type ScenePart,
   type TargetedDrawing,
@@ -50,69 +53,17 @@ export const CIRCULAR_STYLE = {
   donutHole: 0.52,
 } as const;
 
-export type GraphOptions = {
-  /** Must be unique when several graph groups share one SVG. */
-  id: string;
-  /** Internal layout allocation. Final exports shrink to painted content. */
-  width?: number;
-  height?: number;
-  roughness?: number;
-  hatchGap?: number;
-  seed?: number;
-};
+export type { FigureRenderOptions as GraphOptions } from "./options.ts";
+import type { FigureRenderOptions as GraphOptions } from "./options.ts";
 
 function settings(options: GraphOptions) {
-  const result = {
-    width: 800,
-    height: 520,
-    roughness: 1.5,
-    hatchGap: 9,
-    seed: 10,
-    ...options,
-  };
-  if (!/^[a-zA-Z][\w-]*$/.test(result.id)) {
-    throw new Error("Graph id must be a simple SVG identifier.");
-  }
-  if (
-    ![
-      result.width,
-      result.height,
-      result.roughness,
-      result.hatchGap,
-      result.seed,
-    ].every(Number.isFinite) ||
-    result.width < 600 || result.height < 400 || result.roughness < 0 ||
-    result.hatchGap < 2
-  ) {
-    throw new Error(
-      "Graphs need width >= 600, height >= 400, roughness >= 0, hatchGap >= 2, and finite options.",
-    );
-  }
+  const result = resolveFigureOptions(options);
+  if (result.width < 600 || result.height < 400) throw renderError("INVALID_OPTIONS", "Graphs need width >= 600 and height >= 400.");
   return result;
 }
 
-// Keep labels within their allocation. The full text remains in an SVG title.
-function text(
-  value: string,
-  x: number,
-  y: number,
-  size: number = TYPE_SCALE.label,
-  anchor = "start",
-  color: string = INK,
-  maxWidth = Infinity,
-): ScenePart {
-  const visible = fitGraphText(value, size, maxWidth);
-  const markup =
-    `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" fill="${color}"><title>${
-      escapeXml(value)
-    }</title>${escapeXml(visible)}</text>`;
-  const bounds = graphTextBounds(visible, size, x, y, anchor);
-  return {
-    markup,
-    bounds,
-    obstacles: bounds ? [{ bounds, kind: "text" }] : [],
-  };
-}
+// Shared labels retain full text in an SVG title when visually truncated.
+const text = textLabel;
 
 function group(
   title: string | null,
@@ -124,7 +75,7 @@ function group(
   pen: { id: string; seed: number; roughness: number },
 ): TargetedDrawing {
   const bodyBounds = unionBounds(parts.map((p) => p.bounds));
-  if (!bodyBounds) throw new Error("A graph needs visible content.");
+  if (!bodyBounds) throw renderError("INVALID_GEOMETRY", "A graph needs visible content.");
   const label = title ?? namespace;
   const markup = `<g style="${GRAPH_FONT_STYLE}" role="img" aria-label="${
     escapeXml(label)
@@ -168,7 +119,7 @@ function axis(values: number[], includeZero = false) {
   const low = Math.floor(min / step) * step;
   const high = Math.ceil(max / step) * step;
   if (!Number.isFinite(high - low) || high <= low || step <= 0) {
-    throw new Error("Axis values exceed the supported numeric range.");
+    throw renderError("INVALID_GEOMETRY", "Axis values exceed the supported numeric range.");
   }
   const ticks = Array.from(
     { length: Math.round((high - low) / step) + 1 },
@@ -203,13 +154,14 @@ export function renderXyGraphDrawing(
 ): TargetedDrawing {
   const c = settings(options);
   const namespace = chart.id ?? c.id;
-  const targets = new Map<string, RenderTarget>();
+  const scene = drawingBuilder();
+  const targets = scene.targets;
   const isBar = chart.chartStyle === "bar";
   if (!["line", "bar", "scatter", "area"].includes(chart.chartStyle)) {
-    throw new Error(`Unsupported XY style '${chart.chartStyle}'.`);
+    throw renderError("INVALID_GEOMETRY", `Unsupported XY style '${chart.chartStyle}'.`);
   }
   if (!chart.series.length || chart.series.some((s) => !s.points.length)) {
-    throw new Error("An XY chart needs nonempty series and points.");
+    throw renderError("INVALID_GEOMETRY", "An XY chart needs nonempty series and points.");
   }
   const xType = typeof chart.series[0].points[0].x;
   const series = chart.series.map((s) => {
@@ -220,14 +172,14 @@ export function renderXyGraphDrawing(
           ? !Number.isFinite(p.x)
           : !isBar || !p.x.trim())
       ) {
-        throw new Error(
+        throw renderError("INVALID_GEOMETRY", 
           "XY charts require finite values and consistent X types; only bars accept categories.",
         );
       }
       return { ...p };
     });
     if (isBar && new Set(points.map((p) => p.x)).size !== points.length) {
-      throw new Error(
+      throw renderError("INVALID_GEOMETRY", 
         "Each bar series must have at most one value per category.",
       );
     }
@@ -266,7 +218,7 @@ export function renderXyGraphDrawing(
     bottom: c.height - 88 - legendRows * legendRowHeight,
   };
   if (plot.bottom - plot.top < 150) {
-    throw new Error("Increase graph height to fit the series legend.");
+    throw renderError("INVALID_GEOMETRY", "Increase graph height to fit the series legend.");
   }
   const xAxis = isBar
     ? null
@@ -276,7 +228,7 @@ export function renderXyGraphDrawing(
   const band = (plot.right - plot.left) / categories.length;
   const barWidth = band * 0.72 / series.length;
   if (isBar && barWidth < 3) {
-    throw new Error("Increase graph width or reduce bar categories/series.");
+    throw renderError("INVALID_GEOMETRY", "Increase graph width or reduce bar categories/series.");
   }
   const x = (value: number | string) =>
     plot.left +
@@ -356,10 +308,9 @@ export function renderXyGraphDrawing(
   parts.push(line(plot.left, plot.top, plot.left, plot.bottom));
   parts.push(line(plot.left, plot.bottom, plot.right, plot.bottom));
   parts.push(
-    registerTarget(
-      targets,
-      `${namespace}.x-label`,
-      text(
+    scene.add({
+      id: `${namespace}.x-label`,
+      drawing: text(
         chart.xLabel,
         (plot.left + plot.right) / 2,
         plot.bottom + 58,
@@ -368,14 +319,13 @@ export function renderXyGraphDrawing(
         INK,
         c.width - 150,
       ),
-      "text",
-    ),
+      kind: "text",
+    }),
   );
   parts.push(
-    registerTarget(
-      targets,
-      `${namespace}.y-label`,
-      rotateLabel(
+    scene.add({
+      id: `${namespace}.y-label`,
+      drawing: rotateLabel(
         text(
           chart.yLabel,
           0,
@@ -388,9 +338,9 @@ export function renderXyGraphDrawing(
         25,
         (plot.top + plot.bottom) / 2,
       ),
-      "text",
-      true,
-    ),
+      kind: "text",
+      textRotation: -90,
+    }),
   );
 
   series.forEach((s, i) => {
@@ -458,25 +408,23 @@ export function renderXyGraphDrawing(
             stroke: color,
           });
         parts.push(
-          registerTarget(
-            targets,
-            p.id ? `${namespace}.${p.id}.mark` : undefined,
-            {
+          scene.add({
+            id: p.id ? `${namespace}.${p.id}.mark` : undefined,
+            drawing: {
               ...bar,
               markup: `<g><title>${
                 escapeXml(`${s.name}: ${p.x}, ${p.y}`)
               }</title>${bar.markup}</g>`,
             },
-            "mark",
-          ),
+            kind: "mark",
+          }),
         );
         continue;
       }
       parts.push(
-        registerTarget(
-          targets,
-          p.id ? `${namespace}.${p.id}.mark` : undefined,
-          {
+        scene.add({
+          id: p.id ? `${namespace}.${p.id}.mark` : undefined,
+          drawing: {
             markup: `<circle cx="${x(p.x)}" cy="${
               y(p.y)
             }" r="4.5" fill="${color}"><title>${
@@ -484,8 +432,8 @@ export function renderXyGraphDrawing(
             }</title></circle>`,
             bounds: { x: x(p.x) - 4.5, y: y(p.y) - 4.5, width: 9, height: 9 },
           },
-          "mark",
-        ),
+          kind: "mark",
+        }),
       );
     }
     const lx = 92 + legendEntries[i].x;
@@ -517,10 +465,9 @@ export function renderXyGraphDrawing(
       );
     } else parts.push(line(lx, ly - 5, lx + 23, ly - 5, color, 2.7));
     parts.push(
-      registerTarget(
-        targets,
-        s.id ? `${namespace}.${s.id}.legend-label` : undefined,
-        text(
+      scene.add({
+        id: s.id ? `${namespace}.${s.id}.legend-label` : undefined,
+        drawing: text(
           s.name,
           lx + legendLabelOffset,
           ly,
@@ -529,8 +476,8 @@ export function renderXyGraphDrawing(
           INK,
           155,
         ),
-        "text",
-      ),
+        kind: "text",
+      }),
     );
   });
   return group(chart.title, parts, c.width, namespace, targets, {
@@ -555,22 +502,23 @@ export function renderCircularGraphDrawing(
 ): TargetedDrawing {
   const c = settings(options);
   const namespace = chart.id ?? c.id;
-  const targets = new Map<string, RenderTarget>();
+  const scene = drawingBuilder();
+  const targets = scene.targets;
   if (
     chart.slices.length < 1 ||
     chart.slices.some((s) => !Number.isFinite(s.value) || s.value <= 0)
   ) {
-    throw new Error(
+    throw renderError("INVALID_GEOMETRY", 
       "A pie chart needs at least one positive, finite slice value.",
     );
   }
   const total = chart.slices.reduce((sum, s) => sum + s.value, 0);
   if (!Number.isFinite(total)) {
-    throw new Error("Pie total exceeds the supported numeric range.");
+    throw renderError("INVALID_GEOMETRY", "Pie total exceeds the supported numeric range.");
   }
   const style = chart.chartStyle ?? "pie";
   if (!["pie", "donut"].includes(style)) {
-    throw new Error("Unsupported circular chart style.");
+    throw renderError("INVALID_GEOMETRY", "Unsupported circular chart style.");
   }
   let angle = -Math.PI / 2;
   const entries = chart.slices.map((slice) => {
@@ -579,7 +527,7 @@ export function renderCircularGraphDrawing(
     return { slice, startAngle, endAngle: angle };
   });
   if (entries.length * 48 > c.height - 130) {
-    throw new Error("Increase graph height to fit the slice legend.");
+    throw renderError("INVALID_GEOMETRY", "Increase graph height to fit the slice legend.");
   }
   const cx = c.width * 0.3;
   const cy = (c.height + 65) / 2;
@@ -587,7 +535,7 @@ export function renderCircularGraphDrawing(
   const circle = { type: "circle", cx, cy, r } as const;
   const parts: ScenePart[] = [];
   const borders: Drawing[] = [];
-  const percentages: Drawing[] = [];
+  const percentages: ScenePart[] = [];
   entries.forEach(
     ({ slice, startAngle: angle, endAngle }, i) => {
       const outerRadius = r;
@@ -654,10 +602,9 @@ export function renderCircularGraphDrawing(
         },
       );
       parts.push(
-        registerTarget(
-          targets,
-          slice.id ? `${namespace}.${slice.id}.mark` : undefined,
-          {
+        scene.add({
+          id: slice.id ? `${namespace}.${slice.id}.mark` : undefined,
+          drawing: {
             markup: `<g clip-path="url(#${id}-sector)"><title>${
               escapeXml(`${slice.label}: ${slice.value}`)
             }</title>${
@@ -675,18 +622,19 @@ export function renderCircularGraphDrawing(
             bounds: null,
             obstacles: [], // The complete pie disk reserves the filled area below.
           },
-          "mark",
-          false,
-          sectorBounds,
-        ), // Fill is contained by the measured outer circle below.
+          kind: "mark",
+          textRotation: 0,
+          bounds: sectorBounds,
+          attachment: {
+            type: "anchor",
+            point: point((angle + endAngle) / 2),
+            direction: {
+              x: Math.cos((angle + endAngle) / 2),
+              y: Math.sin((angle + endAngle) / 2),
+            },
+          },
+        }), // Fill is contained by the measured outer circle below.
       );
-      if (slice.id) {
-        const mid = (angle + endAngle) / 2;
-        targets.get(`${namespace}.${slice.id}.mark`)!.anchor = {
-          point: point(mid),
-          direction: { x: Math.cos(mid), y: Math.sin(mid) },
-        };
-      }
       borders.push(
         renderHandwritten({
           type: "line",
@@ -707,10 +655,9 @@ export function renderCircularGraphDrawing(
       if (fraction >= 0.08) {
         const mid = (angle + endAngle) / 2;
         percentages.push(
-          registerTarget(
-            targets,
-            slice.id ? `${namespace}.${slice.id}.percentage` : undefined,
-            text(
+          scene.add({
+            id: slice.id ? `${namespace}.${slice.id}.percentage` : undefined,
+            drawing: text(
               percent,
               cx +
                 Math.cos(mid) *
@@ -722,8 +669,8 @@ export function renderCircularGraphDrawing(
               TYPE_SCALE.label,
               "middle",
             ),
-            "text",
-          ),
+            kind: "text",
+          }),
         );
       }
       const lx = c.width * 0.6;
@@ -749,10 +696,9 @@ export function renderCircularGraphDrawing(
         }),
       );
       parts.push(
-        registerTarget(
-          targets,
-          slice.id ? `${namespace}.${slice.id}.legend-label` : undefined,
-          text(
+        scene.add({
+          id: slice.id ? `${namespace}.${slice.id}.legend-label` : undefined,
+          drawing: text(
             slice.label,
             lx + 18 + SPACING.labelGap,
             ly,
@@ -761,8 +707,8 @@ export function renderCircularGraphDrawing(
             INK,
             c.width - lx - 60,
           ),
-          "text",
-        ),
+          kind: "text",
+        }),
       );
       parts.push(
         text(
@@ -796,6 +742,9 @@ export function renderCircularGraphDrawing(
       }),
       obstacles: [{
         kind: "area",
+        connectorPassThroughFor: percentages.flatMap((p) =>
+          p.targetId ? [p.targetId] : []
+        ),
         bounds: { x: cx - r, y: cy - r, width: 2 * r, height: 2 * r },
         circle: { cx, cy, r },
       }],

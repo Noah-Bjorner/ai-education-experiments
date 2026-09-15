@@ -1,3 +1,7 @@
+import { drawingBuilder, transformDrawing } from "./drawing.ts";
+import { textLabel } from "./label.ts";
+import { contextualize, renderError } from "./issues.ts";
+import { resolveFigureOptions } from "./options.ts";
 import { type Geometry, geometrySchema } from "../figures/geometry.ts";
 import {
   type GeometryPoint,
@@ -17,10 +21,11 @@ import { renderMathLatex } from "./latex.ts";
 import { center, distance, obstacleHitsBox } from "./placement.ts";
 import { escapeXml } from "./svg.ts";
 import {
-  registerTarget,
+  allowContainerConnections,
   type RenderObstacle,
   type RenderTarget,
   type ScenePart,
+  segmentsAttachment,
   type TargetedDrawing,
 } from "./targets.ts";
 import { COLORS, SERIES_COLORS, SPACING, TYPE_SCALE } from "./theme.ts";
@@ -42,6 +47,12 @@ const box = (ps: Point[]): Bounds => ({
   height: Math.max(...ps.map((p) => p.y)) - Math.min(...ps.map((p) => p.y)),
 });
 const combine = (parts: ScenePart[]): ScenePart => ({
+  attachment: segmentsAttachment(
+    parts.flatMap((p) =>
+      p.attachment?.type === "segments" ? p.attachment.segments : []
+    ),
+  ),
+  container: parts.find((p) => p.container)?.container,
   markup: parts.map((p) => p.markup).join(""),
   bounds: unionBounds(parts.map((p) => p.bounds)),
   obstacles: parts.flatMap((p) => p.obstacles ?? []),
@@ -57,6 +68,8 @@ function path(ps: Point[], closed = false, dashed = false): ScenePart {
       dashed ? ' stroke-dasharray="7 5"' : ""
     }/>`,
     bounds,
+    attachment: segmentsAttachment(edges),
+    container: closed ? { type: "polygon", points: ps } : undefined,
     obstacles: edges.map((segment) => ({
       bounds: expandBounds(box([segment.a, segment.b]), 1)!,
       kind: "stroke",
@@ -93,24 +106,15 @@ function arc(c: Point, r: number, start: number, sweep: number): ScenePart {
       sweep > 0 ? 1 : 0
     } ${b.x} ${b.y}" fill="none" stroke="${COLORS.ink}" stroke-width="2" stroke-linecap="round"/>`,
     bounds: expandBounds(box(samples), 1),
+    attachment: path(ps).attachment,
     obstacles: path(ps).obstacles,
   };
 }
 function plain(value: string, size: number): Drawing {
-  return {
-    markup: `<text font-size="${size}" fill="${COLORS.ink}">${
-      escapeXml(value)
-    }</text>`,
-    bounds: graphTextBounds(value, size, 0, 0),
-  };
+  return textLabel(value, 0, 0, size);
 }
-function translate(drawing: Drawing, x: number, y: number): Drawing {
-  return {
-    markup: `<g transform="translate(${x} ${y})">${drawing.markup}</g>`,
-    bounds: drawing.bounds &&
-      { ...drawing.bounds, x: drawing.bounds.x + x, y: drawing.bounds.y + y },
-  };
-}
+
+const translate = transformDrawing;
 type LabelJob = {
   id: string;
   drawing: Drawing;
@@ -126,29 +130,24 @@ export function renderGeometryDrawing(
   input: Geometry,
   options: GraphOptions,
 ): TargetedDrawing {
+  options = resolveFigureOptions(options);
   const spec = geometrySchema.parse(input);
-  const width = options.width ?? 800, height = options.height ?? 520;
-  const roughness = options.roughness ?? 1.5,
-    hatchGap = options.hatchGap ?? 9,
-    seed = options.seed ?? 10;
-  if (
-    !/^[a-zA-Z][\w-]*$/.test(options.id) ||
-    ![width, height, roughness, hatchGap, seed].every(Number.isFinite) ||
-    width < 320 || height < 280 || roughness < 0 || hatchGap < 2
-  ) {
-    throw new Error(
-      "Geometry needs a simple SVG id, dimensions at least 320 × 280, finite options, roughness >= 0, and hatchGap >= 2.",
-    );
-  }
+  const { width, height, roughness, hatchGap, seed } = resolveFigureOptions(options);
+  if (width < 320 || height < 280) throw renderError("INVALID_OPTIONS", "Geometry needs dimensions at least 320 × 280.");
   const resolved = resolveGeometry(spec), namespace = spec.id ?? options.id;
-  const targets = new Map<string, RenderTarget>(), parts: ScenePart[] = [];
+  const scene = drawingBuilder();
+  const targets = scene.targets, parts: ScenePart[] = [];
   const jobs: LabelJob[] = [];
   const addPart = (
     id: string,
     drawing: ScenePart,
     kind: "text" | "mark" = "mark",
   ) => {
-    const part = registerTarget(targets, `${namespace}.${id}`, drawing, kind);
+    const part = scene.add({
+      id: `${namespace}.${id}`,
+      drawing: drawing,
+      kind: kind,
+    });
     parts.push(part);
     return part;
   };
@@ -174,7 +173,7 @@ export function renderGeometryDrawing(
     sy = viewport.height / (world.height || span || 1);
   const scale = Math.min(sx, sy);
   if (!Number.isFinite(scale) || scale <= 0) {
-    throw new Error("Geometry coordinate range cannot be displayed.");
+    throw renderError("INVALID_GEOMETRY", "Geometry coordinate range cannot be displayed.");
   }
   const project = (p: GeometryPoint): Point => ({
     x: viewport.x + viewport.width / 2 +
@@ -253,14 +252,27 @@ export function renderGeometryDrawing(
           height: radius * 2,
         };
         clip = `<circle cx="${c.x}" cy="${c.y}" r="${radius}"/>`;
+        const circleOutline = path(
+          Array.from(
+            { length: 181 },
+            (_, i) => add(c, mul(polar(i * TAU / 180), radius)),
+          ),
+        );
         local.push({
           markup:
             `<circle cx="${c.x}" cy="${c.y}" r="${radius}" fill="none" stroke="${COLORS.ink}" stroke-width="2"${
               o.dashed ? ' stroke-dasharray="7 5"' : ""
             }/>`,
           bounds: expandBounds(bounds, 1),
-          obstacles: path(Array.from({ length: 181 }, (_, i) =>
-            add(c, mul(polar(i * TAU / 180), radius)))).obstacles,
+          attachment: circleOutline.attachment,
+          obstacles: circleOutline.obstacles,
+          container: {
+            type: "ellipse",
+            cx: c.x,
+            cy: c.y,
+            rx: radius,
+            ry: radius,
+          },
         });
         anchors.set(o.id, {
           anchor: { x: c.x + radius, y: c.y },
@@ -358,7 +370,7 @@ export function renderGeometryDrawing(
         available * 0.28,
       );
       if (radius < 5) {
-        throw new Error(
+        throw renderError("INVALID_GEOMETRY", 
           `Marking '${m.id}' is too small to display; increase the board size or simplify the figure.`,
         );
       }
@@ -417,7 +429,7 @@ export function renderGeometryDrawing(
         const count = (m.kind === "equal-length" ? equalStyles : parallelStyles)
           .get(id)!;
         if ((count - 1) * 5 + 14 > distance(a, b)) {
-          throw new Error(`Marking '${m.id}' does not fit its segment.`);
+          throw renderError("INVALID_GEOMETRY", `Marking '${m.id}' does not fit its segment.`);
         }
         for (let i = 0; i < count; i++) {
           const p = add(midpoint, mul(tangent, (i - (count - 1) / 2) * 5));
@@ -441,11 +453,7 @@ export function renderGeometryDrawing(
     try {
       return renderMathLatex(latex, TYPE_SCALE.label);
     } catch (error) {
-      throw new Error(
-        `Geometry label '${id}': ${
-          error instanceof Error ? error.message : error
-        }`,
-      );
+      throw contextualize(error, { elementId: id });
     }
   }
   for (const label of spec.labels) {
@@ -459,7 +467,7 @@ export function renderGeometryDrawing(
         const value = Math.hypot(b[0] - a[0], b[1] - a[1]);
         const rounded = Number(value.toFixed(2));
         if (!Number.isFinite(value) || rounded === 0) {
-          throw new Error(
+          throw renderError("INVALID_GEOMETRY", 
             `Length label '${label.id}' cannot be represented at two decimal places; use explicit LaTeX.`,
           );
         }
@@ -480,7 +488,7 @@ export function renderGeometryDrawing(
   for (const job of jobs) {
     const ink = job.drawing.bounds;
     if (!ink) {
-      throw new Error(`Geometry label '${job.id}' has no visible content.`);
+      throw renderError("INVALID_GEOMETRY", `Geometry label '${job.id}' has no visible content.`);
     }
     const directions = [
       ...job.directions.map(unit),
@@ -527,7 +535,7 @@ export function renderGeometryDrawing(
       }
     }
     if (!placement) {
-      throw new Error(
+      throw renderError("INVALID_GEOMETRY", 
         `Geometry label '${job.id}' does not fit without overlap; increase the board size, shorten labels, or split the diagram.`,
       );
     }
@@ -540,7 +548,7 @@ export function renderGeometryDrawing(
   }
   const bounds = unionBounds(parts.map((p) => p.bounds))!;
   if (!Object.values(bounds).every(Number.isFinite)) {
-    throw new Error("Geometry produced nonfinite drawing bounds.");
+    throw renderError("INVALID_GEOMETRY", "Geometry produced nonfinite drawing bounds.");
   }
   return withFigureTitle(
     {
@@ -549,7 +557,7 @@ export function renderGeometryDrawing(
       }</g>`,
       bounds,
       targets,
-      obstacles,
+      obstacles: allowContainerConnections(targets, obstacles, parts),
       focusBounds: contentBounds,
     },
     spec.title,

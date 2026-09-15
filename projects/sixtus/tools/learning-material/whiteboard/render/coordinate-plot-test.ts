@@ -10,7 +10,7 @@ import {
   coordinatePlot,
 } from "../figures/coordinate-plot.ts";
 import { WhiteboardOutput, whiteboardRequestSchema } from "../schema.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
 import { coordinateExamples } from "./coordinate-gallery.ts";
 import {
   clipCoordinateLine,
@@ -303,4 +303,20 @@ Deno.test("tick configuration preserves symbolic labels and fails clearly on unr
     Error,
     "overlap",
   );
+});
+
+Deno.test("vector labels with combining arrows still export", () => {
+  const svg = draw({
+    ...plane,
+    elements: [{
+      type: "line",
+      id: "v",
+      from: [0, 0],
+      to: [3, 2],
+      extend: "neither",
+      arrowheads: "end",
+      label: "v\u20D7",
+    }],
+  }).markup;
+  assert(svg.includes("v→"));
 });

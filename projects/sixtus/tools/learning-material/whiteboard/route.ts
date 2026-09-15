@@ -1,3 +1,4 @@
+import { whiteboardHttpError } from "./render/http-error.ts";
 import { type Context, Hono } from "@hono/hono";
 
 import { createZodJsonBodyMiddleware } from "../../../../../helper/hono.ts";
@@ -42,16 +43,8 @@ whiteboardRoutes.post(
       });
     } catch (error) {
       console.error("Sixtus whiteboard execution failed", error);
-      return c.json(
-        {
-          ok: false,
-          error: {
-            code: "WHITEBOARD_EXECUTE_FAILED",
-            message: "Failed to execute the whiteboard request.",
-          },
-        },
-        500,
-      );
+      const failure = whiteboardHttpError(error, "goal" in request);
+      return c.json(failure.body, failure.status);
     }
   },
 );

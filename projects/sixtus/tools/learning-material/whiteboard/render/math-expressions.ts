@@ -1,3 +1,6 @@
+import { drawingBuilder, transformDrawing } from "./drawing.ts";
+import { contextualize, renderError } from "./issues.ts";
+import { resolveFigureOptions } from "./options.ts";
 import type { MathExpressions } from "../figures/math-expressions.ts";
 import { escapeXml } from "./svg.ts";
 import { type Bounds, type Drawing, unionBounds } from "./bounds.ts";
@@ -5,7 +8,6 @@ import { GRAPH_FONT_STYLE } from "./font.ts";
 import type { GraphOptions } from "./graphs.ts";
 import { renderMathLatex } from "./latex.ts";
 import {
-  registerTarget,
   type RenderTarget,
   type ScenePart,
   type TargetedDrawing,
@@ -13,49 +15,22 @@ import {
 import { COLORS, SPACING, TYPE_SCALE } from "./theme.ts";
 import { withFigureTitle } from "./titles.ts";
 
-function move(
-  drawing: Drawing,
-  x: number,
-  y: number,
-): Drawing {
-  const b = drawing.bounds;
-  return {
-    markup: `<g transform="translate(${x} ${y})">${drawing.markup}</g>`,
-    bounds: b &&
-      {
-        x: x + b.x,
-        y: y + b.y,
-        width: b.width,
-        height: b.height,
-      },
-  };
-}
+const move = transformDrawing;
 export function renderMathExpressionsDrawing(
   figure: MathExpressions,
   options: GraphOptions,
 ): TargetedDrawing {
-  const width = options.width ?? 800, height = options.height ?? 520;
-  const roughness = options.roughness ?? 1.5, seed = options.seed ?? 10;
-  if (
-    !/^[a-zA-Z][\w-]*$/.test(options.id) ||
-    ![width, height, roughness, seed].every(Number.isFinite) ||
-    width < 160 || height < 140 || roughness < 0
-  ) {
-    throw new Error(
-      "Math rendering needs a simple SVG id, finite dimensions (at least 160 × 140), and nonnegative roughness.",
-    );
-  }
+  options = resolveFigureOptions(options);
+  const { width, height, roughness, seed } = resolveFigureOptions(options);
+  if (width < 160 || height < 140) throw renderError("INVALID_OPTIONS", "Math rendering needs dimensions at least 160 × 140.");
   const namespace = figure.id ?? options.id;
-  const targets = new Map<string, RenderTarget>();
+  const scene = drawingBuilder();
+  const targets = scene.targets;
   const rows = figure.expressions.map((expression) => {
     try {
       return renderMathLatex(expression.latex, TYPE_SCALE.mathDisplay);
     } catch (error) {
-      throw new Error(
-        `Math expression '${expression.id}': ${
-          error instanceof Error ? error.message : error
-        }`,
-      );
+      throw contextualize(error, { elementId: expression.id, path: ["expressions", figure.expressions.indexOf(expression), "latex"] });
     }
   });
   const rowGap = SPACING.mathRowGap;
@@ -69,7 +44,7 @@ export function renderMathExpressionsDrawing(
     !Number.isFinite(naturalWidth) ||
     naturalWidth > width - SPACING.sectionGap * 2
   ) {
-    throw new Error(
+    throw renderError("CONTENT_DOES_NOT_FIT", 
       "Math expressions do not fit legibly at the shared size; increase the width or split the expression into shorter rows.",
     );
   }
@@ -78,17 +53,16 @@ export function renderMathExpressionsDrawing(
   rows.forEach((row, i) => {
     y += row.ascent;
     expressions.push(
-      registerTarget(
-        targets,
-        `${namespace}.${figure.expressions[i].id}.expression`,
-        {
+      scene.add({
+        id: `${namespace}.${figure.expressions[i].id}.expression`,
+        drawing: {
           ...move(row, (width - row.width) / 2, y),
           markup: `<g aria-label="${escapeXml(figure.expressions[i].latex)}">${
             move(row, (width - row.width) / 2, y).markup
           }</g>`,
         },
-        "text",
-      ),
+        kind: "text",
+      }),
     );
     y += row.descent + rowGap;
   });

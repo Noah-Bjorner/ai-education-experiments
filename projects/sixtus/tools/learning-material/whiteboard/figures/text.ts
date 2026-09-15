@@ -12,7 +12,7 @@ export const textFigureSchema = z.strictObject({
   title: figureTitleField,
   annotations: figureAnnotationsField,
   role: z.enum(["note", "question", "takeaway"]).describe(
-    "question introduces the visualization that answers it; note adds supporting context after a visualization; takeaway states the conclusion after a visualization.",
+    "question gives the learner a specific comparison, prediction, or reasoning task; note supplies necessary context or an assumption the visualization cannot convey; takeaway states a needed inference or general principle that may not be clear from the visualization alone.",
   ),
   text: z.string().min(1).refine((value) => value.trim().length > 0, {
     message: "Text figures require nonempty text.",
@@ -27,38 +27,30 @@ export const textFigure = {
   type: textFigureSchema.shape.type.value,
   schema: textFigureSchema,
   summary:
-    "A short prose block with role question, note, or takeaway.",
-  useWhen:
-    "it accompanies a visualization; name the role in instructions",
-  instructions: `### When to use it
-
-Use for a standalone question, supporting note, or takeaway accompanying a visualization. Use annotations for messages pointing at a specific visual target; use freeform text for labels inside a diagram and math_expressions for typeset equations.
-
-### Fields
-
-- \`type\`: always "text".
-- \`id\`, \`title\`, and \`annotations\`: follow the shared rules. Prefer a null title when the text speaks for itself.
-- \`role\`: "note", "question", or "takeaway".
-- \`text\`: nonempty plain text, with optional newlines. Preserve the complete message.
-- \`anchor\` and \`side\`: follow the shared placement rules and the reading order below.
-
-### Rules
-
-- A question must come before and above the visualization that answers it. In a mixed board, put the question immediately before its answer in the figures array, and anchor the answer to the question with side "bottom". Several consecutive questions may form a bottom-anchored chain ending in their answering visualization.
-- Put notes and takeaways after and below the visualization they describe. Anchor them to that visualization with side "bottom", or chain them below another note or takeaway belonging to it.
-- A later question starts a new question/answer group below an earlier figure; it must use side "bottom". Never place a question after its answer or a note/takeaway above its visualization.
-- Text-only boards are supported; after the root, chain text figures with side "bottom".
-- Annotation targets: \`<id>.text\` for the complete text block and \`<id>.title\` only when title is not null. There are no per-word or border targets.
+    "Standalone text for a focused question, necessary context, or an inference that needs to be explicit.",
+  useWhen: `standalone text performs a necessary job for the requested purpose and teaching depth that the visualization, its labels, or a brief annotation cannot do clearly.
+  - Question: give the learner a specific comparison, prediction, or reasoning task that guides their reading and serves the learning goal. Do not turn a topic heading into a question merely to introduce a figure.
+  - Note: supply necessary context or an assumption the visualization cannot convey. When that context is needed to answer a particular question, include the question itself so it is clear why the note is there.
+  - Takeaway: state an inference or general principle the learner needs but may not reliably extract from the visualization. Add one only when making that inference explicit is necessary for the requested teaching depth. Omit it when it merely repeats a visible result, label, or completed calculation.
+  Do not routinely wrap a visualization in an opening question and closing takeaway. Specify the role and exact message for each text figure`,
+  rules: `- Preserve the complete message, including newlines.
+- Default to a null title. Do not add a heading that repeats the message or merely names its role, such as "Question" or "Takeaway".
+- Express the requested message directly; do not add an introduction, recap, or additional explanation beyond the instructions.
 - Do not emit font sizes, widths, colors, border styles, pixels, or additional layout fields. The renderer styles each role and wraps text.`,
+  annotationTargets: [
+    "<id>.text — the complete text block; no per-word or border targets",
+    "<id>.title — only when title is not null",
+  ],
   example: {
-    goal: "State the conclusion after comparing 4 apples and 6 oranges.",
+    instructions:
+      "For a lesson on interpreting observational data, use the takeaway role to make the limit of an association explicit. An illustrative scatter plot shows that students who study longer tend to have higher scores, but the observations do not establish causation. State exactly: 'Students who study longer tend to score higher, but these observations alone do not show that extra study time caused the higher scores.' Use no title or annotations.",
     output: {
       type: "text",
-      id: "fruit-takeaway",
+      id: "association-takeaway",
       title: null,
       annotations: [],
       role: "takeaway",
-      text: "There are 2 more oranges than apples.",
+      text: "Students who study longer tend to score higher, but these observations alone do not show that extra study time caused the higher scores.",
     },
   },
 } satisfies WhiteboardFigureDefinition<typeof textFigureSchema>;

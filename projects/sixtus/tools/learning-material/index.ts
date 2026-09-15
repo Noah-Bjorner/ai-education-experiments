@@ -171,7 +171,6 @@ async function executeLearningMaterial(
     case "whiteboard": {
       const result = await executeWhiteboard({
         goal: learningMaterial.goal,
-        domain: learningMaterial.domain,
         ...WHITEBOARD_CHAT_INPUT,
       });
       return whiteboardOutputBranchSchema.parse({

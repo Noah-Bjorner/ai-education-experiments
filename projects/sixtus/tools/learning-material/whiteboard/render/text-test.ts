@@ -1,6 +1,6 @@
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import { textFigure, textFigureSchema } from "../figures/text.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
 import { WhiteboardOutput } from "../schema.ts";
 import { graphTextBounds } from "./font.ts";
 import { renderHandwritten } from "./handwritten.ts";
@@ -26,13 +26,11 @@ Deno.test("text is registered in the output schema and generation prompt", () =>
       JSON.stringify(textFigure.example.output.text),
     ),
   );
+  assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("<id>.text"));
   assert(
     WHITEBOARD_SPEC_SYSTEM_PROMPT.includes(
-      "before and above the visualization",
+      "The renderer styles each role and wraps text",
     ),
-  );
-  assert(
-    WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("after and below the visualization"),
   );
   for (const text of ["", " \n ", 123, null]) {
     assert(

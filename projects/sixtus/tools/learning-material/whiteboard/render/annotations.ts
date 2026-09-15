@@ -1,169 +1,98 @@
-import type { WhiteboardFigureContent } from "../schema.ts";
-import { escapeXml } from "./svg.ts";
-import { type Drawing, unionBounds } from "./bounds.ts";
-import { GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
-import { renderHandwritten } from "./handwritten.ts";
-import type { Shape } from "./shapes.ts";
-import type { RenderObstacle, RenderTarget } from "./targets.ts";
-import { COLORS, SPACING, TYPE_SCALE } from "./theme.ts";
+import { renderError } from "./issues.ts";
+import { annotationSchema } from "../figures/shared.ts";
+import type {
+  Annotation,
+  AnnotationOptions,
+  ResolvedAnnotation,
+  ResolvedCallout,
+  ResolvedEmphasis,
+} from "./annotation-types.ts";
+import { renderEmphasis } from "./emphasis.ts";
+import { renderCallouts } from "./callouts.ts";
+import {
+  type RenderTarget,
+  type TargetedDrawing,
+  validateTarget,
+} from "./targets.ts";
 
-type Annotation = NonNullable<
-  WhiteboardFigureContent["annotations"]
->[number];
-export type PendingCallout = {
-  figureId: string;
-  annotationIndex: number;
-  annotation: Annotation;
-};
-
-/** Add emphasis first; queue message callouts for the placement stage. */
-export function renderEmphasisAnnotations(
+/** Validate once, retaining measured targets throughout every annotation stage. */
+export function resolveAnnotations(
   annotations: Annotation[],
   targets: Map<string, RenderTarget>,
-  options: {
-    figureId: string;
-    id: string;
-    roughness?: number;
-    seed?: number;
-    color?: string;
-  },
-): {
-  drawing: Drawing;
-  pendingCallouts: PendingCallout[];
-  obstacles: RenderObstacle[];
-} {
-  const color = options.color ?? COLORS.ink;
-  const parts: Drawing[] = [];
-  const pendingCallouts: PendingCallout[] = [];
-  const obstacles: RenderObstacle[] = [];
-  annotations.forEach((annotation, annotationIndex) => {
+  figureId: string,
+): ResolvedAnnotation[] {
+  return annotations.map((input, annotationIndex) => {
+    const annotation = annotationSchema.parse(input);
     const selected = annotation.targetIds.map((id) => {
       const target = targets.get(id);
       if (!target) {
-        throw new Error(
-          `Unknown or unavailable annotation target '${id}' in figure '${options.figureId}'.`,
+        throw renderError(
+          "UNKNOWN_TARGET",
+          `Unknown or unavailable annotation target '${id}' in figure '${figureId}'.`,
+          {
+            stage: "annotations",
+            figureId,
+            annotationIndex,
+            path: ["annotations", annotationIndex, "targetIds"],
+          },
+        );
+      }
+      validateTarget(target, id);
+      if (
+        (annotation.type === "underline" ||
+          annotation.type === "strikethrough") && target.kind !== "text"
+      ) {
+        throw renderError(
+          "INVALID_ANNOTATION",
+          `Annotation '${annotation.type}' requires a text target: '${id}'.`,
         );
       }
       return target;
     });
-    if (["arrow", "line", "bracket"].includes(annotation.type)) {
-      pendingCallouts.push({
-        figureId: options.figureId,
-        annotationIndex,
-        annotation,
-      });
-      return;
-    }
-    const target = selected[0];
-    const b = target.bounds;
-    const id = `${options.id}-annotation-${annotationIndex}`;
-    // A stable seed per annotation, independent of the base renderer's strokes.
-    const pen = {
-      id,
-      seed: (options.seed ?? 10) + annotationIndex,
-      roughness: options.roughness ?? 1.5,
-      stroke: color,
-      strokeWidth: 2,
-    };
-    let drawing: Drawing;
-    if (annotation.type === "number") {
-      const value = annotation.content!;
-      const x = b.x + b.width + SPACING.labelGap;
-      const y = b.y - SPACING.labelGap;
-      drawing = {
-        markup:
-          `<text x="${x}" y="${y}" font-size="${TYPE_SCALE.annotation}" fill="${
-            escapeXml(color)
-          }">${escapeXml(value)}</text>`,
-        bounds: graphTextBounds(value, TYPE_SCALE.annotation, x, y),
-      };
-    } else {
-      let shape: Shape;
-      // Wide targets use the existing box outline to keep emphasis close to ink.
-      const useBox = annotation.type === "box" ||
-        (annotation.type === "circle" && b.width > b.height * 3);
-      if (annotation.type === "circle" && !useBox) {
-        shape = target.kind === "text"
-          ? {
-            type: "ellipse",
-            cx: b.x + b.width / 2,
-            cy: b.y + b.height / 2,
-            // Enclose the text rectangle without making height depend on width.
-            rx: b.width / Math.SQRT2 + 5,
-            ry: b.height / Math.SQRT2 + 5,
-          }
-          : {
-            type: "circle",
-            cx: b.x + b.width / 2,
-            cy: b.y + b.height / 2,
-            r: Math.hypot(b.width, b.height) / 2 + 5,
-          };
-      } else if (useBox) {
-        shape = {
-          type: "rectangle",
-          x: b.x - 5,
-          y: b.y - 5,
-          width: b.width + 10,
-          height: b.height + 10,
-        };
-      } else {
-        if (target.kind !== "text") {
-          throw new Error(
-            `Annotation '${annotation.type}' requires a text target: '${
-              annotation.targetIds[0]
-            }'.`,
-          );
-        }
-        // Underline follows glyph bottoms; strikethrough crosses glyph centers.
-        // For -90-degree axis labels, the underline is on the right of the text.
-        const offset = annotation.type === "underline"
-          ? (target.vertical ? b.width : b.height) + 3
-          : (target.vertical ? b.width : b.height) / 2;
-        shape = target.vertical
-          ? {
-            type: "line",
-            x1: b.x + offset,
-            y1: b.y,
-            x2: b.x + offset,
-            y2: b.y + b.height,
-          }
-          : {
-            type: "line",
-            x1: b.x,
-            y1: b.y + offset,
-            x2: b.x + b.width,
-            y2: b.y + offset,
-          };
-      }
-      drawing = renderHandwritten(shape, pen);
-    }
-    parts.push({
-      ...drawing,
-      markup:
-        `<g id="${id}" data-annotation-type="${annotation.type}" data-target-id="${
-          escapeXml(annotation.targetIds[0])
-        }">${drawing.markup}</g>`,
-    });
-    if (drawing.bounds) {
-      obstacles.push({
-        bounds: drawing.bounds,
-        kind: "annotation",
-        ownerId: annotation.type === "number"
-          ? undefined
-          : annotation.targetIds[0],
-      });
-    }
+    // The schema enforces type/content combinations; downstream code uses this union.
+    return {
+      ...annotation,
+      targets: selected,
+      figureId,
+      annotationIndex,
+    } as ResolvedAnnotation;
   });
+}
+
+/** The sole shared annotation pipeline, independent of the figure family. */
+export function renderAnnotations(
+  annotations: Annotation[],
+  scene: TargetedDrawing,
+  options: AnnotationOptions,
+) {
+  const emphasisRequests: ResolvedEmphasis[] = [],
+    calloutRequests: ResolvedCallout[] = [];
+  for (
+    const request of resolveAnnotations(
+      annotations,
+      scene.targets,
+      options.figureId,
+    )
+  ) {
+    switch (request.type) {
+      case "arrow":
+      case "line":
+      case "bracket":
+        calloutRequests.push(request);
+        break;
+      default:
+        emphasisRequests.push(request);
+    }
+  }
+  const emphasis = renderEmphasis(emphasisRequests, options);
+  const callouts = renderCallouts(calloutRequests, scene, emphasis, options);
+  for (const diagnostic of callouts.diagnostics) {
+    console.warn(diagnostic.message);
+  }
   return {
-    drawing: {
-      markup: parts.length
-        ? `<g data-layer="emphasis" style="${GRAPH_FONT_STYLE}">${
-          parts.map((p) => p.markup).join("\n")
-        }</g>`
-        : "",
-      bounds: unionBounds(parts.map((p) => p.bounds)),
-    },
-    pendingCallouts,
-    obstacles,
+    emphasis: emphasis.drawing,
+    callouts: callouts.drawing,
+    placements: callouts.placements,
+    diagnostics: callouts.diagnostics,
   };
 }

@@ -68,8 +68,10 @@ annotations, and text inside diagram nodes.
   Preserve the complete text in `<title>` when truncating it visually.
 - The bundled Shantell Sans Math Medium font preserves the original Swedish
   letters and adds Greek and mathematical symbols. Tight exports reject visible
-  glyphs absent from the font; a system fallback cannot be measured reliably.
-  Font metrics and math outlines must be regenerated together when extending it.
+  base glyphs absent from the font; a system fallback cannot be measured
+  reliably. Combining marks the font cannot paint are dropped or replaced with
+  spacing stand-ins (⃗ → →) so labels still export. Font metrics and math
+  outlines must be regenerated together when extending it.
 
 All figure renderers use these semantic roles from `theme.ts`. Sizes and line
 heights are in board SVG units; line height means baseline-to-baseline distance,
@@ -225,10 +227,10 @@ Different relationships may share a number but remain separate settings: changin
 override inter-figure spacing without affecting other relationships.
 
 - Export with zero outer padding; the client supplies presentation padding.
-  The one exception is optical centering: if teaching annotations overflow the
-  base on one side, the export viewBox gets that same extra space on the
-  opposite side so the base stays centered. That empty gutter is not client
-  chrome.
+  The one exception is horizontal optical centering: if teaching annotations
+  overflow the base on the left or right, the export viewBox gets that same
+  extra space on the opposite side so the base stays centered. Top and bottom
+  stay a tight crop. That empty gutter is not client chrome.
 - Measure titles, multiline text, and legend widths before positioning them.
   Font and line-height changes must flow into measurement and rendering together.
 - Keep each renderer's mathematical geometry and necessary chart margins local.
@@ -298,9 +300,10 @@ Separate two steps:
 2. **Export:** measure the final painted bounds and use their union as the SVG's
    outer rectangle. This trims unused margins without changing the layout.
    Then expand that rectangle with `balanceAround(base, complete)` so teaching
-   annotations that hang off one side get matching empty space on the other.
-   Base, emphasis, and callout stages share this viewBox so a staged reveal
-   does not jump. A board with no overflow keeps tight bounds.
+   annotations that hang off the left or right get matching empty space on the
+   other side. Top and bottom overflow stay tight. Base, emphasis, and callout
+   stages share this viewBox so a staged reveal does not jump. A board with no
+   horizontal overflow keeps tight bounds.
 
 Implement this through shared bounds helpers used by every renderer, rather than
 per-chart hardcoded crop values. `renderXyGraphDrawing()` and

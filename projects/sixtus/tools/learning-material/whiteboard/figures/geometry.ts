@@ -119,22 +119,16 @@ export const geometrySchema = geometryShape.superRefine((spec, ctx) => {
 export const geometry = {
   type: "geometry",
   schema: geometrySchema,
-  summary: "2D shapes and constructions without axes.",
-  useWhen: "the drawing is geometric, not a data plot or equation",
-  instructions: String.raw`### When to use it
-
-Use for 2D geometry: shapes, circle geometry, constructions, angle relationships, and proofs. Use xy_chart for data or function plots and math_expressions for equations.
-
-### Fields
-
-- type: always "geometry". title, id, annotations follow shared rules.
-- unit: optional common length unit. One coordinate unit equals one unit of length.
+  summary:
+    "A 2D diagram of geometric shapes and constructions without axes, with labels and markings for lengths, angles, and parallel lines.",
+  useWhen:
+    "the learner needs to understand geometric properties or constructions, such as a triangle's perpendicular height, equal sides, angle relationships, or circle intersections",
+  rules: String.raw`- unit: optional common length unit. One coordinate unit equals one unit of length.
 - points, objects, labels, markings: arrays; labels and markings may be empty.
 - All points, objects, labels, and markings require stable IDs, unique together within this figure. Group names on angle markings are matching-style keys, not element IDs.
 - Coordinates are mathematical (positive Y upward), never pixels. The renderer preserves aspect ratio, fits the figure, and places labels automatically. No axes or grid are implied.
 
 ### Points
-
 - position: at: [x, y].
 - along: points: [a, b], fraction: t. A + t(B - A); 0.5 is the midpoint. Values outside [0, 1] extend the line.
 - projection: point: p, onto: [a, b]. The perpendicular foot on the infinite line through A and B.
@@ -144,7 +138,6 @@ Use for 2D geometry: shapes, circle geometry, constructions, angle relationships
 - Forward references are allowed, but dependencies must be acyclic. Derive points when relationships matter instead of approximating coordinates.
 
 ### Objects
-
 - segment, line, ray: points: [a, b]. A ray starts at A and passes through B. Lines extend in both directions and rays in one direction to the drawing boundary, with arrowheads indicating continuation.
 - polygon: points in boundary order, at least three distinct vertices; do not repeat the first vertex. Simple, nonzero-area polygons only. fill is an optional boolean.
 - circle: center: pointId; radius is a positive number or { through: pointId }. fill is an optional boolean.
@@ -153,7 +146,6 @@ Use for 2D geometry: shapes, circle geometry, constructions, angle relationships
 - Shapes are compositions: a triangle is a three-point polygon. Add explicit segments for edges that need an object ID, for example for parallel/equal-length markings. Polygon edge names are not generated implicitly.
 
 ### Labels and markings
-
 - text label: target is a point, object, or marking ID; latex is the displayed text/math. Point names are displayed only when explicitly labelled.
 - length label: points: [a, b]; optional latex displays a symbol or supplied text (such as "x"). Without latex, display the calculated length in unit, rounded to at most two decimal places. No other measurement is revealed automatically. Labels do not define geometry or assert numeric values.
 - right-angle marking: points: [a, vertex, b]. Requires perpendicular arms.
@@ -163,13 +155,18 @@ Use for 2D geometry: shapes, circle geometry, constructions, angle relationships
 - The renderer chooses matching tick/arrow/arc styles from groups. Mathematical markings assert properties; annotations only add teaching emphasis.
 - LaTeX follows math_expressions conventions; escape backslashes in JSON.
 
-### Validation and targets
-
-Unknown/wrong-kind references, duplicate IDs, cyclic dependencies, degenerate objects, impossible intersections, self-crossing polygons, and contradictory mathematical markings are errors. This is deterministic construction, not a constraint solver. It does not interpret mathematical assertions in free-form LaTeX labels.
-
-Annotation targets: <figureId>.title (only when title is not null), <figureId>.<pointId>.mark, <figureId>.<objectId>.mark, <figureId>.<markingId>.mark, and <figureId>.<labelId>.label. An angle marking with latex also exposes <figureId>.<markingId>.label. Only text targets support underline/strikethrough.`,
+### Validation
+Unknown/wrong-kind references, duplicate IDs, cyclic dependencies, degenerate objects, impossible intersections, self-crossing polygons, and contradictory mathematical markings are errors. This is deterministic construction, not a constraint solver. It does not interpret mathematical assertions in free-form LaTeX labels. Only text targets support underline/strikethrough.`,
+  annotationTargets: [
+    "<figureId>.title — only when title is not null",
+    "<figureId>.<pointId>.mark",
+    "<figureId>.<objectId>.mark",
+    "<figureId>.<markingId>.mark",
+    "<figureId>.<labelId>.label",
+    "<figureId>.<markingId>.label — angle markings with latex only",
+  ],
   example: {
-    goal:
+    instructions:
       "Show a triangle's base and perpendicular height without revealing measurements.",
     output: {
       type: "geometry",

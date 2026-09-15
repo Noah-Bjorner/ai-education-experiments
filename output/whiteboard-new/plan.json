@@ -1,0 +1,19 @@
+{
+  "title": "Solving 2x + 4 = 22: Movie tickets",
+  "figurePlans": [
+    {
+      "type": "text",
+      "instructions": "Short prose block (2–3 sentences) for a 7th grader. Frame the word problem: \"You bought two movie tickets at the same price, call it x dollars each, plus a $4 popcorn, and the total was $22. That gives the equation 2x + 4 = 22. Let's solve for x step by step.\" Keep the tone friendly and direct. Label the role: 'Setting up the equation.' The equation 2x + 4 = 22 should be typeset in inline math within the text.",
+      "id": "figure-1",
+      "anchor": null,
+      "side": null
+    },
+    {
+      "type": "math_expressions",
+      "instructions": "For a 7th grader, show the step-by-step solution of 2x + 4 = 22 in three aligned lines:\n\nLine 1: 2x + 4 = 22\nLine 2: 2x = 18   (with a small side note: '− 4 from both sides')\nLine 3: x = 9    (with a small side note: '÷ 2 on both sides')\n\nAnnotations:\n- Call out on line 2, pointing to the '− 4 from both sides' note: say \"We subtract 4 first to undo the +4 and get rid of the extra number, leaving just the ticket term.\"\n- Call out on line 3, pointing to the '÷ 2 on both sides' note: say \"We divide by 2 to undo the ×2 and find the price of ONE ticket.\"\n- Highlight line 3 (x = 9) and add a short label: \"One ticket costs $9.\"\n\nMake it visually obvious that each step undoes the most recently added operation (addition before multiplication), which is why subtraction comes before division.",
+      "id": "figure-2",
+      "anchor": "figure-1",
+      "side": "bottom"
+    }
+  ]
+}

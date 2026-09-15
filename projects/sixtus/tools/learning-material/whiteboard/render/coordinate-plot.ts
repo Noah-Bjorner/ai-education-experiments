@@ -1,3 +1,7 @@
+import { drawingBuilder } from "./drawing.ts";
+import { textLabel } from "./label.ts";
+import { contextualize, renderError } from "./issues.ts";
+import { resolveFigureOptions } from "./options.ts";
 import {
   type CoordinateElement,
   type CoordinatePlot,
@@ -8,10 +12,12 @@ import { expandBounds, unionBounds } from "./bounds.ts";
 import { fitGraphText, GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
 import type { GraphOptions } from "./graphs.ts";
 import {
-  registerTarget,
+  allowContainerConnections,
+  type ContainerGeometry,
   type RenderObstacle,
   type RenderTarget,
   type ScenePart,
+  segmentsAttachment,
   type TargetedDrawing,
 } from "./targets.ts";
 import {
@@ -55,11 +61,11 @@ export function coordinateTicks(
   const step = axis.tickStep ??
     ([1, 2, 5, 10].find((n) => n * power >= raw)! * power);
   if (!Number.isFinite(step) || step <= 0) {
-    throw new Error("Coordinate tick spacing is outside numerical precision.");
+    throw renderError("INVALID_GEOMETRY", "Coordinate tick spacing is outside numerical precision.");
   }
   const first = Math.ceil(axis.min / step), last = Math.floor(axis.max / step);
   if (![first, last].every(Number.isSafeInteger) || last - first > 100) {
-    throw new Error(
+    throw renderError("INVALID_GEOMETRY", 
       "Coordinate axis needs at most 101 ticks; increase tickStep or use explicit ticks.",
     );
   }
@@ -76,14 +82,10 @@ export function renderCoordinatePlotDrawing(
   input: CoordinatePlot,
   options: GraphOptions,
 ): TargetedDrawing {
+  options = resolveFigureOptions(options);
   const plot = coordinatePlotSchema.parse(input);
-  const width = options.width ?? 800, height = options.height ?? 520;
-  if (![width, height].every(Number.isFinite) || width < 600 || height < 400) {
-    throw new Error("Coordinate plots need width >= 600 and height >= 400.");
-  }
-  if (!/^[a-zA-Z][\w-]*$/.test(options.id)) {
-    throw new Error("Coordinate renderer id must be a simple SVG identifier.");
-  }
+  const { width, height } = resolveFigureOptions(options);
+  if (width < 600 || height < 400) throw renderError("INVALID_OPTIONS", "Coordinate plots need width >= 600 and height >= 400.");
   const id = plot.id ?? options.id;
   const { x: xAxis, y: yAxis } = plot.axes;
   const xSpan = xAxis.max - xAxis.min, ySpan = yAxis.max - yAxis.min;
@@ -99,7 +101,7 @@ export function renderCoordinatePlotDrawing(
     ![sx, sy, ...Object.values(box)].every(Number.isFinite) || box.width < 40 ||
     box.height < 40
   ) {
-    throw new Error(
+    throw renderError("INVALID_GEOMETRY", 
       "Coordinate ranges cannot fit a readable plane; use independent scaling or a different window.",
     );
   }
@@ -108,7 +110,8 @@ export function renderCoordinatePlotDrawing(
     y: box.y + (yAxis.max - y) * sy,
   });
   const mathBox = { x: xAxis.min, y: yAxis.min, width: xSpan, height: ySpan };
-  const targets = new Map<string, RenderTarget>();
+  const scene = drawingBuilder();
+  const targets = scene.targets;
   const furniture: ScenePart[] = [],
     marks: ScenePart[] = [],
     labels: ScenePart[] = [];
@@ -131,20 +134,16 @@ export function renderCoordinatePlotDrawing(
     color: string = COLORS.ink,
     maxWidth = width - 32,
   ): ScenePart {
-    const shown = fitGraphText(value, size, maxWidth);
-    const bounds = graphTextBounds(shown, size, x, y, anchor);
-    return {
-      markup: `<text x="${fmt(x)}" y="${
-        fmt(y)
-      }" font-size="${size}" text-anchor="${anchor}" fill="${color}"><title>${
-        escapeXml(value)
-      }</title>${escapeXml(shown)}</text>`,
-      bounds,
-      obstacles: bounds ? [{ bounds, kind: "text" }] : [],
-    };
+    const part = textLabel(value, x, y, size, anchor, color, maxWidth);
+    return { ...part, markup: part.markup.replace(`x="${x}" y="${y}"`, `x="${fmt(x)}" y="${fmt(y)}"`) };
   }
+
   function addText(part: ScenePart, target?: string) {
-    const registered = registerTarget(targets, target, part, "text");
+    const registered = scene.add({
+      id: target,
+      drawing: part,
+      kind: "text",
+    });
     labels.push(registered);
     obstacles.push(...registered.obstacles ?? []);
   }
@@ -238,7 +237,7 @@ export function renderCoordinatePlotDrawing(
       part.bounds &&
       tickBoxes.some((b) => overlaps(expandBounds(b, 3)!, part.bounds!))
     ) {
-      throw new Error(
+      throw renderError("INVALID_GEOMETRY", 
         "X tick labels overlap; increase tick spacing or shorten labels.",
       );
     }
@@ -269,7 +268,7 @@ export function renderCoordinatePlotDrawing(
       part.bounds &&
       yTickBoxes.some((b) => overlaps(expandBounds(b, 3)!, part.bounds!))
     ) {
-      throw new Error(
+      throw renderError("INVALID_GEOMETRY", 
         "Y tick labels overlap; increase tick spacing or shorten labels.",
       );
     }
@@ -302,6 +301,7 @@ export function renderCoordinatePlotDrawing(
   for (const [index, element] of plot.elements.entries()) {
     const color = SERIES_COLORS[index % SERIES_COLORS.length];
     const segments: [Point, Point][] = [];
+    let container: ContainerGeometry | undefined;
     const markers: { p: Point; open: boolean }[] = [];
     const arrows: [Point, Point][] = [];
     const addSegment = (a: Point, b: Point) => {
@@ -347,6 +347,10 @@ export function renderCoordinatePlotDrawing(
         break;
       }
       case "polygon": {
+        container = {
+          type: "polygon",
+          points: element.vertices.map((p) => project(p[0], p[1])),
+        };
         for (let i = 0; i < element.vertices.length; i++) {
           const a = element.vertices[i],
             b = element.vertices[(i + 1) % element.vertices.length];
@@ -363,9 +367,17 @@ export function renderCoordinatePlotDrawing(
         break;
       }
       case "circle": {
+        const c = project(element.center[0], element.center[1]);
+        container = {
+          type: "ellipse",
+          cx: c.x,
+          cy: c.y,
+          rx: element.radius * sx,
+          ry: element.radius * sy,
+        };
         const radius = element.radius * Math.max(sx, sy);
         if (!Number.isFinite(radius)) {
-          throw new Error(
+          throw renderError("INVALID_GEOMETRY", 
             `Circle '${element.id}' exceeds numerical plotting range.`,
           );
         }
@@ -374,7 +386,7 @@ export function renderCoordinatePlotDrawing(
           Math.ceil(Math.PI * Math.sqrt(radius / 0.15)),
         );
         if (count > 8192) {
-          throw new Error(
+          throw renderError("INVALID_GEOMETRY", 
             `Circle '${element.id}' is too large for this window; adjust its radius or the axes.`,
           );
         }
@@ -480,11 +492,17 @@ export function renderCoordinatePlotDrawing(
       });
     }
     if (!parts.length) continue;
-    const mark = registerTarget(targets, `${id}.${element.id}.mark`, {
-      markup: parts.map((p) => p.markup).join(""),
-      bounds: unionBounds(parts.map((p) => p.bounds)),
-      obstacles: parts.flatMap((p) => p.obstacles ?? []),
-    }, "mark");
+    const mark = scene.add({
+      id: `${id}.${element.id}.mark`,
+      drawing: {
+        attachment: segmentsAttachment(segments.map(([a, b]) => ({ a, b }))),
+        container,
+        markup: parts.map((p) => p.markup).join(""),
+        bounds: unionBounds(parts.map((p) => p.bounds)),
+        obstacles: parts.flatMap((p) => p.obstacles ?? []),
+      },
+      kind: "mark",
+    });
     marks.push(mark);
     obstacles.push(...mark.obstacles ?? []);
     const anchors: Point[] = [];
@@ -598,21 +616,12 @@ export function renderCoordinatePlotDrawing(
         [...furniture, ...marks, ...labels].map((p) => p.bounds),
       ),
       targets,
-      obstacles,
+      obstacles: allowContainerConnections(targets, obstacles, marks),
       focusBounds: box,
     },
     plot.title,
     id,
     options,
   );
-  for (const annotation of plot.annotations ?? []) {
-    for (const target of annotation.targetIds) {
-      if (!targets.has(target)) {
-        throw new Error(
-          `Coordinate annotation target '${target}' is outside the visible window.`,
-        );
-      }
-    }
-  }
   return drawing;
 }

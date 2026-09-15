@@ -1,3 +1,6 @@
+import { drawingBuilder } from "./drawing.ts";
+import { contextualize, renderError } from "./issues.ts";
+import { resolveFigureOptions } from "./options.ts";
 import {
   type Freeform,
   type FreeformElement,
@@ -21,11 +24,15 @@ import {
   TYPE_SCALE,
 } from "./theme.ts";
 import {
-  registerTarget,
+  allowContainerConnections,
   type RenderObstacle,
   type RenderTarget,
   type ScenePart,
+  type Segment,
+  segmentsAttachment,
   type TargetedDrawing,
+  transformObstacle,
+  transformTarget,
 } from "./targets.ts";
 import { textBlock } from "./text-block.ts";
 import { withFigureTitle } from "./titles.ts";
@@ -76,7 +83,10 @@ function boundary(e: ShapeElement, toward: Point): Point {
     dx = toward.x - c.x,
     dy = toward.y - c.y;
   if (Math.hypot(dx, dy) < 1e-8) {
-    throw new Error(`Cannot attach toward the center of '${e.id}'`);
+    throw renderError(
+      "INVALID_GEOMETRY",
+      `Cannot attach toward the center of '${e.id}'`,
+    );
   }
   let t: number;
   if (e.type === "rectangle") {
@@ -112,25 +122,22 @@ export function renderFreeformDrawing(
   input: Freeform,
   options: GraphOptions,
 ): TargetedDrawing {
+  options = resolveFigureOptions(options);
   const parsed = freeformSchema.safeParse(input);
   if (!parsed.success) {
-    throw new Error(
+    throw renderError(
+      "INVALID_GEOMETRY",
       `Freeform '${input.id}': ${parsed.error.message}`,
     );
   }
   const figure = parsed.data, namespace = figure.id ?? options.id;
-  const width = options.width ?? 800, height = options.height ?? 520;
-  if (
-    !/^[a-zA-Z][\w-]*$/.test(options.id) ||
-    ![
-      width,
-      height,
-      options.seed ?? 10,
-      options.roughness ?? 1.5,
-      options.hatchGap ?? 9,
-    ].every(Number.isFinite) || width <= 0 || height <= 80 ||
-    (options.roughness ?? 1.5) < 0 || (options.hatchGap ?? 9) < 2
-  ) throw new Error(`Freeform '${namespace}': invalid render options`);
+  const { width, height } = resolveFigureOptions(options);
+  if (height <= 80) {
+    throw renderError(
+      "INVALID_OPTIONS",
+      `Freeform '${namespace}': height must exceed 80.`,
+    );
+  }
   const scale = Math.min(width / SCENE_WIDTH, (height - 80) / SCENE_HEIGHT),
     tx = (width - SCENE_WIDTH * scale) / 2;
   const shapes = new Map(
@@ -139,20 +146,20 @@ export function renderFreeformDrawing(
     ).map((e) => [e.id, e]),
   );
   // Bound geometry before fill generation or reference resolution does any work.
-  const skipped = new Set<string>();
   for (const e of shapes.values()) {
     const b = shapeBounds(e);
     if (!finiteBounds(b) || !withinExtent(b)) {
-      console.warn(
+      throw renderError(
+        "INVALID_GEOMETRY",
         `Freeform '${namespace}', element '${e.id}': Shape geometry is invalid or too large`,
+        { elementId: e.id },
       );
-      skipped.add(e.id);
     }
   }
   const parts: ScenePart[] = [];
-  const localTargets = new Map<string, RenderTarget>();
+  const scene = drawingBuilder();
+  const localTargets = scene.targets;
   for (const e of figure.elements) {
-    if (skipped.has(e.id)) continue;
     try {
       const ink = palette(e.color);
       let part: ScenePart;
@@ -209,7 +216,13 @@ export function renderFreeformDrawing(
         if (
           length < 1e-8 ||
           (b.x - a.x) * (end.x - start.x) + (b.y - a.y) * (end.y - start.y) <= 0
-        ) throw new Error("Zero-length or overlapping attached connector");
+        ) {
+          throw renderError(
+            "INVALID_GEOMETRY",
+            "Zero-length or overlapping attached connector",
+          );
+        }
+        const edges = [{ a, b }];
         const obstacles = [segment(a, b)];
         let markup = `<path d="M ${a.x} ${a.y} L ${b.x} ${b.y}" ${
           e.dashed ? 'stroke-dasharray="8 6"' : ""
@@ -226,6 +239,7 @@ export function renderFreeformDrawing(
             x: b.x - head * ux - head * .45 * uy,
             y: b.y - head * uy + head * .45 * ux,
           };
+          edges.push({ a: l, b }, { a: b, b: r });
           obstacles.push(segment(l, b), segment(b, r));
           markup +=
             `<path d="M ${l.x} ${l.y} L ${b.x} ${b.y} L ${r.x} ${r.y}"/>`;
@@ -234,17 +248,23 @@ export function renderFreeformDrawing(
           markup:
             `<g fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${markup}</g>`,
           bounds: unionBounds(obstacles.map((o) => o.bounds)),
+          attachment: segmentsAttachment(edges),
           obstacles,
         };
       } else {
         const b = shapeBounds(e), obstacles: RenderObstacle[] = [];
+        const edges: Segment[] = [];
+        const edge = (a: Point, b: Point) => {
+          edges.push({ a, b });
+          return segment(a, b);
+        };
         if (e.type === "marker" && e.variant === "x") {
           obstacles.push(
-            segment({ x: b.x, y: b.y }, {
+            edge({ x: b.x, y: b.y }, {
               x: b.x + b.width,
               y: b.y + b.height,
             }),
-            segment({ x: b.x, y: b.y + b.height }, {
+            edge({ x: b.x, y: b.y + b.height }, {
               x: b.x + b.width,
               y: b.y,
             }),
@@ -268,7 +288,7 @@ export function renderFreeformDrawing(
               y: b.y + b.height,
             }, { x: b.x, y: b.y + b.height }];
             for (let i = 0; i < 4; i++) {
-              obstacles.push(segment(p[i], p[(i + 1) % 4]));
+              obstacles.push(edge(p[i], p[(i + 1) % 4]));
             }
           } else {
             // Fine polygonal outline keeps empty ellipse interiors available for callouts.
@@ -278,7 +298,7 @@ export function renderFreeformDrawing(
                 y: e.y + b.height / 2 * Math.sin(t),
               });
               obstacles.push(
-                segment(p(i * Math.PI / 128), p((i + 1) * Math.PI / 128)),
+                edge(p(i * Math.PI / 128), p((i + 1) * Math.PI / 128)),
               );
             }
           }
@@ -315,28 +335,51 @@ export function renderFreeformDrawing(
             part = { ...drawing, obstacles };
           }
         }
+        part = {
+          ...part,
+          attachment: e.type === "marker" && e.variant === "dot"
+            ? { type: "bounds" }
+            : segmentsAttachment(edges),
+          container: e.type === "rectangle"
+            ? { type: "rectangle", bounds: b }
+            : e.type === "ellipse"
+            ? {
+              type: "ellipse",
+              cx: e.x,
+              cy: e.y,
+              rx: b.width / 2,
+              ry: b.height / 2,
+            }
+            : undefined,
+        };
       }
       const b = part.bounds;
       if (!finiteBounds(b) || !withinExtent(b)) {
-        throw new Error("Painted content is invalid or too large");
+        throw renderError(
+          "INVALID_GEOMETRY",
+          "Painted content is invalid or too large",
+        );
       }
       parts.push(
-        registerTarget(
-          localTargets,
-          `${namespace}.${e.id}.${e.type === "text" ? "label" : "mark"}`,
-          part,
-          e.type === "text" ? "text" : "mark",
-        ),
+        scene.add({
+          id: `${namespace}.${e.id}.${e.type === "text" ? "label" : "mark"}`,
+          drawing: part,
+          kind: e.type === "text" ? "text" : "mark",
+        }),
       );
     } catch (error) {
-      console.warn(
-        `Freeform '${namespace}', element '${e.id}': ${
-          error instanceof Error ? error.message : error
-        }`,
-      );
+      throw contextualize(error, {
+        figureId: namespace,
+        elementId: e.id,
+        path: ["elements", figure.elements.indexOf(e)],
+      });
     }
   }
-  const localObstacles = parts.flatMap((p) => p.obstacles ?? []);
+  const localObstacles = allowContainerConnections(
+    localTargets,
+    parts.flatMap((p) => p.obstacles ?? []),
+    parts,
+  );
   const containers = new Set(
     figure.elements.filter((e) =>
       e.type === "rectangle" || e.type === "ellipse"
@@ -351,15 +394,23 @@ export function renderFreeformDrawing(
           !containers.has(obstacle.ownerId ?? "") &&
           obstacleHitsBox(obstacle, target.bounds, 1.1)
         ) {
-          console.warn(
-            `Freeform '${namespace}': text '${id}' overlaps '${obstacle.ownerId}'`,
-          );
+          options.onDiagnostic?.({
+            code: "LAYOUT_OVERLAP",
+            stage: "base",
+            figureId: namespace,
+            path: [],
+            severity: "warning",
+            message:
+              `Freeform '${namespace}': text '${id}' overlaps '${obstacle.ownerId}'`,
+          });
         }
       }
     }
   }
-  const sceneBounds = unionBounds(parts.map((p) => p.bounds)) ??
-    { x: 0, y: 0, width: SCENE_WIDTH, height: SCENE_HEIGHT };
+  const sceneBounds = unionBounds(parts.map((p) => p.bounds));
+  if (!sceneBounds) {
+    throw renderError("INVALID_GEOMETRY", "Freeform has no visible content.");
+  }
   const ty = 64 + Math.max(0, -sceneBounds.y) * scale;
   const transformBounds = (b: Bounds): Bounds => ({
     x: tx + b.x * scale,
@@ -367,33 +418,13 @@ export function renderFreeformDrawing(
     width: b.width * scale,
     height: b.height * scale,
   });
-  const transformPoint = (p: Point): Point => ({
-    x: tx + p.x * scale,
-    y: ty + p.y * scale,
-  });
-  const targets = new Map<string, RenderTarget>();
-  for (const [id, t] of localTargets) {
-    targets.set(id, {
-      ...t,
-      bounds: transformBounds(t.bounds),
-      outline: t.outline?.map((s) => ({
-        a: transformPoint(s.a),
-        b: transformPoint(s.b),
-      })),
-    });
-  }
-  const obstacles: RenderObstacle[] = localObstacles.map((o) => ({
-    ...o,
-    bounds: transformBounds(o.bounds),
-    segment: o.segment &&
-      { a: transformPoint(o.segment.a), b: transformPoint(o.segment.b) },
-    circle: o.circle &&
-      {
-        cx: tx + o.circle.cx * scale,
-        cy: ty + o.circle.cy * scale,
-        r: o.circle.r * scale,
-      },
-  }));
+  const transform = { x: tx, y: ty, scale };
+  const targets = new Map(
+    [...localTargets].map((
+      [id, target],
+    ) => [id, transformTarget(target, transform)]),
+  );
+  const obstacles = localObstacles.map((o) => transformObstacle(o, transform));
   const focusBounds = transformBounds(sceneBounds);
   return withFigureTitle(
     {

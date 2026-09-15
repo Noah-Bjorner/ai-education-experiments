@@ -130,10 +130,10 @@ export function withFigureTitle(
     x: bounds.x + dx,
     y: bounds.y + dy,
   });
-  const part = registerTarget(
-    drawing.targets,
-    `${namespace}.title`,
-    {
+  const part = registerTarget({
+    targets: drawing.targets,
+    id: `${namespace}.title`,
+    drawing: {
       markup:
         `<g style="${GRAPH_FONT_STYLE}" transform="translate(${dx} ${dy})">${marked.markup}</g>`,
       bounds: shift(b),
@@ -145,10 +145,10 @@ export function withFigureTitle(
         })),
       ],
     },
-    "text",
-    false,
-    shift(text.bounds!),
-  );
+    kind: "text",
+    textRotation: 0,
+    bounds: shift(text.bounds!),
+  });
   return {
     ...drawing,
     markup: part.markup + drawing.markup,

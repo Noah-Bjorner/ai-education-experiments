@@ -1,3 +1,4 @@
+import { ANNOTATION_LAYOUT as LAYOUT } from "./annotation-layout.ts";
 import { type Bounds, type Point } from "./bounds.ts";
 import type { RenderObstacle } from "./targets.ts";
 
@@ -148,19 +149,9 @@ export function clearRoute(
   );
 }
 
-export function routeScore(
-  points: Point[],
-  soft: RenderObstacle[],
-  clearance: number,
-) {
-  return routeLength(points) + Math.max(0, points.length - 2) * 24 +
-    points.slice(1).reduce(
-      (sum, p, i) =>
-        sum +
-        soft.filter((o) => segmentHitsObstacle(points[i], p, o, clearance))
-            .length * 160,
-      0,
-    );
+export function routeScore(points: Point[]) {
+  return routeLength(points) +
+    Math.max(0, points.length - 2) * LAYOUT.bendPenalty;
 }
 
 /** Prefer direct or one-bend routes. Visibility routing is the bounded fallback. */
@@ -168,19 +159,20 @@ export function routeConnector(
   start: Point,
   end: Point,
   hard: RenderObstacle[],
-  soft: RenderObstacle[],
   clearance: number,
   detailed = false,
 ): Point[] | null {
+  if (
+    ![start.x, start.y, end.x, end.y, clearance].every(Number.isFinite) ||
+    distance(start, end) < 0.01
+  ) return null;
   const candidates = [
     [start, end],
     [start, { x: start.x, y: end.y }, end],
     [start, { x: end.x, y: start.y }, end],
   ].map(simplifyRoute).filter((p) => clearRoute(p, hard, clearance));
   if (candidates.length) {
-    return candidates.sort((a, b) =>
-      routeScore(a, soft, clearance) - routeScore(b, soft, clearance)
-    )[0];
+    return candidates.sort((a, b) => routeScore(a) - routeScore(b))[0];
   }
   if (!detailed) return null;
 
@@ -191,13 +183,13 @@ export function routeConnector(
     y: Math.min(start.y, end.y),
     width: Math.abs(start.x - end.x),
     height: Math.abs(start.y - end.y),
-  }, 160);
+  }, LAYOUT.routeSearchPadding);
   const nearby = hard.filter((o) => overlaps(o.bounds, search)).sort((a, b) =>
     distance(center(a.bounds), start) - distance(center(b.bounds), start)
-  ).slice(0, 48);
+  ).slice(0, LAYOUT.routeObstacleLimit);
   const vertices: Point[] = [start, end];
   for (const obstacle of nearby) {
-    const b = inflate(obstacle.bounds, clearance + 2);
+    const b = inflate(obstacle.bounds, clearance + LAYOUT.routeCornerPadding);
     for (
       const p of [{ x: b.x, y: b.y }, { x: b.x + b.width, y: b.y }, {
         x: b.x,
@@ -231,8 +223,8 @@ export function routeConnector(
     for (let next = 0; next < vertices.length; next++) {
       if (visited.has(next) || next === current) continue;
       const segment = [vertices[current], vertices[next]];
-      const cost = costs[current] + routeScore(segment, soft, clearance) +
-        (current ? 24 : 0);
+      const cost = costs[current] + routeScore(segment) +
+        (current ? LAYOUT.bendPenalty : 0);
       if (cost >= costs[next] || !clearRoute(segment, hard, clearance)) {
         continue;
       }

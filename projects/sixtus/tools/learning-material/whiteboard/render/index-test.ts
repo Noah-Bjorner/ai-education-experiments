@@ -114,7 +114,10 @@ Deno.test("base and emphasis are retained before callout placement", () => {
   );
   const stripFrame = (svg: string) =>
     svg.replace(/ width="[^"]+" height="[^"]+" viewBox="[^"]+"/, "");
-  assertEquals(stripFrame(result.stages.base.svg), stripFrame(withoutAnnotations.svg));
+  assertEquals(
+    stripFrame(result.stages.base.svg),
+    stripFrame(withoutAnnotations.svg),
+  );
 });
 
 Deno.test("all five emphasis types render, including numbering and rotated text", () => {
@@ -133,7 +136,11 @@ Deno.test("all five emphasis types render, including numbering and rotated text"
       base.targets.get("trend.last.mark")!.bounds.x,
   );
   const vertical = base.targets.get("trend.y-label")!;
-  assert(vertical.vertical);
+  assert(vertical.kind === "text");
+  assertEquals(
+    vertical.decorations.underline.a.x,
+    vertical.decorations.underline.b.x,
+  );
   const b = vertical.bounds;
   const x = (b.x + b.width + 3).toFixed(2);
   assert(
@@ -249,13 +256,10 @@ Deno.test("export balances annotation overflow so the base stays centered", () =
     subject.x - frame.x,
     frame.x + frame.width - (subject.x + subject.width),
   );
-  assertAlmostEquals(
-    subject.y - frame.y,
-    frame.y + frame.height - (subject.y + subject.height),
-  );
+  assertEquals(frame.y, annotated.contentBounds.y);
+  assertEquals(frame.height, annotated.contentBounds.height);
   assert(frame.width > subject.width);
   assert(annotated.contentBounds.width <= frame.width);
-  assert(annotated.contentBounds.height <= frame.height);
   const titled = renderWhiteboardSvg({
     title: "Combine like terms",
     figures: boardExample([figure]).figures,

@@ -1,0 +1,66 @@
+{
+  "title": "Solving 2x + 4 = 22: Movie tickets",
+  "figures": [
+    {
+      "type": "text",
+      "id": "figure-1",
+      "title": "Setting up the equation.",
+      "annotations": [],
+      "role": "question",
+      "text": "You bought two movie tickets at the same price — call it x dollars each — plus a $4 popcorn, and the total was $22. That gives the equation 2x + 4 = 22.\nLet's solve for x step by step.",
+      "anchor": null,
+      "side": null
+    },
+    {
+      "type": "math_expressions",
+      "id": "figure-2",
+      "title": null,
+      "annotations": [
+        {
+          "type": "arrow",
+          "targetIds": [
+            "figure-2.step2.expression"
+          ],
+          "content": "We subtract 4 first to undo the +4 and get rid of the extra number, leaving just the ticket term."
+        },
+        {
+          "type": "arrow",
+          "targetIds": [
+            "figure-2.step3.expression"
+          ],
+          "content": "We divide by 2 to undo the ×2 and find the price of ONE ticket."
+        },
+        {
+          "type": "box",
+          "targetIds": [
+            "figure-2.step3.expression"
+          ],
+          "content": null
+        },
+        {
+          "type": "arrow",
+          "targetIds": [
+            "figure-2.step3.expression"
+          ],
+          "content": "One ticket costs $9."
+        }
+      ],
+      "expressions": [
+        {
+          "id": "step1",
+          "latex": "2x + 4 = 22"
+        },
+        {
+          "id": "step2",
+          "latex": "2x = 18 \\quad \\text{(- 4 from both sides)}"
+        },
+        {
+          "id": "step3",
+          "latex": "x = 9 \\quad \\text{(÷ 2 on both sides)}"
+        }
+      ],
+      "anchor": "figure-1",
+      "side": "bottom"
+    }
+  ]
+}

@@ -1,3 +1,6 @@
+import { drawingBuilder } from "./drawing.ts";
+import { contextualize, renderError } from "./issues.ts";
+import { resolveFigureOptions } from "./options.ts";
 import { type TextFigure, textFigureSchema } from "../figures/text.ts";
 import { unionBounds } from "./bounds.ts";
 import { GRAPH_FONT_STYLE } from "./font.ts";
@@ -5,7 +8,6 @@ import { textBlock } from "./text-block.ts";
 import type { GraphOptions } from "./graphs.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import {
-  registerTarget,
   type RenderTarget,
   type ScenePart,
   type TargetedDrawing,
@@ -18,22 +20,13 @@ export function renderTextFigureDrawing(
   input: TextFigure,
   options: GraphOptions,
 ): TargetedDrawing {
+  options = resolveFigureOptions(options);
   const figure = textFigureSchema.parse(input);
-  const width = options.width ?? 800;
-  const height = options.height ?? 520;
-  const roughness = options.roughness ?? 1.5;
-  const seed = options.seed ?? 10;
+  const { width, height, roughness, seed } = resolveFigureOptions(options);
   const style = TEXT_FIGURE_STYLE;
-  if (
-    !/^[a-zA-Z][\w-]*$/.test(options.id) ||
-    ![width, height, roughness, seed].every(Number.isFinite) ||
-    width <= style.padding * 2 || height <= 0 || roughness < 0
-  ) {
-    throw new Error(
-      "Text rendering needs a simple SVG id, a width greater than 32, positive height, and finite nonnegative roughness.",
-    );
-  }
-  const targets = new Map<string, RenderTarget>();
+  if (width <= style.padding * 2) throw renderError("INVALID_OPTIONS", "Text rendering needs a width greater than 32.");
+  const scene = drawingBuilder();
+  const targets = scene.targets;
   const parts: ScenePart[] = [];
   const colors = style.roles[figure.role];
   const body = textBlock(
@@ -72,10 +65,16 @@ export function renderTextFigureDrawing(
       ownerId: `${figure.id}.text`,
     }],
   });
-  parts.push(registerTarget(targets, `${figure.id}.text`, {
-    markup: `<g transform="translate(0 ${cardY})">${body.markup}</g>`,
-    bounds: { ...body.bounds!, y: body.bounds!.y + cardY },
-  }, "text"));
+  parts.push(
+    scene.add({
+      id: `${figure.id}.text`,
+      drawing: {
+        markup: `<g transform="translate(0 ${cardY})">${body.markup}</g>`,
+        bounds: { ...body.bounds!, y: body.bounds!.y + cardY },
+      },
+      kind: "text",
+    }),
+  );
   return withFigureTitle(
     {
       markup: `<g data-text-role="${figure.role}" style="${GRAPH_FONT_STYLE}">${

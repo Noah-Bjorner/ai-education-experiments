@@ -2,8 +2,8 @@ import { boardExample } from "./board-example.ts";
 import type { WhiteboardFigureContent } from "../schema.ts";
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import type { WhiteboardSpec } from "../schema.ts";
-import type { PendingCallout } from "./annotations.ts";
-import { renderCallouts } from "./callouts.ts";
+import type { Annotation } from "./annotation-types.ts";
+import { renderAnnotations } from "./annotations.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
 import { freeformExamples } from "./freeform-examples.ts";
@@ -114,8 +114,8 @@ Deno.test("visibility routing goes around a wall when direct and elbow paths are
     bounds: { x: 140, y: 40, width: 50, height: 120 },
   };
   const start = { x: 50, y: 100 }, end = { x: 280, y: 100 };
-  assertEquals(routeConnector(start, end, [wall], [], 6), null);
-  const route = routeConnector(start, end, [wall], [], 6, true)!;
+  assertEquals(routeConnector(start, end, [wall], 6), null);
+  const route = routeConnector(start, end, [wall], 6, true)!;
   assert(route && route.length > 2);
   assertEquals(route[0], start);
   assertEquals(route.at(-1), end);
@@ -129,10 +129,15 @@ Deno.test("a crowded plot uses an outside gutter, with full untruncated text", (
     focusBounds: { x: 0, y: 0, width: 500, height: 400 },
     targets: new Map([["scene.target.mark", {
       kind: "mark",
+      attachment: { type: "bounds" },
       bounds: { x: 246, y: 196, width: 8, height: 8 },
     }]]),
     obstacles: [
-      { kind: "area", bounds: { x: 0, y: 0, width: 500, height: 400 } },
+      {
+        kind: "area",
+        bounds: { x: 0, y: 0, width: 500, height: 400 },
+        connectorPassThroughFor: ["scene.target.mark"],
+      },
       {
         kind: "shape",
         ownerId: "scene.target.mark",
@@ -142,20 +147,19 @@ Deno.test("a crowded plot uses an outside gutter, with full untruncated text", (
   };
   const text =
     "AntidisestablishmentarianismABCDEFGHIJKLMNOPQRSTUVWXYZ\nA second explanatory line";
-  const pending: PendingCallout[] = [{
-    figureId: "scene",
-    annotationIndex: 0,
-    annotation: {
-      type: "arrow",
-      targetIds: ["scene.target.mark"],
-      content: text,
-    },
+  const annotations: Annotation[] = [{
+    type: "arrow",
+    targetIds: ["scene.target.mark"],
+    content: text,
   }];
-  const result = renderCallouts(pending, scene, [], { id: "demo" });
+  const result = renderAnnotations(annotations, scene, {
+    id: "demo",
+    figureId: "scene",
+  });
   assert(result.placements[0].usedGutter);
   assert(!overlaps(scene.bounds!, result.placements[0].labelBounds!));
   const visible = [
-    ...result.drawing.markup.matchAll(/<text[^>]*>([^<]*)<\/text>/g),
+    ...result.callouts.markup.matchAll(/<text[^>]*>([^<]*)<\/text>/g),
   ].map((m) => m[1]).join("");
   assertEquals(visible.replace(/\s/g, ""), text.replace(/\s/g, ""));
 });
@@ -216,7 +220,8 @@ Deno.test("pie arrows use wedge boundaries and can also reach interior percentag
   }]));
   assertEquals(result.calloutPlacements.length, 2);
   const mark = result.calloutPlacements.find((p) => p.annotationIndex === 0)!;
-  const anchor = base.targets.get("pie.a.mark")!.anchor!;
+  const anchor = base.targets.get("pie.a.mark")!.attachment;
+  assert(anchor.type === "anchor");
   const end = mark.paths[0].at(-1)!;
   assert(
     Math.abs(Math.hypot(end.x - anchor.point.x, end.y - anchor.point.y) - 9) <
