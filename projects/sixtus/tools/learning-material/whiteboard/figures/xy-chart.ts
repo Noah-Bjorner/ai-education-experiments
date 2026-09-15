@@ -28,8 +28,9 @@ const xyChartSchema = z.object({
 export const xyChart = {
   type: xyChartSchema.shape.type.value,
   schema: xyChartSchema,
-  useWhen:
-    "supplied data on X/Y: bars for categories, line/area for trends, scatter for pairs; not functions.",
+  summary:
+    "Supplied data on X/Y: bars for categories, line or area for trends, scatter for pairs.",
+  useWhen: "the values are tabulated, not expression-defined functions",
   instructions: `### When to use it
 
 trends, comparisons, or distributions on X/Y (line, bar, scatter, or area)

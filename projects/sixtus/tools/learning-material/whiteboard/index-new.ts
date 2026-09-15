@@ -27,7 +27,7 @@ export const whiteboardPlannerOutputSchema = z.strictObject({
   figurePlans: z.array(z.strictObject({
     type: z.enum(plannerFigureTypes),
     instructions: z.string().trim().min(1).describe(
-      "Self-contained construction task, including any shared values, units, and assumptions needed by this figure.",
+      "Self-contained construction task: what to draw, any shared values, units, and assumptions, and what the learner should notice.",
     ),
   })).min(1),
 });
@@ -99,7 +99,6 @@ export async function generateWhiteboardFigureSpec(
     },
     system,
     prompt: JSON.stringify({
-      goal: context.goal,
       boardTitle: context.title ?? null,
       figureId: plan.id,
       instructions: plan.instructions,

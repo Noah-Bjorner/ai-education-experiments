@@ -1,11 +1,3 @@
-import {
-  whiteboardFigureCategories,
-  whiteboardFigures,
-} from "./figures/index.ts";
-
-// PLANNER PROMPT
-
-export const WHITEBOARD_PLANNER_PROMPT = `
 # Role and responsibility
 
 Plan the content of an educational whiteboard for the supplied learning goal. You read the goal, decide how to teach it, and write instructions for each figure. Separate figure generators then build the figures from your instructions.
@@ -16,16 +8,18 @@ Each figure is generated independently from its instructions alone. The figure g
 
 # Available figure types
 
-${
-  Object.entries(whiteboardFigureCategories).map(([category, figures]) =>
-    [
-      `## ${category.charAt(0).toUpperCase()}${category.slice(1)}`,
-      ...figures.map((figure) =>
-        `- ${figure.type}: ${figure.summary} Use when ${figure.useWhen}.`
-      ),
-    ].join("\n")
-  ).join("\n\n")
-}
+## Charts
+- xy_chart: supplied data on X/Y: bars for categories, line/area for trends, scatter for pairs; not functions.
+- pie_chart: positive amounts as parts of one whole (pie or donut); not independent comparisons.
+
+## Math
+- math_expressions: formulas or a short algebra sequence; not diagram labels or prose.
+- coordinate_plot: functions and Cartesian geometry on a plane; empty for a blank grid; not tabulated data.
+- geometry: 2D shapes and constructions without axes; not data plots or equations.
+
+## Miscellaneous
+- freeform: schematics from text, shapes, and arrows when no specialized type fits.
+- text: a question, note, or takeaway beside a visualization; name the role in instructions.
 
 # Plan the content
 
@@ -76,7 +70,7 @@ Do not add other fields, IDs, or placement information.
 
 Goal: Help a 7th grader solve 2x + 4 = 22.
 
-\`\`\`json
+```json
 {
   "title": null,
   "figurePlans": [
@@ -86,13 +80,13 @@ Goal: Help a 7th grader solve 2x + 4 = 22.
     }
   ]
 }
-\`\`\`
+```
 
 ## Related figures
 
 Goal: Help a learner connect a triangle's perpendicular height to its area: base 10 cm, height 6 cm. Show a diagram followed by the calculation.
 
-\`\`\`json
+```json
 {
   "title": "Triangle area",
   "figurePlans": [
@@ -106,56 +100,4 @@ Goal: Help a learner connect a triangle's perpendicular height to its area: base
     }
   ]
 }
-\`\`\`
-
-\`\`\`json
-{
-  "title": null,
-  "figurePlans": [
-    {
-      "type": "math_expressions",
-      "instructions": "For a 7th grader, show 2x + 4 = 22, subtract 4 from both sides to get 2x = 18, then divide both sides by 2 to get x = 9. Make clear that applying the same operation to both sides preserves equality as x is isolated."
-    }
-  ]
-}
-\`\`\`
-`;
-
-
-
-export const GOAL_PROMPT = (goal: string): string => `
-# Goal
-${goal}
-`;
-
-
-
-
-
-
-
-// FIGURE PROMPT
-
-export function whiteboardFigureSystemPrompt(
-  figure: (typeof whiteboardFigures)[number],
-): string {
-  return `# Task
-Create one educational whiteboard figure from its construction brief.
-Return only the figure JSON matching the supplied schema.
-
-# Shared rules
-- Use the assigned figure ID exactly, including in annotation target IDs.
-- Preserve the brief's facts, values, units, and teaching purpose.
-- Use a null figure title when unnecessary or when it would repeat the board title.
-- Give elements unique lowercase IDs containing only letters, digits, and hyphens.
-- Include annotations when useful, otherwise use an empty array. Target only this figure's declared elements and supported visual parts.
-- The board already controls placement. Do not output anchor, side, or other fields outside the schema.
-
-# Figure type: ${figure.type}
-${figure.instructions}
-
-# Example
-Goal: ${figure.example.goal}
-${JSON.stringify(figure.example.output, null, 2)}
-`;
-}
+```

@@ -234,8 +234,9 @@ export type CoordinateElement = z.infer<typeof coordinateElementSchema>;
 export const coordinatePlot = {
   type: "coordinate_plot",
   schema: coordinatePlotSchema,
+  summary: "Functions and Cartesian geometry on a plane.",
   useWhen:
-    "functions and Cartesian geometry on a plane; empty for a blank grid; not tabulated data.",
+    "plotting expressions or coordinate geometry; empty for a blank grid, not tabulated data",
   instructions: `### When to use it
 
 Use for functions and coordinate geometry on one Cartesian plane. Use xy_chart for supplied observations or category comparisons. An empty elements array produces a blank coordinate exercise.

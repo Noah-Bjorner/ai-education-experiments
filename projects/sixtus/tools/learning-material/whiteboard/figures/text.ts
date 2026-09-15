@@ -26,8 +26,10 @@ export type TextFigure = z.infer<typeof textFigureSchema>;
 export const textFigure = {
   type: textFigureSchema.shape.type.value,
   schema: textFigureSchema,
+  summary:
+    "A short prose block with role question, note, or takeaway.",
   useWhen:
-    "a question, note, or takeaway beside a visualization; name the role in instructions.",
+    "it accompanies a visualization; name the role in instructions",
   instructions: `### When to use it
 
 Use for a standalone question, supporting note, or takeaway accompanying a visualization. Use annotations for messages pointing at a specific visual target; use freeform text for labels inside a diagram and math_expressions for typeset equations.
