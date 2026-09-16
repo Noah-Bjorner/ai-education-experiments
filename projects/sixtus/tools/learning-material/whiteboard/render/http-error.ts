@@ -10,9 +10,10 @@ export function whiteboardHttpError(cause: unknown, generated: boolean) {
       ok: false as const,
       error: {
         code: "WHITEBOARD_EXECUTE_FAILED",
-        message: error.issues.some((issue) => issue.code === "INTERNAL_RENDER_ERROR")
-          ? "Failed to execute the whiteboard request."
-          : "The whiteboard contains content that could not be rendered.",
+        message:
+          error.issues.some((issue) => issue.code === "INTERNAL_RENDER_ERROR")
+            ? "Failed to execute the whiteboard request."
+            : "The whiteboard contains content that could not be rendered.",
         issues: error.issues,
       },
     },

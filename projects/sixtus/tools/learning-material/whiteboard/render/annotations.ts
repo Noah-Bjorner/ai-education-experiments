@@ -23,6 +23,10 @@ export function resolveAnnotations(
 ): ResolvedAnnotation[] {
   return annotations.map((input, annotationIndex) => {
     const annotation = annotationSchema.parse(input);
+    const availableTargetIds = [...targets].filter(([, target]) =>
+      (annotation.type !== "underline" &&
+        annotation.type !== "strikethrough") || target.kind === "text"
+    ).map(([id]) => id);
     const selected = annotation.targetIds.map((id) => {
       const target = targets.get(id);
       if (!target) {
@@ -34,6 +38,7 @@ export function resolveAnnotations(
             figureId,
             annotationIndex,
             path: ["annotations", annotationIndex, "targetIds"],
+            availableTargetIds,
           },
         );
       }
@@ -45,6 +50,13 @@ export function resolveAnnotations(
         throw renderError(
           "INVALID_ANNOTATION",
           `Annotation '${annotation.type}' requires a text target: '${id}'.`,
+          {
+            stage: "annotations",
+            figureId,
+            annotationIndex,
+            path: ["annotations", annotationIndex, "targetIds"],
+            availableTargetIds,
+          },
         );
       }
       return target;
@@ -86,9 +98,6 @@ export function renderAnnotations(
   }
   const emphasis = renderEmphasis(emphasisRequests, options);
   const callouts = renderCallouts(calloutRequests, scene, emphasis, options);
-  for (const diagnostic of callouts.diagnostics) {
-    console.warn(diagnostic.message);
-  }
   return {
     emphasis: emphasis.drawing,
     callouts: callouts.drawing,

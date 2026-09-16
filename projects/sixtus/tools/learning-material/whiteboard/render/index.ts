@@ -4,7 +4,7 @@ import {
   prepareFigure,
 } from "./prepare.ts";
 import type { FigureRenderOptions } from "./options.ts";
-import { contextualize, renderError } from "./issues.ts";
+import { contextualize, renderError, type RenderIssue } from "./issues.ts";
 import { WhiteboardOutput, type WhiteboardSpec } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import {
@@ -49,6 +49,7 @@ export type WhiteboardRenderResult = SvgRenderStage & {
   };
   calloutPlacements: CalloutPlacement[];
   annotationDiagnostics: AnnotationDiagnostic[];
+  diagnostics: RenderIssue[];
   figurePlacements: FigurePlacement[];
   /** Painted union before optical centering; `bounds` is the shared viewBox. */
   contentBounds: Bounds;
@@ -217,6 +218,7 @@ export function composeWhiteboard(
     ...callouts,
     contentBounds,
     stages: { base, emphasis, callouts },
+    diagnostics: prepared.flatMap((figure) => figure.diagnostics),
     calloutPlacements: prepared.flatMap((figure) => figure.calloutPlacements),
     annotationDiagnostics: prepared.flatMap((figure) =>
       figure.annotationDiagnostics

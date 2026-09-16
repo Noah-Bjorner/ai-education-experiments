@@ -26,6 +26,16 @@ export const circularChart = {
     "A pie or donut chart showing how categories divide a single whole into parts.",
   useWhen:
     "the learner needs to understand proportions, such as each genre's share of a book collection. The categories should be distinct parts that together make up the whole",
+  need: {
+    question:
+      "Does this goal need a pie or donut chart showing how one whole is split into parts?",
+    criteria: {
+      true:
+        "The goal is about proportions or shares of a single total, such as the percentage of a budget spent on each item or each category's share of a collection. The parts do not overlap and together make up the whole.",
+      false:
+        "The goal compares independent quantities, tracks change over time, or uses values that do not add up to one whole.",
+    },
+  },
   rules: `- All slices must refer to the same whole and use the same unit.
 - Categories must not overlap.
 - Use the supplied amounts directly; counts do not need conversion to percentages.

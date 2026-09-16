@@ -33,6 +33,16 @@ export const textFigure = {
   - Note: supply necessary context or an assumption the visualization cannot convey. When that context is needed to answer a particular question, include the question itself so it is clear why the note is there.
   - Takeaway: state an inference or general principle the learner needs but may not reliably extract from the visualization. Add one only when making that inference explicit is necessary for the requested teaching depth. Omit it when it merely repeats a visible result, label, or completed calculation.
   Do not routinely wrap a visualization in an opening question and closing takeaway. Specify the role and exact message for each text figure`,
+  need: {
+    question:
+      "Does this goal call for standalone written text on the board, such as a question posed to the learner, a stated assumption, or a spelled-out conclusion?",
+    criteria: {
+      true:
+        "The goal asks for a question the learner should answer, context or an assumption to state, or a conclusion or general principle to write out in words, beyond the labels of any figure.",
+      false:
+        "The goal only asks for figures, or any wording needed fits in a figure title, a label, or a short annotation.",
+    },
+  },
   rules: `- Preserve the complete message, including newlines.
 - Default to a null title. Do not add a heading that repeats the message or merely names its role, such as "Question" or "Takeaway".
 - Express the requested message directly; do not add an introduction, recap, or additional explanation beyond the instructions.

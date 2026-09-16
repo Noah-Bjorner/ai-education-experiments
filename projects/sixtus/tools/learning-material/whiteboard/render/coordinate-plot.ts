@@ -1,6 +1,6 @@
 import { drawingBuilder } from "./drawing.ts";
 import { textLabel } from "./label.ts";
-import { contextualize, renderError } from "./issues.ts";
+import { renderError } from "./issues.ts";
 import { resolveFigureOptions } from "./options.ts";
 import {
   type CoordinateElement,
@@ -9,13 +9,12 @@ import {
 } from "../figures/coordinate-plot.ts";
 import type { Bounds, Point } from "./bounds.ts";
 import { expandBounds, unionBounds } from "./bounds.ts";
-import { fitGraphText, GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
-import type { GraphOptions } from "./graphs.ts";
+import { GRAPH_FONT_STYLE } from "./font.ts";
+import type { FigureRenderOptions as GraphOptions } from "./options.ts";
 import {
   allowContainerConnections,
   type ContainerGeometry,
   type RenderObstacle,
-  type RenderTarget,
   type ScenePart,
   segmentsAttachment,
   type TargetedDrawing,
@@ -28,7 +27,6 @@ import {
   TYPE_SCALE,
 } from "./theme.ts";
 import { withFigureTitle } from "./titles.ts";
-import { escapeXml } from "./svg.ts";
 import { segmentHitsBox } from "./placement.ts";
 import {
   clipCoordinateLine,
@@ -61,11 +59,15 @@ export function coordinateTicks(
   const step = axis.tickStep ??
     ([1, 2, 5, 10].find((n) => n * power >= raw)! * power);
   if (!Number.isFinite(step) || step <= 0) {
-    throw renderError("INVALID_GEOMETRY", "Coordinate tick spacing is outside numerical precision.");
+    throw renderError(
+      "INVALID_GEOMETRY",
+      "Coordinate tick spacing is outside numerical precision.",
+    );
   }
   const first = Math.ceil(axis.min / step), last = Math.floor(axis.max / step);
   if (![first, last].every(Number.isSafeInteger) || last - first > 100) {
-    throw renderError("INVALID_GEOMETRY", 
+    throw renderError(
+      "INVALID_GEOMETRY",
       "Coordinate axis needs at most 101 ticks; increase tickStep or use explicit ticks.",
     );
   }
@@ -82,10 +84,14 @@ export function renderCoordinatePlotDrawing(
   input: CoordinatePlot,
   options: GraphOptions,
 ): TargetedDrawing {
-  options = resolveFigureOptions(options);
   const plot = coordinatePlotSchema.parse(input);
   const { width, height } = resolveFigureOptions(options);
-  if (width < 600 || height < 400) throw renderError("INVALID_OPTIONS", "Coordinate plots need width >= 600 and height >= 400.");
+  if (width < 600 || height < 400) {
+    throw renderError(
+      "INVALID_OPTIONS",
+      "Coordinate plots need width >= 600 and height >= 400.",
+    );
+  }
   const id = plot.id ?? options.id;
   const { x: xAxis, y: yAxis } = plot.axes;
   const xSpan = xAxis.max - xAxis.min, ySpan = yAxis.max - yAxis.min;
@@ -101,7 +107,8 @@ export function renderCoordinatePlotDrawing(
     ![sx, sy, ...Object.values(box)].every(Number.isFinite) || box.width < 40 ||
     box.height < 40
   ) {
-    throw renderError("INVALID_GEOMETRY", 
+    throw renderError(
+      "CONTENT_DOES_NOT_FIT",
       "Coordinate ranges cannot fit a readable plane; use independent scaling or a different window.",
     );
   }
@@ -134,8 +141,7 @@ export function renderCoordinatePlotDrawing(
     color: string = COLORS.ink,
     maxWidth = width - 32,
   ): ScenePart {
-    const part = textLabel(value, x, y, size, anchor, color, maxWidth);
-    return { ...part, markup: part.markup.replace(`x="${x}" y="${y}"`, `x="${fmt(x)}" y="${fmt(y)}"`) };
+    return textLabel(value, x, y, size, anchor, color, maxWidth, fmt);
   }
 
   function addText(part: ScenePart, target?: string) {
@@ -237,7 +243,8 @@ export function renderCoordinatePlotDrawing(
       part.bounds &&
       tickBoxes.some((b) => overlaps(expandBounds(b, 3)!, part.bounds!))
     ) {
-      throw renderError("INVALID_GEOMETRY", 
+      throw renderError(
+        "CONTENT_DOES_NOT_FIT",
         "X tick labels overlap; increase tick spacing or shorten labels.",
       );
     }
@@ -268,7 +275,8 @@ export function renderCoordinatePlotDrawing(
       part.bounds &&
       yTickBoxes.some((b) => overlaps(expandBounds(b, 3)!, part.bounds!))
     ) {
-      throw renderError("INVALID_GEOMETRY", 
+      throw renderError(
+        "CONTENT_DOES_NOT_FIT",
         "Y tick labels overlap; increase tick spacing or shorten labels.",
       );
     }
@@ -377,7 +385,8 @@ export function renderCoordinatePlotDrawing(
         };
         const radius = element.radius * Math.max(sx, sy);
         if (!Number.isFinite(radius)) {
-          throw renderError("INVALID_GEOMETRY", 
+          throw renderError(
+            "INVALID_GEOMETRY",
             `Circle '${element.id}' exceeds numerical plotting range.`,
           );
         }
@@ -386,7 +395,8 @@ export function renderCoordinatePlotDrawing(
           Math.ceil(Math.PI * Math.sqrt(radius / 0.15)),
         );
         if (count > 8192) {
-          throw renderError("INVALID_GEOMETRY", 
+          throw renderError(
+            "INVALID_GEOMETRY",
             `Circle '${element.id}' is too large for this window; adjust its radius or the axes.`,
           );
         }

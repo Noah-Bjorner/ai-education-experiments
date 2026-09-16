@@ -123,6 +123,16 @@ export const geometry = {
     "A 2D diagram of geometric shapes and constructions without axes, with labels and markings for lengths, angles, and parallel lines.",
   useWhen:
     "the learner needs to understand geometric properties or constructions, such as a triangle's perpendicular height, equal sides, angle relationships, or circle intersections",
+  need: {
+    question:
+      "Does this goal need a diagram of geometric shapes drawn without coordinate axes?",
+    criteria: {
+      true:
+        "The goal is about a triangle, circle, polygon, angle, side length, parallel or perpendicular lines, or a geometric construction, and seeing the shape with its labels and markings helps the learner. A real-world setup counts only when the goal works with the shape it forms, such as a ladder against a wall treated as a right triangle.",
+      false:
+        "The goal has no shape to draw. Data, categories, or quantities alone do not count, and shapes that must sit on a coordinate grid with axes do not count.",
+    },
+  },
   rules: String.raw`- unit: optional common length unit. One coordinate unit equals one unit of length.
 - points, objects, labels, markings: arrays; labels and markings may be empty.
 - All points, objects, labels, and markings require stable IDs, unique together within this figure. Group names on angle markings are matching-style keys, not element IDs.

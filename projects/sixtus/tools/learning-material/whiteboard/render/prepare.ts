@@ -34,7 +34,11 @@ export type PreparedFigure = {
   annotationDiagnostics: AnnotationDiagnostic[];
   diagnostics: RenderIssue[];
 };
-export type FigurePreparationResult = { ok: true; figure: PreparedFigure } | {
+export type FigurePreparationResult = {
+  ok: true;
+  content: WhiteboardFigureContent;
+  figure: PreparedFigure;
+} | {
   ok: false;
   issues: RenderIssue[];
   error: WhiteboardRenderError;
@@ -153,11 +157,14 @@ export function prepareFigure(
       message: issue.message,
       severity: "warning",
     })));
-    const unplaceable = diagnostics.filter((issue) => issue.code === "CALLOUT_UNPLACEABLE").map((issue) => ({ ...issue, severity: "error" as const }));
+    const unplaceable = diagnostics.filter((issue) =>
+      issue.code === "CALLOUT_UNPLACEABLE"
+    ).map((issue) => ({ ...issue, severity: "error" as const }));
     if (unplaceable.length) throw new WhiteboardRenderError(unplaceable);
     assertScenePart(complete);
     return {
       ok: true,
+      content: figure,
       figure: {
         id: figure.id ?? options.id,
         type: figure.type,

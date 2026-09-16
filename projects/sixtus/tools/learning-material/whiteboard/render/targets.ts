@@ -73,18 +73,23 @@ export function validateTarget(target: RenderTarget, id: string) {
   const b = target.bounds, attachment = target.attachment;
   const finiteSegment = (s: Segment) => finitePoint(s.a) && finitePoint(s.b);
   if (
-    !Object.values(b).every(Number.isFinite) || b.width < 0 || b.height < 0 ||
+    ![b.x, b.y, b.width, b.height, b.x + b.width, b.y + b.height].every(
+      Number.isFinite,
+    ) || b.width < 0 || b.height < 0 ||
     !attachment ||
     (attachment.type === "anchor" &&
       (!finitePoint(attachment.point) || !finitePoint(attachment.direction) ||
-        Math.hypot(attachment.direction.x, attachment.direction.y) === 0)) ||
+        (Math.hypot(attachment.direction.x, attachment.direction.y) === 0 ||
+          !Number.isFinite(
+            Math.hypot(attachment.direction.x, attachment.direction.y),
+          )))) ||
     (attachment.type === "segments" &&
       (!attachment.segments.length ||
         !attachment.segments.every((s) =>
           finiteSegment(s) && (s.a.x !== s.b.x || s.a.y !== s.b.y)
         ))) ||
     (target.kind === "text" &&
-      (!finiteSegment(target.decorations.underline) ||
+      (!target.decorations || !finiteSegment(target.decorations.underline) ||
         !finiteSegment(target.decorations.strikethrough)))
   ) {
     throw renderError(

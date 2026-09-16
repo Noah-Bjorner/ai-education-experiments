@@ -1,4 +1,4 @@
-import { drawingBuilder } from "./drawing.ts";
+import { drawingBuilder, transformDrawing } from "./drawing.ts";
 import { contextualize, renderError } from "./issues.ts";
 import { resolveFigureOptions } from "./options.ts";
 import {
@@ -13,7 +13,7 @@ import {
   unionBounds,
 } from "./bounds.ts";
 import { GRAPH_FONT_STYLE } from "./font.ts";
-import type { GraphOptions } from "./graphs.ts";
+import type { FigureRenderOptions as GraphOptions } from "./options.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import { center, obstacleHitsBox } from "./placement.ts";
 import {
@@ -26,13 +26,10 @@ import {
 import {
   allowContainerConnections,
   type RenderObstacle,
-  type RenderTarget,
   type ScenePart,
   type Segment,
   segmentsAttachment,
   type TargetedDrawing,
-  transformObstacle,
-  transformTarget,
 } from "./targets.ts";
 import { textBlock } from "./text-block.ts";
 import { withFigureTitle } from "./titles.ts";
@@ -122,7 +119,6 @@ export function renderFreeformDrawing(
   input: Freeform,
   options: GraphOptions,
 ): TargetedDrawing {
-  options = resolveFigureOptions(options);
   const parsed = freeformSchema.safeParse(input);
   if (!parsed.success) {
     throw renderError(
@@ -412,30 +408,22 @@ export function renderFreeformDrawing(
     throw renderError("INVALID_GEOMETRY", "Freeform has no visible content.");
   }
   const ty = 64 + Math.max(0, -sceneBounds.y) * scale;
-  const transformBounds = (b: Bounds): Bounds => ({
-    x: tx + b.x * scale,
-    y: ty + b.y * scale,
-    width: b.width * scale,
-    height: b.height * scale,
-  });
-  const transform = { x: tx, y: ty, scale };
-  const targets = new Map(
-    [...localTargets].map((
-      [id, target],
-    ) => [id, transformTarget(target, transform)]),
+  const transformed = transformDrawing(
+    {
+      markup: parts.map((part) => part.markup).join(""),
+      bounds: sceneBounds,
+      focusBounds: sceneBounds,
+      targets: localTargets,
+      obstacles: localObstacles,
+    },
+    tx,
+    ty,
+    scale,
   );
-  const obstacles = localObstacles.map((o) => transformObstacle(o, transform));
-  const focusBounds = transformBounds(sceneBounds);
   return withFigureTitle(
     {
-      markup:
-        `<g style="${GRAPH_FONT_STYLE}"><g transform="translate(${tx} ${ty}) scale(${scale})">${
-          parts.map((p) => p.markup).join("")
-        }</g></g>`,
-      bounds: focusBounds,
-      focusBounds,
-      targets,
-      obstacles,
+      ...transformed,
+      markup: `<g style="${GRAPH_FONT_STYLE}">${transformed.markup}</g>`,
     },
     figure.title,
     namespace,

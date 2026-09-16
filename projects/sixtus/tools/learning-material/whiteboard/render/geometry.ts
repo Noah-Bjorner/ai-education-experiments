@@ -14,16 +14,14 @@ import {
   type Point,
   unionBounds,
 } from "./bounds.ts";
-import { GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
-import type { GraphOptions } from "./graphs.ts";
+import { GRAPH_FONT_STYLE } from "./font.ts";
+import type { FigureRenderOptions as GraphOptions } from "./options.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import { renderMathLatex } from "./latex.ts";
 import { center, distance, obstacleHitsBox } from "./placement.ts";
-import { escapeXml } from "./svg.ts";
 import {
   allowContainerConnections,
   type RenderObstacle,
-  type RenderTarget,
   type ScenePart,
   segmentsAttachment,
   type TargetedDrawing,
@@ -99,6 +97,7 @@ function arc(c: Point, r: number, start: number, sweep: number): ScenePart {
     { length: steps + 1 },
     (_, i) => add(c, mul(polar(start + sweep * i / steps), r)),
   );
+  const outline = path(ps);
   return {
     markup: `<path d="M ${a.x} ${a.y} A ${r} ${r} 0 ${
       Math.abs(sweep) > Math.PI ? 1 : 0
@@ -106,8 +105,8 @@ function arc(c: Point, r: number, start: number, sweep: number): ScenePart {
       sweep > 0 ? 1 : 0
     } ${b.x} ${b.y}" fill="none" stroke="${COLORS.ink}" stroke-width="2" stroke-linecap="round"/>`,
     bounds: expandBounds(box(samples), 1),
-    attachment: path(ps).attachment,
-    obstacles: path(ps).obstacles,
+    attachment: outline.attachment,
+    obstacles: outline.obstacles,
   };
 }
 function plain(value: string, size: number): Drawing {
@@ -130,10 +129,16 @@ export function renderGeometryDrawing(
   input: Geometry,
   options: GraphOptions,
 ): TargetedDrawing {
-  options = resolveFigureOptions(options);
   const spec = geometrySchema.parse(input);
-  const { width, height, roughness, hatchGap, seed } = resolveFigureOptions(options);
-  if (width < 320 || height < 280) throw renderError("INVALID_OPTIONS", "Geometry needs dimensions at least 320 × 280.");
+  const { width, height, roughness, hatchGap, seed } = resolveFigureOptions(
+    options,
+  );
+  if (width < 320 || height < 280) {
+    throw renderError(
+      "INVALID_OPTIONS",
+      "Geometry needs dimensions at least 320 × 280.",
+    );
+  }
   const resolved = resolveGeometry(spec), namespace = spec.id ?? options.id;
   const scene = drawingBuilder();
   const targets = scene.targets, parts: ScenePart[] = [];
@@ -173,7 +178,10 @@ export function renderGeometryDrawing(
     sy = viewport.height / (world.height || span || 1);
   const scale = Math.min(sx, sy);
   if (!Number.isFinite(scale) || scale <= 0) {
-    throw renderError("INVALID_GEOMETRY", "Geometry coordinate range cannot be displayed.");
+    throw renderError(
+      "INVALID_GEOMETRY",
+      "Geometry coordinate range cannot be displayed.",
+    );
   }
   const project = (p: GeometryPoint): Point => ({
     x: viewport.x + viewport.width / 2 +
@@ -370,7 +378,8 @@ export function renderGeometryDrawing(
         available * 0.28,
       );
       if (radius < 5) {
-        throw renderError("INVALID_GEOMETRY", 
+        throw renderError(
+          "CONTENT_DOES_NOT_FIT",
           `Marking '${m.id}' is too small to display; increase the board size or simplify the figure.`,
         );
       }
@@ -429,7 +438,10 @@ export function renderGeometryDrawing(
         const count = (m.kind === "equal-length" ? equalStyles : parallelStyles)
           .get(id)!;
         if ((count - 1) * 5 + 14 > distance(a, b)) {
-          throw renderError("INVALID_GEOMETRY", `Marking '${m.id}' does not fit its segment.`);
+          throw renderError(
+            "CONTENT_DOES_NOT_FIT",
+            `Marking '${m.id}' does not fit its segment.`,
+          );
         }
         for (let i = 0; i < count; i++) {
           const p = add(midpoint, mul(tangent, (i - (count - 1) / 2) * 5));
@@ -467,7 +479,8 @@ export function renderGeometryDrawing(
         const value = Math.hypot(b[0] - a[0], b[1] - a[1]);
         const rounded = Number(value.toFixed(2));
         if (!Number.isFinite(value) || rounded === 0) {
-          throw renderError("INVALID_GEOMETRY", 
+          throw renderError(
+            "INVALID_GEOMETRY",
             `Length label '${label.id}' cannot be represented at two decimal places; use explicit LaTeX.`,
           );
         }
@@ -488,7 +501,10 @@ export function renderGeometryDrawing(
   for (const job of jobs) {
     const ink = job.drawing.bounds;
     if (!ink) {
-      throw renderError("INVALID_GEOMETRY", `Geometry label '${job.id}' has no visible content.`);
+      throw renderError(
+        "INVALID_GEOMETRY",
+        `Geometry label '${job.id}' has no visible content.`,
+      );
     }
     const directions = [
       ...job.directions.map(unit),
@@ -535,7 +551,8 @@ export function renderGeometryDrawing(
       }
     }
     if (!placement) {
-      throw renderError("INVALID_GEOMETRY", 
+      throw renderError(
+        "CONTENT_DOES_NOT_FIT",
         `Geometry label '${job.id}' does not fit without overlap; increase the board size, shorten labels, or split the diagram.`,
       );
     }
@@ -548,7 +565,10 @@ export function renderGeometryDrawing(
   }
   const bounds = unionBounds(parts.map((p) => p.bounds))!;
   if (!Object.values(bounds).every(Number.isFinite)) {
-    throw renderError("INVALID_GEOMETRY", "Geometry produced nonfinite drawing bounds.");
+    throw renderError(
+      "INVALID_GEOMETRY",
+      "Geometry produced nonfinite drawing bounds.",
+    );
   }
   return withFigureTitle(
     {

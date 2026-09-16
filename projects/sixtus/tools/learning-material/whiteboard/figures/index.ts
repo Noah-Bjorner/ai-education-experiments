@@ -24,7 +24,11 @@ export const whiteboardFigureCategories = {
 } as const;
 
 export const whiteboardFigures = [
-  ...whiteboardFigureCategories.charts,
-  ...whiteboardFigureCategories.math,
-  ...whiteboardFigureCategories.miscellaneous,
+  xyChart,
+  circularChart,
+  mathExpressions,
+  coordinatePlot,
+  geometry,
+  freeform,
+  textFigure
 ] as const;

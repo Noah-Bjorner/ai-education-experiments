@@ -1,8 +1,8 @@
 import { z } from "@zod";
 import {
+  elementIdField,
   figureAnnotationsField,
   figureTitleField,
-  elementIdField,
   type WhiteboardFigureDefinition,
 } from "./shared.ts";
 import { parseCoordinateExpression } from "./coordinate-expression.ts";
@@ -199,7 +199,6 @@ export const coordinatePlotSchema = z.strictObject({
     }
     ids.add(element.id);
   }
-
 });
 
 export type CoordinatePlot = z.infer<typeof coordinatePlotSchema>;
@@ -212,6 +211,16 @@ export const coordinatePlot = {
     "An x/y coordinate plane showing function graphs, points, lines, vectors, and shapes.",
   useWhen:
     "the learner needs to explore functions, slopes, intercepts, or domains, or study shapes and positions on coordinate axes. It can also provide a blank grid for an exercise. Use geometry for shape diagrams without axes",
+  need: {
+    question:
+      "Does this goal need an x/y coordinate plane with axes?",
+    criteria: {
+      true:
+        "The goal involves graphing a function, line, or inequality; plotting points, vectors, or shapes at given coordinates; reading slopes, intercepts, or intersections; or providing a blank grid for a coordinate exercise.",
+      false:
+        "Nothing in the goal is placed on coordinate axes. A shape diagram that stands on its own without axes, or a chart of measured data values, does not count.",
+    },
+  },
   rules: `An empty elements array produces a blank coordinate exercise.
 
 ### Plane

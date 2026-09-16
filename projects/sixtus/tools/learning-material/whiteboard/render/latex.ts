@@ -38,7 +38,8 @@ function svgMarkup(node: LiteElement): string {
   if (
     !["svg", "g", "path", "rect", "line", "polygon", "polyline"].includes(kind)
   ) {
-    throw renderError("INVALID_LATEX", 
+    throw renderError(
+      "INVALID_LATEX",
       "The expression requires unsupported external content or font glyphs.",
     );
   }
@@ -46,14 +47,20 @@ function svgMarkup(node: LiteElement): string {
     name !== "id" && !name.startsWith("data-latex")
   ).map(({ name, value }) => {
     if (/^(?:on|href|xlink:href)/i.test(name)) {
-      throw renderError("INVALID_LATEX", "External math content is unavailable.");
+      throw renderError(
+        "INVALID_LATEX",
+        "External math content is unavailable.",
+      );
     }
     return ` ${name}="${escapeXml(String(value))}"`;
   }).join("");
   const children = adaptor.childNodes(node).map((child) => {
     if (child instanceof LiteElement) return svgMarkup(child);
     if (adaptor.value(child).trim()) {
-      throw renderError("INVALID_LATEX", "Math output must use the bundled font outlines.");
+      throw renderError(
+        "INVALID_LATEX",
+        "Math output must use the bundled font outlines.",
+      );
     }
     return "";
   }).join("");
@@ -63,7 +70,10 @@ function svgMarkup(node: LiteElement): string {
 /** Accept math-mode source or one conventional pair of paste delimiters. */
 export function normalizeMathLatex(source: string): string {
   if (source.length > 2000) {
-    throw renderError("INVALID_LATEX", "Use at most 2000 characters per expression.");
+    throw renderError(
+      "INVALID_LATEX",
+      "Use at most 2000 characters per expression.",
+    );
   }
   let latex = source.trim();
   for (
@@ -80,7 +90,9 @@ export function normalizeMathLatex(source: string): string {
       break;
     }
   }
-  if (!latex) throw renderError("INVALID_LATEX", "Enter a LaTeX math expression.");
+  if (!latex) {
+    throw renderError("INVALID_LATEX", "Enter a LaTeX math expression.");
+  }
   // Bound nesting independently of MathJax's macro-expansion limit.
   let depth = 0;
   for (let i = 0; i < latex.length; i++) {
@@ -89,7 +101,10 @@ export function normalizeMathLatex(source: string): string {
       continue;
     }
     if (latex[i] === "{" && ++depth > 32) {
-      throw renderError("INVALID_LATEX", "Math expressions may nest at most 32 groups.");
+      throw renderError(
+        "INVALID_LATEX",
+        "Math expressions may nest at most 32 groups.",
+      );
     }
     if (latex[i] === "}") depth--;
   }
@@ -114,7 +129,10 @@ export function renderMathLatex(source: string, size = 36): MathBox {
   });
   const svg = adaptor.firstChild(container);
   if (!(svg instanceof LiteElement) || adaptor.kind(svg) !== "svg") {
-    throw renderError("INVALID_LATEX", "The expression did not produce math output.");
+    throw renderError(
+      "INVALID_LATEX",
+      "The expression did not produce math output.",
+    );
   }
   const viewBox = adaptor.getAttribute(svg, "viewBox")?.split(/\s+/).map(
     Number,
@@ -124,7 +142,10 @@ export function renderMathLatex(source: string, size = 36): MathBox {
   }
   const [x, y, w, h] = viewBox;
   if (w <= 0 || h <= 0) {
-    throw renderError("INVALID_LATEX", "The expression has no visible content.");
+    throw renderError(
+      "INVALID_LATEX",
+      "The expression has no visible content.",
+    );
   }
   const scale = size / 1000;
   const markup = adaptor.childNodes(svg).map((node) => {
@@ -132,7 +153,10 @@ export function renderMathLatex(source: string, size = 36): MathBox {
     return svgMarkup(node);
   }).join("");
   if (!/<path\b[^>]*\bd="[^"]+"|<rect\b/.test(markup)) {
-    throw renderError("INVALID_LATEX", "The expression has no visible content.");
+    throw renderError(
+      "INVALID_LATEX",
+      "The expression has no visible content.",
+    );
   }
   return {
     markup: `<g transform="scale(${scale})">${markup}</g>`,

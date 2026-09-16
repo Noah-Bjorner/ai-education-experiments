@@ -5,8 +5,9 @@ import {
   unionBounds,
 } from "./bounds.ts";
 import {
+  type Attachment,
+  type ContainerGeometry,
   registerTarget,
-  type RenderObstacle,
   type RenderTarget,
   type ScenePart,
   type TargetedDrawing,
@@ -77,9 +78,13 @@ export function drawingBuilder(targets = new Map<string, RenderTarget>()) {
   return {
     targets,
     parts,
-    add(options: Omit<Parameters<typeof registerTarget>[0], "targets">): ScenePart {
+    add(
+      options: Omit<Parameters<typeof registerTarget>[0], "targets">,
+    ): ScenePart {
       assertScenePart(options.drawing);
-      assertBounds(options.bounds === undefined ? options.drawing.bounds : options.bounds);
+      assertBounds(
+        options.bounds === undefined ? options.drawing.bounds : options.bounds,
+      );
       const registered = registerTarget({ ...options, targets });
       parts.push(registered);
       return registered;
@@ -124,13 +129,40 @@ export function transformDrawing<T extends Drawing>(
     height: b.height * scale,
   });
   const transform = { x, y, scale };
-  const scene = drawing as T & Partial<TargetedDrawing>;
+  const scene = drawing as
+    & T
+    & Partial<TargetedDrawing>
+    & Pick<ScenePart, "attachment" | "container">;
+  const attachment = (value: Attachment): Attachment =>
+    transformTarget({
+      kind: "mark",
+      bounds: drawing.bounds ?? { x: 0, y: 0, width: 0, height: 0 },
+      attachment: value,
+    }, transform).attachment;
+  const container = (value: ContainerGeometry): ContainerGeometry => {
+    switch (value.type) {
+      case "rectangle":
+        return { ...value, bounds: bounds(value.bounds) };
+      case "ellipse":
+        return {
+          ...value,
+          cx: x + value.cx * scale,
+          cy: y + value.cy * scale,
+          rx: value.rx * scale,
+          ry: value.ry * scale,
+        };
+      case "polygon":
+        return { ...value, points: value.points.map(point) };
+    }
+  };
   const result = {
     ...drawing,
     markup: `<g transform="translate(${x} ${y})${
       scale === 1 ? "" : ` scale(${scale})`
     }">${drawing.markup}</g>`,
     bounds: drawing.bounds && bounds(drawing.bounds),
+    ...(scene.attachment ? { attachment: attachment(scene.attachment) } : {}),
+    ...(scene.container ? { container: container(scene.container) } : {}),
     ...(scene.obstacles
       ? {
         obstacles: scene.obstacles.map((o) => transformObstacle(o, transform)),

@@ -265,6 +265,6 @@ Deno.test("geometry handles text annotations and rejects unreadable labels and b
   assertThrows(
     () => renderGeometryDrawing(spec, { id: "bad" }),
     Error,
-    "Geometry label 'bad-latex'",
+    "Undefined control sequence",
   );
 });

@@ -19,7 +19,8 @@ export function textBlock(
     ![width, size, lineHeight, x, y].every(Number.isFinite) ||
     width <= 0 || size <= 0 || lineHeight < size
   ) {
-    throw renderError("CONTENT_DOES_NOT_FIT", 
+    throw renderError(
+      "CONTENT_DOES_NOT_FIT",
       "Text blocks need positive finite dimensions and line height >= font size.",
     );
   }
@@ -33,19 +34,31 @@ export function textBlock(
   let lines: string[];
   let bounds: Bounds | null;
   for (;;) {
-    lines = wrapGraphText(sanitizeGraphText(value).replace(/\r\n?/g, "\n"), size, wrapWidth);
+    lines = wrapGraphText(
+      sanitizeGraphText(value).replace(/\r\n?/g, "\n"),
+      size,
+      wrapWidth,
+    );
     bounds = unionBounds(
       lines.map((line, i) =>
         graphTextBounds(line, size, anchorX, i * lineHeight, anchor)
       ),
     );
-    if (!bounds) throw renderError("CONTENT_DOES_NOT_FIT", "Text blocks require visible text.");
+    if (!bounds) {
+      throw renderError(
+        "CONTENT_DOES_NOT_FIT",
+        "Text blocks require visible text.",
+      );
+    }
     if (bounds.width <= width) break;
     // Advance widths and ink widths differ for overhanging glyphs. Reflow at
     // the measured excess rather than allowing that ink to cross the border.
     wrapWidth -= Math.max(1, bounds.width - width);
     if (wrapWidth <= 0) {
-      throw renderError("CONTENT_DOES_NOT_FIT", "Text block is too narrow for its glyphs.");
+      throw renderError(
+        "CONTENT_DOES_NOT_FIT",
+        "Text block is too narrow for its glyphs.",
+      );
     }
   }
   const left = align === "left" ? x - bounds.x : x;

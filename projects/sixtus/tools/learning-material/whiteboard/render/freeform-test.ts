@@ -42,16 +42,19 @@ const label: FreeformElement = {
   align: "left",
   size: "normal",
 };
-const draw = (s: Freeform) => renderFreeformDrawing(s, { id: "test-render" });
+let diagnosticSink: ((message: string) => void) | undefined;
+const draw = (s: Freeform) =>
+  renderFreeformDrawing(s, {
+    id: "test-render",
+    onDiagnostic: (issue) => diagnosticSink?.(issue.message),
+  });
 const captureWarnings = (fn: () => void): string[] => {
   const warnings: string[] = [];
-  const original = console.warn;
-  console.warn = (...args: unknown[]) =>
-    warnings.push(args.map(String).join(" "));
+  diagnosticSink = (message) => warnings.push(message);
   try {
     fn();
   } finally {
-    console.warn = original;
+    diagnosticSink = undefined;
   }
   return warnings;
 };
@@ -111,10 +114,11 @@ Deno.test("freeform validates attachments and resolves forward references", () =
     Error,
     "label",
   );
-  const reversed = captureWarnings(() =>
-    draw(spec([{ ...arrow, from: { target: "box" } }, box]))
+  assertThrows(
+    () => draw(spec([{ ...arrow, from: { target: "box" } }, box])),
+    Error,
+    "center",
   );
-  assert(reversed.some((w) => w.includes("arrow")));
   assertThrows(
     () =>
       draw(spec([{ ...label, position: { target: "missing", side: "top" } }])),
@@ -189,11 +193,12 @@ Deno.test("freeform supports four label sides and uniform scaling", () => {
     normal.targets.get("test.label.label")!.bounds.height,
   );
 });
-Deno.test("freeform warns on collisions, skips damaged elements, and allows containment", () => {
-  const emoji = captureWarnings(() =>
-    draw(spec([{ ...label, content: "🙂" }]))
+Deno.test("freeform reports collisions, rejects damaged elements, and allows containment", () => {
+  assertThrows(
+    () => draw(spec([{ ...label, content: "🙂" }])),
+    Error,
+    "has no glyph",
   );
-  assert(emoji.some((w) => w.includes("Freeform 'test'")));
   const stacked = captureWarnings(() =>
     draw(spec([label, { ...label, id: "duplicate-text" }]))
   );
@@ -207,7 +212,7 @@ Deno.test("freeform warns on collisions, skips damaged elements, and allows cont
     }]))
   );
   assert(crossed.some((w) => w.includes("cross")));
-  const oversized = captureWarnings(() =>
+  const oversized = assertThrows(() =>
     draw(spec([box, {
       id: "offside-line",
       type: "line",
@@ -215,8 +220,8 @@ Deno.test("freeform warns on collisions, skips damaged elements, and allows cont
       to: { x: 560, y: 50_000 },
     }]))
   );
-  assert(oversized.some((w) => w.includes("offside-line")));
-  assert(oversized.some((w) => w.includes("too large")));
+  assert(oversized instanceof Error);
+  assert(oversized.message.includes("too large"));
   const allowed = captureWarnings(() => {
     draw(spec([{ ...box, x: 20, y: 20, width: 300, height: 180 }, label]));
     draw(spec([box, { ...box, id: "overlap", x: 260 }]));
@@ -334,12 +339,13 @@ Deno.test("freeform composes with charts and shared annotations without duplicat
   assertEquals(new Set(ids).size, ids.length);
 });
 
-Deno.test("freeform skips large filled shapes before generating hatch strokes", () => {
-  const boxWarning = captureWarnings(() =>
+Deno.test("freeform rejects large filled shapes before generating hatch strokes", () => {
+  const boxWarning = assertThrows(() =>
     draw(spec([{ ...box, width: 1e300, fill: true }]))
   );
-  assert(boxWarning.some((w) => w.includes("box")));
-  const ellipseWarning = captureWarnings(() =>
+  assert(boxWarning instanceof Error);
+  assert(boxWarning.message.includes("box"));
+  const ellipseWarning = assertThrows(() =>
     draw(spec([{
       id: "huge",
       type: "ellipse",
@@ -350,7 +356,8 @@ Deno.test("freeform skips large filled shapes before generating hatch strokes", 
       fill: true,
     }]))
   );
-  assert(ellipseWarning.some((w) => w.includes("huge")));
+  assert(ellipseWarning instanceof Error);
+  assert(ellipseWarning.message.includes("huge"));
 });
 
 Deno.test("freeform validates options, titles, gaps and diagonal ellipse endpoints", () => {

@@ -70,9 +70,10 @@ for (const definition of whiteboardFigures) {
   Deno.test(`shared annotation contract: ${definition.type}`, () => {
     const figure: WhiteboardFigureContent = {
       ...structuredClone(definition.example.output),
+      title: "Annotation heading",
       annotations: [],
     };
-    const prepared = prepareFigure(figure, { id: "test" });
+    const prepared = prepareFigure(figure, { id: "whiteboard-figure-0" });
     assert(prepared.ok);
     const base = prepared.figure.base;
     const before = structuredClone(base);
@@ -576,12 +577,10 @@ Deno.test("blocked routes report best-effort fallback and numerically unusable r
     bounds: { x: 150, y: 100, width: 100, height: 100 },
     ownerId: "unrelated",
   }]);
-  const { result, warnings } = quiet(() =>
-    renderAnnotations(input, blocked, options)
-  );
+  const { result } = quiet(() => renderAnnotations(input, blocked, options));
   assertEquals(result.placements.length, 1);
   assertEquals(result.diagnostics.map((d) => d.code), ["overlap-fallback"]);
-  assertEquals(warnings, [result.diagnostics[0].message]);
+  assert(result.diagnostics[0].message.includes("using a fallback placement"));
   assert(result.callouts.markup.includes("&lt;this&gt;"));
   assertEquals(
     result,
@@ -594,4 +593,83 @@ Deno.test("blocked routes report best-effort fallback and numerically unusable r
   assertEquals(skipped.placements, []);
   assertEquals(skipped.diagnostics.map((d) => d.code), ["unplaceable"]);
   assertEquals(skipped.callouts.markup, "");
+});
+
+Deno.test("multiple callouts to one emphasized target reserve each other's labels and arrowheads", () => {
+  const target = mark({ x: 196, y: 146, width: 8, height: 8 });
+  const base = scene(new Map([["target", target]]), [{
+    kind: "shape",
+    ownerId: "target",
+    bounds: target.bounds,
+  }]);
+  const result = renderAnnotations(
+    [
+      { type: "circle", targetIds: ["target"], content: null },
+      { type: "arrow", targetIds: ["target"], content: "First explanation" },
+      { type: "arrow", targetIds: ["target"], content: "Second explanation" },
+      { type: "line", targetIds: ["target"], content: "Third explanation" },
+    ],
+    base,
+    options,
+  );
+  assertEquals(result.diagnostics, []);
+  assertEquals(result.placements.length, 3);
+  for (const placement of result.placements) {
+    const label = placement.labelBounds!;
+    for (const other of result.placements) {
+      if (other === placement) continue;
+      assert(
+        !obstacleHitsBox(
+          { kind: "text", bounds: label },
+          other.labelBounds!,
+          5,
+        ),
+      );
+      for (const path of other.paths) {
+        assert(clearRoute(path, [{ kind: "text", bounds: label }], 3));
+      }
+    }
+  }
+});
+
+Deno.test("board rendering exposes structured fallback diagnostics with stable annotation identity", () => {
+  const figure: WhiteboardFigureContent = {
+    type: "freeform",
+    id: "blocked",
+    title: null,
+    elements: [
+      {
+        type: "marker",
+        id: "target",
+        x: 250,
+        y: 200,
+        radius: 4,
+        variant: "dot",
+      },
+      {
+        type: "text",
+        id: "cover",
+        content:
+          "Covering the target\nCovering the target\nCovering the target\nCovering the target",
+        position: { x: 150, y: 140 },
+        width: 300,
+        size: "large",
+        align: "left",
+      },
+    ],
+    annotations: [{
+      type: "arrow",
+      targetIds: ["blocked.target.mark"],
+      content: "Explain this target",
+    }],
+  };
+  const result = renderWhiteboardSvg(boardExample([figure]));
+  assertEquals(result.calloutPlacements.length, 1);
+  assertEquals(result.annotationDiagnostics.length, 1);
+  const diagnostic = result.annotationDiagnostics[0];
+  assertEquals(diagnostic.code, "overlap-fallback");
+  assertEquals(diagnostic.figureId, "blocked");
+  assertEquals(diagnostic.annotationIndex, 0);
+  assertEquals(diagnostic.targetIds, ["blocked.target.mark"]);
+  assert(diagnostic.message.includes("fallback"));
 });

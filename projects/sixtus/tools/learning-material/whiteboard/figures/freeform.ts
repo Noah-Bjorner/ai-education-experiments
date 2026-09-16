@@ -134,6 +134,16 @@ export const freeform = {
     "A custom diagram assembled from text, simple shapes, lines, and arrows.",
   useWhen:
     "the learner needs a process, relationship, or grouping that the specialized figure types cannot express, such as a flowchart, a sender-to-receiver diagram, or objects grouped inside containers",
+  need: {
+    question:
+      "Does this goal need a custom diagram made of labelled boxes, shapes, and arrows, such as a flowchart or a relationship diagram?",
+    criteria: {
+      true:
+        "The goal describes a process with steps, a flow between parts, a hierarchy, items grouped inside containers, or a labelled schematic that is not a data chart, a coordinate graph, or a geometric shape.",
+      false:
+        "The content is fully covered by a data chart, a coordinate graph, a geometric shape diagram, or written math and text.",
+    },
+  },
   rules:
     `Generate the complete scene in this spec; no prompt or SVG fields.
 Lay out the scene in an 800 by 440 logical area, beneath an automatically drawn title. X increases rightward, Y downward. Keep the main diagram inside that area so scale stays consistent; inset large containers so labels fit beside them. A label that spills past an edge is drawn (the export grows) rather than cropped. Labels may sit in or on rectangles and ellipses. Do not stack labels on each other or run connectors through text. Elements render in array order.

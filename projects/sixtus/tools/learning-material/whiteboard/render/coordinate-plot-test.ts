@@ -266,16 +266,16 @@ Deno.test("clipped content has no ghost labels or annotation targets", () => {
   assert(!draw(p).markup.includes("Outside"));
   assertThrows(
     () =>
-      draw({
+      renderWhiteboardSvg(boardExample([{
         ...p,
         annotations: [{
           type: "arrow",
           targetIds: ["slope.off.mark"],
           content: "Invisible",
         }],
-      }),
+      }])),
     Error,
-    "outside the visible window",
+    "Unknown or unavailable annotation target",
   );
 });
 

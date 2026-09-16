@@ -72,6 +72,14 @@ export type WhiteboardFigureDefinition<S extends z.ZodType<{ type: string }>> = 
   summary: string;
   useWhen: string;
 
+  // goal classifier (typesafe noul), evaluated against the goal text in isolation.
+  // `question` is a yes/no question about the goal where yes means this figure is needed.
+  // `criteria` pins down the boundary; put discriminators against neighbouring figures in `false`.
+  need: {
+    question: string;
+    criteria?: { true: string; false: string };
+  };
+
   // figure-generator grammar
   rules: string;
   annotationTargets: string[];

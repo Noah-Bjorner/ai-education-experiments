@@ -1,4 +1,4 @@
-import { type RenderIssue, renderError } from "./issues.ts";
+import { renderError, type RenderIssue } from "./issues.ts";
 
 export type FigureRenderOptions = {
   id: string;
@@ -20,10 +20,23 @@ export function resolveFigureOptions(options: FigureRenderOptions) {
     seed: options.seed ?? 10,
     onDiagnostic: options.onDiagnostic,
   };
-  if (!/^[a-zA-Z][\w-]*$/.test(resolved.id) ||
-    ![resolved.width, resolved.height, resolved.roughness, resolved.hatchGap, resolved.seed].every(Number.isFinite) ||
-    resolved.width <= 0 || resolved.height <= 0 || resolved.roughness < 0 || resolved.hatchGap < 2) {
-    throw renderError("INVALID_OPTIONS", "Rendering requires a simple SVG id, finite positive dimensions, roughness >= 0, and hatchGap >= 2.", { stage: "validation" });
+  if (
+    !/^[a-zA-Z][\w-]*$/.test(resolved.id) ||
+    ![
+      resolved.width,
+      resolved.height,
+      resolved.roughness,
+      resolved.hatchGap,
+      resolved.seed,
+    ].every(Number.isFinite) ||
+    resolved.width <= 0 || resolved.height <= 0 || resolved.roughness < 0 ||
+    resolved.hatchGap < 2
+  ) {
+    throw renderError(
+      "INVALID_OPTIONS",
+      "Rendering options require a simple SVG id, finite positive dimensions, roughness >= 0, and hatchGap >= 2.",
+      { stage: "validation" },
+    );
   }
   return resolved;
 }

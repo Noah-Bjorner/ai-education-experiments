@@ -4,11 +4,24 @@ import { escapeXml } from "./svg.ts";
 import { COLORS, TYPE_SCALE } from "./theme.ts";
 
 /** Draw exactly the normalized/truncated string that was measured. */
-export function textLabel(value: string, x: number, y: number, size: number = TYPE_SCALE.label, anchor = "start", color: string = COLORS.ink, maxWidth = Infinity): ScenePart {
+export function textLabel(
+  value: string,
+  x: number,
+  y: number,
+  size: number = TYPE_SCALE.label,
+  anchor = "start",
+  color: string = COLORS.ink,
+  maxWidth = Infinity,
+  formatCoordinate: (value: number) => string | number = String,
+): ScenePart {
   const visible = fitGraphText(value, size, maxWidth);
   const bounds = graphTextBounds(visible, size, x, y, anchor);
   return {
-    markup: `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" fill="${escapeXml(color)}"><title>${escapeXml(value)}</title>${escapeXml(visible)}</text>`,
+    markup: `<text x="${formatCoordinate(x)}" y="${
+      formatCoordinate(y)
+    }" font-size="${size}" text-anchor="${anchor}" fill="${
+      escapeXml(color)
+    }"><title>${escapeXml(value)}</title>${escapeXml(visible)}</text>`,
     bounds,
     obstacles: bounds ? [{ bounds, kind: "text" }] : [],
   };

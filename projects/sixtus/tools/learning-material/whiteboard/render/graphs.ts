@@ -1,6 +1,6 @@
 import { drawingBuilder } from "./drawing.ts";
 import { textLabel } from "./label.ts";
-import { contextualize, renderError } from "./issues.ts";
+import { renderError } from "./issues.ts";
 import { resolveFigureOptions } from "./options.ts";
 import type { WhiteboardFigureContent } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
@@ -9,7 +9,6 @@ import {
   fitGraphText,
   GRAPH_FONT_DEFS,
   GRAPH_FONT_STYLE,
-  graphTextBounds,
   measureGraphText,
 } from "./font.ts";
 import {
@@ -58,7 +57,12 @@ import type { FigureRenderOptions as GraphOptions } from "./options.ts";
 
 function settings(options: GraphOptions) {
   const result = resolveFigureOptions(options);
-  if (result.width < 600 || result.height < 400) throw renderError("INVALID_OPTIONS", "Graphs need width >= 600 and height >= 400.");
+  if (result.width < 600 || result.height < 400) {
+    throw renderError(
+      "INVALID_OPTIONS",
+      "Graphs need width >= 600 and height >= 400.",
+    );
+  }
   return result;
 }
 
@@ -75,7 +79,9 @@ function group(
   pen: { id: string; seed: number; roughness: number },
 ): TargetedDrawing {
   const bodyBounds = unionBounds(parts.map((p) => p.bounds));
-  if (!bodyBounds) throw renderError("INVALID_GEOMETRY", "A graph needs visible content.");
+  if (!bodyBounds) {
+    throw renderError("INVALID_GEOMETRY", "A graph needs visible content.");
+  }
   const label = title ?? namespace;
   const markup = `<g style="${GRAPH_FONT_STYLE}" role="img" aria-label="${
     escapeXml(label)
@@ -119,7 +125,10 @@ function axis(values: number[], includeZero = false) {
   const low = Math.floor(min / step) * step;
   const high = Math.ceil(max / step) * step;
   if (!Number.isFinite(high - low) || high <= low || step <= 0) {
-    throw renderError("INVALID_GEOMETRY", "Axis values exceed the supported numeric range.");
+    throw renderError(
+      "INVALID_GEOMETRY",
+      "Axis values exceed the supported numeric range.",
+    );
   }
   const ticks = Array.from(
     { length: Math.round((high - low) / step) + 1 },
@@ -158,10 +167,16 @@ export function renderXyGraphDrawing(
   const targets = scene.targets;
   const isBar = chart.chartStyle === "bar";
   if (!["line", "bar", "scatter", "area"].includes(chart.chartStyle)) {
-    throw renderError("INVALID_GEOMETRY", `Unsupported XY style '${chart.chartStyle}'.`);
+    throw renderError(
+      "INVALID_GEOMETRY",
+      `Unsupported XY style '${chart.chartStyle}'.`,
+    );
   }
   if (!chart.series.length || chart.series.some((s) => !s.points.length)) {
-    throw renderError("INVALID_GEOMETRY", "An XY chart needs nonempty series and points.");
+    throw renderError(
+      "INVALID_GEOMETRY",
+      "An XY chart needs nonempty series and points.",
+    );
   }
   const xType = typeof chart.series[0].points[0].x;
   const series = chart.series.map((s) => {
@@ -172,14 +187,16 @@ export function renderXyGraphDrawing(
           ? !Number.isFinite(p.x)
           : !isBar || !p.x.trim())
       ) {
-        throw renderError("INVALID_GEOMETRY", 
+        throw renderError(
+          "INVALID_GEOMETRY",
           "XY charts require finite values and consistent X types; only bars accept categories.",
         );
       }
       return { ...p };
     });
     if (isBar && new Set(points.map((p) => p.x)).size !== points.length) {
-      throw renderError("INVALID_GEOMETRY", 
+      throw renderError(
+        "INVALID_GEOMETRY",
         "Each bar series must have at most one value per category.",
       );
     }
@@ -218,7 +235,10 @@ export function renderXyGraphDrawing(
     bottom: c.height - 88 - legendRows * legendRowHeight,
   };
   if (plot.bottom - plot.top < 150) {
-    throw renderError("INVALID_GEOMETRY", "Increase graph height to fit the series legend.");
+    throw renderError(
+      "CONTENT_DOES_NOT_FIT",
+      "Increase graph height to fit the series legend.",
+    );
   }
   const xAxis = isBar
     ? null
@@ -228,7 +248,10 @@ export function renderXyGraphDrawing(
   const band = (plot.right - plot.left) / categories.length;
   const barWidth = band * 0.72 / series.length;
   if (isBar && barWidth < 3) {
-    throw renderError("INVALID_GEOMETRY", "Increase graph width or reduce bar categories/series.");
+    throw renderError(
+      "CONTENT_DOES_NOT_FIT",
+      "Increase graph width or reduce bar categories/series.",
+    );
   }
   const x = (value: number | string) =>
     plot.left +
@@ -508,13 +531,17 @@ export function renderCircularGraphDrawing(
     chart.slices.length < 1 ||
     chart.slices.some((s) => !Number.isFinite(s.value) || s.value <= 0)
   ) {
-    throw renderError("INVALID_GEOMETRY", 
+    throw renderError(
+      "INVALID_GEOMETRY",
       "A pie chart needs at least one positive, finite slice value.",
     );
   }
   const total = chart.slices.reduce((sum, s) => sum + s.value, 0);
   if (!Number.isFinite(total)) {
-    throw renderError("INVALID_GEOMETRY", "Pie total exceeds the supported numeric range.");
+    throw renderError(
+      "INVALID_GEOMETRY",
+      "Pie total exceeds the supported numeric range.",
+    );
   }
   const style = chart.chartStyle ?? "pie";
   if (!["pie", "donut"].includes(style)) {
@@ -527,7 +554,10 @@ export function renderCircularGraphDrawing(
     return { slice, startAngle, endAngle: angle };
   });
   if (entries.length * 48 > c.height - 130) {
-    throw renderError("INVALID_GEOMETRY", "Increase graph height to fit the slice legend.");
+    throw renderError(
+      "CONTENT_DOES_NOT_FIT",
+      "Increase graph height to fit the slice legend.",
+    );
   }
   const cx = c.width * 0.3;
   const cy = (c.height + 65) / 2;

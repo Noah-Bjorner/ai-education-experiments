@@ -32,6 +32,16 @@ export const xyChart = {
     "A bar, line, area, or scatter chart built from explicit data points, with one or more series.",
   useWhen:
     "the learner needs to compare categories (bar), follow trends over time or another numeric variable (line or area), or see relationships between measurements (scatter). Use coordinate_plot for functions defined by formulas",
+  need: {
+    question:
+      "Does this goal need a bar, line, area, or scatter chart drawn from data values?",
+    criteria: {
+      true:
+        "The goal compares independent amounts across categories, shows how a quantity changes over time or another variable, or relates two measured quantities. The data values are given or can reasonably be supplied.",
+      false:
+        "There is no data series to plot, or the values are shares or percentages of one whole. A curve defined by a formula or shapes placed on axes do not count either.",
+    },
+  },
   rules: `Choose \`chartStyle\` according to the relationship:
 - \`line\`: change over an ordered numeric axis, such as time or an input variable.
 - \`bar\`: comparisons between categories.

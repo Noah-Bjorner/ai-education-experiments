@@ -91,12 +91,6 @@ export function graphTextBounds(
   let cursor = 0;
   for (const character of normalized) {
     const key = String(character.codePointAt(0));
-    if (!(key in glyphBounds)) {
-      // Unknown system fallback glyphs cannot be measured reliably on the server.
-      throw renderError("UNSUPPORTED_GLYPH", 
-        `${GRAPH_FONT_FAMILY} has no glyph for '${character}'; provide font metrics before exporting tight bounds.`,
-      );
-    }
     const b = glyphBounds[key];
     if (b) {
       boxes.push({
@@ -111,12 +105,18 @@ export function graphTextBounds(
   return unionBounds(boxes);
 }
 
-/** Supported glyphs use real font advances. Other scripts use a fallback estimate. */
+/** Use the same bundled glyph coverage for measurement and drawing. */
 export function measureGraphText(value: string, fontSize: number): number {
   let width = 0;
   for (const character of sanitizeGraphText(value)) {
-    width += advances[String(character.codePointAt(0))] ??
-      metrics.fallbackAdvance;
+    const key = String(character.codePointAt(0));
+    if (!(key in glyphBounds)) {
+      throw renderError(
+        "UNSUPPORTED_GLYPH",
+        `${GRAPH_FONT_FAMILY} has no glyph for '${character}'; provide font metrics before exporting tight bounds.`,
+      );
+    }
+    width += advances[key];
   }
   return width / metrics.unitsPerEm * fontSize;
 }
@@ -162,7 +162,10 @@ export function wrapGraphText(
       }
       for (const ch of token) {
         if (measureGraphText(ch, size) > width) {
-          throw renderError("CONTENT_DOES_NOT_FIT", "Text width is narrower than a glyph");
+          throw renderError(
+            "CONTENT_DOES_NOT_FIT",
+            "Text width is narrower than a glyph",
+          );
         }
         if (measureGraphText(line + ch, size) > width) {
           lines.push(line);

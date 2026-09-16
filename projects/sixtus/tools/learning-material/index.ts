@@ -24,7 +24,7 @@ import {
   whiteboardInputSchema,
   whiteboardResultSchema,
   WHITEBOARD_SYSTEM_PROMPT_DESCRIPTION,
-} from "./whiteboard/index.ts";
+} from "./whiteboard/index-old-1.ts";
 
 
 export const LEARNING_MATERIAL_TYPES = {

@@ -19,6 +19,7 @@
     "npm:@mathjax/src@4.0.0": "4.0.0",
     "npm:@neondatabase/serverless@1.0.2": "1.0.2",
     "npm:@trigger.dev/sdk@4.4.6": "4.4.6_ai@7.0.3__zod@4.4.3_zod@4.4.3",
+    "npm:@typesafe-ai/sdk@0.6.0": "0.6.0",
     "npm:@upstash/redis@*": "1.38.3",
     "npm:ai@*": "7.0.3_zod@4.4.3",
     "npm:ai@7": "7.0.3_zod@4.4.3",
@@ -1637,6 +1638,9 @@
         "pg-types"
       ]
     },
+    "@typesafe-ai/sdk@0.6.0": {
+      "integrity": "sha512-IddX+Q0XM+VagOUZFeP7wZjaO4SHMdvnh2zEBdrZZnXedWI3BNK1lKhMx3ayrkFWvVLbVcUHJy6AVZlY+e6Jaw=="
+    },
     "@upstash/redis@1.38.3": {
       "integrity": "sha512-vtS0BonQHU6kDSWvHTISh+LOuLIEk+jeMXebv20CDJ/aHGOG085SGa8OpI+I+Ow8WgPFhqH23XG8kQ2LXXRnag==",
       "dependencies": [
@@ -2534,6 +2538,7 @@
       "npm:@mathjax/src@4.0.0",
       "npm:@neondatabase/serverless@1.0.2",
       "npm:@trigger.dev/sdk@4.4.6",
+      "npm:@typesafe-ai/sdk@0.6.0",
       "npm:@upstash/redis@*",
       "npm:ai@7",
       "npm:esbuild@~0.28.1",

@@ -24,8 +24,12 @@ system-font defaults into new whiteboard types.
 - `index.ts`: shared staged board renderer with base, emphasis, and callout snapshots.
 - `figure-placement.ts`: measured figure placement by anchor ID and side.
 - `targets.ts`: semantic SVG IDs and measured figure-local annotation targets.
-- `annotations.ts`: emphasis rendering and a queue for message callouts.
-- `callouts.ts`: measured messages, candidate placement, brackets, and connectors.
+- `annotations.ts`: shared annotation validation, target resolution, and stage coordination.
+- `annotation-types.ts`: resolved request unions and structured placement diagnostics.
+- `emphasis.ts`: fixed emphasis and measured effective attachment bounds.
+- `annotation-layout.ts`: bounded placement and routing policy constants.
+- `callouts.ts`: separate candidate generation, evaluation, selection, and drawing.
+  Arrow and line use the same layout; brackets supply their own candidate geometry.
 - `placement.ts`: geometric collision checks and connector routing.
 
 Keep the code small and direct. Shared values belong in code; explanations,
@@ -479,7 +483,23 @@ wobble for every new visualization type.
   local to the figure; base and emphasis share its board translation. XY point
   IDs survive sorting. Missing targets (including omitted tiny-slice percentage
   labels), duplicate content IDs, and invalid text targets fail explicitly.
-- Arrow and line callouts measure and wrap complete messages at 15 units, with
+- Every target has measured bounds, a text/mark kind, and one explicit attachment:
+  bounds, visible segments, or a fixed anchor with outward direction. Text targets
+  also carry underline and strikethrough segments. Primitive geometry supplies
+  attachments independently of collision obstacles. Registration validates the
+  complete target; renderers do not patch it afterward. Shared transforms move
+  attachment paths, anchors, and text decorations with the target.
+- `renderAnnotations` resolves requests once, renders fixed emphasis, then lays
+  out callouts. Emphasis records updated attachment bounds per target; numbers
+  reserve independent space without changing those bounds. Candidate evaluation
+  returns geometry or a rejection reason without changing the scene. Drawing
+  paints the chosen geometry, then the coordinator reserves measured strokes,
+  arrowheads, and message bounds before placing the next annotation.
+- Initial candidate availability is computed once per request. Equal scores use
+  stable enumeration order. Search distances, weights, endpoint gaps, and bounded
+  routing limits live in `annotation-layout.ts`; no global optimizer or soft
+  collision mode is used. Nonfinite and zero-length routes are never drawn.
+- Arrow and line callouts measure and wrap complete messages at 16 units, with
   22-unit line spacing and a 190-unit maximum line width. Explicit newlines and
   long words are preserved. There is no truncation or opaque text backing.
 - All visible base text and shapes, data strokes, and emphasis reserve space.
@@ -493,20 +513,35 @@ wobble for every new visualization type.
 - Connectors prefer straight or one-bend routes. A bounded visibility graph
   around nearby obstacle corners handles blocked routes; outside gutters are
   evaluated as alternatives. Paths avoid unrelated text, shapes, and data
-  strokes, except closed containers that enclose the target (a pitch around a
-  player, a pie slice around its percentage). Arrowheads face the target, and
+  strokes. Figure renderers declare connector passage through closed containers
+  using actual rectangle, ellipse, or polygon containment of the target center;
+  boundaries are excluded. Pie disks explicitly allow interior percentage targets.
+  These permissions never exempt obstacles from label collision checks. Open
+  paths and concave cutouts are not containers just because their bounds enclose
+  a target. Arrowheads face the target, and
   the gap to it must not hide an intervening label. Crowded axis intersections
   may use a slightly larger gap.
 - Brackets evaluate both sides of vertical groups and above/below horizontal
   spans, reserving their caps and optional label. They can move outside the
-  figure's painted extent when nearby sides are occupied.
+  figure's painted extent when nearby sides are occupied. Group orientation and
+  placement depend on geometric extremes, not the order of target IDs.
 - This is a deterministic, bounded placement search, not a guarantee that every
   possible annotation set has a non-overlapping solution. If no clear candidate
-  can be routed, a fallback placement is used and a warning is logged; only
-  unusable leftover cases are skipped. Existing emphasis positions and the base
-  chart's internal layout are not globally optimized.
+  can be routed, a fallback placement is returned with an `overlap-fallback`
+  diagnostic. If no usable geometry exists, the annotation engine returns an
+  `unplaceable` diagnostic without emitting that annotation. Figure preparation
+  applies the orchestration failure policy; logging belongs at execution
+  boundaries, while layout and drawing remain log-free. Public board results
+  expose `annotationDiagnostics` alongside the existing placements and stages.
+  Each diagnostic identifies the figure, original annotation index, target IDs,
+  code, and message. Ordinary placements produce no diagnostics. Existing
+  emphasis positions and the base chart's internal layout are not globally
+  optimized.
 - `index-test.ts` runs the supplied book example and an XY emphasis demo
   without an LLM call; run it with font read and output-ex write permissions.
+- `annotation-contract-test.ts` exercises all seven figure families, explicit
+  containment permissions, transformed geometry, repeated target annotations,
+  order-independent brackets, and fallback diagnostics.
 - `callouts-test.ts` adds motion, grouping, and split-board review examples,
   saving their SVGs and JSON specs/placement diagnostics under `output-ex/`.
 - Planned: asset processing, global layout optimization, wrapping base chart
@@ -723,8 +758,8 @@ rotation, arbitrary paths, or additional model calls are involved.
   gap (`SPACING.labelGap`, 8 board units by default). Text wraps using shared font advances, splits oversized
   words at glyph boundaries, and preserves whitespace and explicit newlines.
   Painted bounds use shared glyph metrics. Text is never truncated or shrunk.
-  Smaller allocations rewrap at the shared size; impossible glyph widths retain
-  the freeform warning/skip policy. Titles use the same wrapping and measured
+  Smaller allocations rewrap at the shared size; impossible glyph widths return
+  a typed content-fitting error. Titles use the same wrapping and measured
   separation as all other figure types.
 - Arrow endpoints accept explicit points or shape references, including forward
   references. Referenced endpoints meet the shape boundary toward the opposite
@@ -736,12 +771,13 @@ rotation, arbitrary paths, or additional model calls are involved.
   obstacles are transformed together into figure-local allocation coordinates.
   Parent composition owns the final translation and embedded font.
 - Reject invalid references, duplicate IDs, and invalid render sizes/options.
-  Absurd geometry is skipped before any fill generation. Other layout problems
-  warn and still render: stacked labels, lines or arrows that cross text,
-  degenerate attached connectors, and individual elements whose painted bounds are invalid or
-  exceed the 10k safety extent (those elements are skipped). Rectangle and
-  ellipse outlines are containers: labels may sit inside them or meet their
-  border. Warnings identify the figure and involved elements. Intentional shape
+  Absurd geometry is rejected before any fill generation. Degenerate attached
+  connectors, unsupported text, and invalid painted bounds (including content
+  beyond the 10k safety extent) fail preparation; no requested element is skipped.
+  Stacked labels and lines crossing text remain renderable and produce structured
+  overlap diagnostics. Rectangle and ellipse outlines are containers: labels may
+  sit inside them or meet their border. Diagnostics identify the figure and
+  involved elements. Intentional shape
   overlap remains supported; hatch strokes are not text collision obstacles.
   Ellipse collision outlines use 256 segments.
 
@@ -833,3 +869,54 @@ deno run --allow-read --allow-write=/tmp/whiteboard-design-system projects/sixtu
 
 Review long titles, absent titles, dense equation rows, wrapping text, annotation
 targets, and label/legend readability at both natural and reduced display sizes.
+
+
+## Preparation and bounded generation repair
+
+Every family keeps its specialized mathematical layout. Shared `drawing.ts`
+operations register measured targets, retain obstacles, and transform all scene
+geometry together; `label.ts`, `text-block.ts`, and `options.ts` provide common
+text and option handling. Font measurement and emitted text use the same bundled
+Shantell glyph coverage, without estimated system-font fallback.
+
+`prepareFigure` validates one figure, builds its base and title, resolves all
+annotations against visible targets, and renders emphasis/callouts. It returns a
+validated content object and a `PreparedFigure`, or structured `RenderIssue`s
+with a typed error preserving the original cause. Known content errors carry
+stable codes and locations. Unexpected exceptions are internal failures and
+must not trigger content regeneration. Layout remains fixed; there is no automatic
+shrinking, arbitrary LaTeX splitting, or change to chart data.
+
+`composeWhiteboard` accepts drawings prepared for the same content, figure order,
+and rendering options. It places complete figures, adds the board title, and
+exports base/emphasis/callout stages with one shared frame. `renderWhiteboardSvg`
+is the deterministic convenience entry point. Neither preparation nor composition
+calls a model, uploads data, or logs warnings; diagnostics are returned to callers.
+
+Generated requests use `generation.ts`: generate and prepare each figure, then
+make at most one targeted correction for schema or known content failures. Supply
+the failed output, original goal/instructions, and exact issues (including visible
+compatible target IDs). Successful figures are retained. Corrections must preserve
+original elements and annotations; removing content is not an accepted repair.
+The prompt also requires preservation of facts and mathematical meaning, which
+structural validation alone cannot prove. Board structural validation still runs;
+there is no automatic replanning. An unrenderable generated board title gets one
+title-only correction without regenerating figures. Failed corrections abort the
+request before upload. Direct supplied specifications never invoke a model.
+
+Execution logs duration, repair count, issue codes, stages, and outcomes. HTTP
+render failures for supplied content use 422; exhausted generated requests and
+internal failures use 500. Public errors contain actionable issues, never provider
+payloads or stacks. The successful HTTP response and figure JSON formats remain
+unchanged.
+
+Verification from this directory:
+
+```sh
+deno test --allow-read generation-test.ts render/*-test.ts
+deno check index.ts route.ts
+```
+
+Generation tests use injected model/upload functions and require no network calls
+or credentials. Valid examples should retain their typography, geometry, bounds,
+and placement when refactoring shared code.

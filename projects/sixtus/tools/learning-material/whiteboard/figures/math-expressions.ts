@@ -28,6 +28,16 @@ export const mathExpressions = {
     "Mathematical expressions, formulas, or equations displayed in rows.",
   useWhen:
     "the learner needs to read mathematical notation or follow a calculation or algebra sequence, such as substituting values into a formula, simplifying an expression, or solving an equation",
+  need: {
+    question:
+      "Does this goal need mathematical notation written out, such as a formula, an equation, or the steps of a calculation?",
+    criteria: {
+      true:
+        "The goal involves stating a formula, substituting values into it, simplifying an expression, or solving an equation, so the learner has to read or follow the math itself.",
+      false:
+        "The goal has no formula, equation, or calculation to work through. A formula that merely names a function to graph, or numbers that only appear as chart values or labels, do not count.",
+    },
+  },
   rules: String.raw`- Each expression is a separate centered row, in supplied order.
 - Supports MathJax base and AMS math: Greek letters, operators and relations, fractions, roots, scripts, sums/products/integrals with limits, \sin and other functions, \text{...}, \mathbb{R}, \left...\right delimiters, matrices, cases, and aligned equations.
 - Use braces around multi-character script arguments. Prefer math source without dollar signs or display wrappers (one surrounding pair is accepted).

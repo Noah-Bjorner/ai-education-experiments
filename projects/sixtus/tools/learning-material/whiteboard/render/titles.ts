@@ -1,3 +1,4 @@
+import { contextualize } from "./issues.ts";
 import { type Bounds, unionBounds } from "./bounds.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import {
@@ -107,16 +108,22 @@ export function withFigureTitle(
 ): TargetedDrawing {
   if (title === null || !drawing.bounds) return drawing;
   const body = drawing.bounds;
-  const text = textBlock(
-    title,
-    options.width ?? 800,
-    TYPE_SCALE.figureTitle,
-    LINE_HEIGHT.figureTitle,
-    0,
-    0,
-    COLORS.ink,
-    "center",
-  );
+  const text = (() => {
+    try {
+      return textBlock(
+        title,
+        options.width ?? 800,
+        TYPE_SCALE.figureTitle,
+        LINE_HEIGHT.figureTitle,
+        0,
+        0,
+        COLORS.ink,
+        "center",
+      );
+    } catch (error) {
+      throw contextualize(error, { figureId: namespace, path: ["title"] });
+    }
+  })();
   const marked = withTitleUnderline(text, {
     ...options,
     id: `${options.id}-title-underline`,
