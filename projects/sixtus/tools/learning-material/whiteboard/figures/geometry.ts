@@ -1,8 +1,8 @@
 import { z } from "@zod";
 import {
-  figureAnnotationsField,
-  figureTitleField,
   elementIdField as id,
+  figureEnvelope,
+  titleTargetParts,
   type WhiteboardFigureDefinition,
 } from "./shared.ts";
 import { resolveGeometry } from "./geometry-resolver.ts";
@@ -91,11 +91,7 @@ const marking = z.union([
   }).strict(),
 ]);
 
-const geometryShape = z.object({
-  type: z.literal("geometry"),
-  id: id.optional(),
-  title: figureTitleField,
-  annotations: figureAnnotationsField.optional(),
+const geometryShape = figureEnvelope("geometry").safeExtend({
   unit: z.string().trim().min(1).max(30).optional(),
   points: z.array(point).min(1).max(128),
   objects: z.array(object).min(1).max(128),
@@ -124,16 +120,16 @@ export const geometry = {
   useWhen:
     "the learner needs to understand geometric properties or constructions, such as a triangle's perpendicular height, equal sides, angle relationships, or circle intersections",
   need: {
-    question:
-      "Does this goal need a diagram of geometric shapes drawn without coordinate axes?",
+    question: "Does `goal` need a geometric drawing?",
     criteria: {
       true:
-        "The goal is about a triangle, circle, polygon, angle, side length, parallel or perpendicular lines, or a geometric construction, and seeing the shape with its labels and markings helps the learner. A real-world setup counts only when the goal works with the shape it forms, such as a ladder against a wall treated as a right triangle.",
+        "The goal shows a geometric shape, such as a triangle with its height marked.",
       false:
-        "The goal has no shape to draw. Data, categories, or quantities alone do not count, and shapes that must sit on a coordinate grid with axes do not count.",
+        "The shape belongs on a coordinate plane, or there is no geometric shape.",
     },
   },
-  rules: String.raw`- unit: optional common length unit. One coordinate unit equals one unit of length.
+  rules: String
+    .raw`- unit: optional common length unit. One coordinate unit equals one unit of length.
 - points, objects, labels, markings: arrays; labels and markings may be empty.
 - All points, objects, labels, and markings require stable IDs, unique together within this figure. Group names on angle markings are matching-style keys, not element IDs.
 - Coordinates are mathematical (positive Y upward), never pixels. The renderer preserves aspect ratio, fits the figure, and places labels automatically. No axes or grid are implied.
@@ -167,6 +163,22 @@ export const geometry = {
 
 ### Validation
 Unknown/wrong-kind references, duplicate IDs, cyclic dependencies, degenerate objects, impossible intersections, self-crossing polygons, and contradictory mathematical markings are errors. This is deterministic construction, not a constraint solver. It does not interpret mathematical assertions in free-form LaTeX labels. Only text targets support underline/strikethrough.`,
+  annotationTargetParts: (figure) => [
+    ...titleTargetParts(figure),
+    ...[...figure.points, ...figure.objects, ...figure.markings].map((e) => ({
+      part: `${e.id}.mark`,
+      kind: "mark" as const,
+    })),
+    ...figure.labels.map((e) => ({
+      part: `${e.id}.label`,
+      kind: "text" as const,
+    })),
+    ...figure.markings.flatMap((e) =>
+      e.kind === "angle" && e.latex
+        ? [{ part: `${e.id}.label`, kind: "text" as const }]
+        : []
+    ),
+  ],
   annotationTargets: [
     "<figureId>.title — only when title is not null",
     "<figureId>.<pointId>.mark",

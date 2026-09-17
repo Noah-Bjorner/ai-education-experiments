@@ -1,6 +1,3 @@
-import { freeform } from "./freeform.ts";
-export { freeform, freeformSchema } from "./freeform.ts";
-export type { Freeform, FreeformElement } from "./freeform.ts";
 import { circularChart } from "./circular-chart.ts";
 import { xyChart } from "./xy-chart.ts";
 import { mathExpressions } from "./math-expressions.ts";
@@ -20,7 +17,7 @@ export { resolveGeometry } from "./geometry-resolver.ts";
 export const whiteboardFigureCategories = {
   charts: [xyChart, circularChart],
   math: [mathExpressions, coordinatePlot, geometry],
-  miscellaneous: [freeform, textFigure],
+  miscellaneous: [textFigure],
 } as const;
 
 export const whiteboardFigures = [
@@ -29,6 +26,9 @@ export const whiteboardFigures = [
   mathExpressions,
   coordinatePlot,
   geometry,
-  freeform,
-  textFigure
+  textFigure,
 ] as const;
+
+export function whiteboardFigureByType(type: string) {
+  return whiteboardFigures.find((figure) => figure.type === type);
+}

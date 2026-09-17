@@ -1,8 +1,8 @@
 import { z } from "@zod";
 import {
   elementIdField,
-  figureAnnotationsField,
-  figureTitleField,
+  figureEnvelope,
+  titleTargetParts,
   type WhiteboardFigureDefinition,
 } from "./shared.ts";
 import { parseCoordinateExpression } from "./coordinate-expression.ts";
@@ -175,31 +175,28 @@ export const coordinateElementSchema = z.union([
   }),
 ]);
 
-export const coordinatePlotSchema = z.strictObject({
-  type: z.literal("coordinate_plot"),
-  id: elementIdField.optional(),
-  title: figureTitleField,
-  annotations: figureAnnotationsField.optional(),
-  axes: z.strictObject({
-    x: axis,
-    y: axis,
-    scale: z.enum(["equal", "independent"]).optional(),
-    grid: z.boolean().optional(),
-  }),
-  elements: z.array(coordinateElementSchema).max(100),
-}).superRefine((value, ctx) => {
-  const ids = new Set<string>();
-  for (const [i, element] of value.elements.entries()) {
-    if (ids.has(element.id)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["elements", i, "id"],
-        message: "Element IDs must be unique within the plot.",
-      });
+export const coordinatePlotSchema = figureEnvelope("coordinate_plot")
+  .safeExtend({
+    axes: z.strictObject({
+      x: axis,
+      y: axis,
+      scale: z.enum(["equal", "independent"]).optional(),
+      grid: z.boolean().optional(),
+    }),
+    elements: z.array(coordinateElementSchema).max(100),
+  }).strict().superRefine((value, ctx) => {
+    const ids = new Set<string>();
+    for (const [i, element] of value.elements.entries()) {
+      if (ids.has(element.id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["elements", i, "id"],
+          message: "Element IDs must be unique within the plot.",
+        });
+      }
+      ids.add(element.id);
     }
-    ids.add(element.id);
-  }
-});
+  });
 
 export type CoordinatePlot = z.infer<typeof coordinatePlotSchema>;
 export type CoordinateElement = z.infer<typeof coordinateElementSchema>;
@@ -212,13 +209,11 @@ export const coordinatePlot = {
   useWhen:
     "the learner needs to explore functions, slopes, intercepts, or domains, or study shapes and positions on coordinate axes. It can also provide a blank grid for an exercise. Use geometry for shape diagrams without axes",
   need: {
-    question:
-      "Does this goal need an x/y coordinate plane with axes?",
+    question: "Does `goal` need a coordinate plane?",
     criteria: {
       true:
-        "The goal involves graphing a function, line, or inequality; plotting points, vectors, or shapes at given coordinates; reading slopes, intercepts, or intersections; or providing a blank grid for a coordinate exercise.",
-      false:
-        "Nothing in the goal is placed on coordinate axes. A shape diagram that stands on its own without axes, or a chart of measured data values, does not count.",
+        "A function or points belong on an x/y grid, such as plotting y = 2x - 3.",
+      false: "A chart of data, or a shape with no axes.",
     },
   },
   rules: `An empty elements array produces a blank coordinate exercise.
@@ -249,6 +244,15 @@ export const coordinatePlot = {
 - Geometry is clipped to the window. The renderer owns typography, colors, sampling, and label placement. Labels and annotations must not imply visibility for entirely clipped elements.
 - Supply explicit coordinates for intersections, tangent lines, and other constructions; the renderer is not a symbolic solver.
 - Rendering uses bounded adaptive numerical sampling, not symbolic analysis. Extremely rapid oscillations or tiny features can require a narrower window. Unsupported numerical ranges, excessive ticks, and invisible annotation targets produce explicit errors.`,
+  annotationTargetParts: (figure) => [
+    ...titleTargetParts(figure),
+    { part: "x-label", kind: "text" },
+    { part: "y-label", kind: "text" },
+    ...figure.elements.flatMap((e) => [
+      { part: `${e.id}.mark`, kind: "mark" as const },
+      ...(e.label ? [{ part: `${e.id}.label`, kind: "text" as const }] : []),
+    ]),
+  ],
   annotationTargets: [
     "<figureId>.title — only when title is not null",
     "<figureId>.x-label",

@@ -2,14 +2,13 @@ import { z } from "@zod";
 import {
   elementIdField,
   figureAnnotationsField,
-  figureTitleField,
+  figureEnvelope,
+  titleTargetParts,
   type WhiteboardFigureDefinition,
 } from "./shared.ts";
 
-export const textFigureSchema = z.strictObject({
-  type: z.literal("text"),
+export const textFigureSchema = figureEnvelope("text").safeExtend({
   id: elementIdField,
-  title: figureTitleField,
   annotations: figureAnnotationsField,
   role: z.enum(["note", "question", "takeaway"]).describe(
     "question gives the learner a specific comparison, prediction, or reasoning task; note supplies necessary context or an assumption the visualization cannot convey; takeaway states a needed inference or general principle that may not be clear from the visualization alone.",
@@ -19,34 +18,42 @@ export const textFigureSchema = z.strictObject({
   }).describe(
     "Complete plain text. Newlines are supported; text wraps without truncation.",
   ),
-});
+}).strict();
 
 export type TextFigure = z.infer<typeof textFigureSchema>;
 
 export const textFigure = {
-  type: textFigureSchema.shape.type.value,
+  type: "text" as const,
   schema: textFigureSchema,
   summary:
     "Standalone text for a focused question, necessary context, or an inference that needs to be explicit.",
-  useWhen: `standalone text performs a necessary job for the requested purpose and teaching depth that the visualization, its labels, or a brief annotation cannot do clearly.
+  useWhen:
+    `standalone text performs a necessary job for the requested purpose and teaching depth that the visualization, its labels, or a brief annotation cannot do clearly.
   - Question: give the learner a specific comparison, prediction, or reasoning task that guides their reading and serves the learning goal. Do not turn a topic heading into a question merely to introduce a figure.
   - Note: supply necessary context or an assumption the visualization cannot convey. When that context is needed to answer a particular question, include the question itself so it is clear why the note is there.
   - Takeaway: state an inference or general principle the learner needs but may not reliably extract from the visualization. Add one only when making that inference explicit is necessary for the requested teaching depth. Omit it when it merely repeats a visible result, label, or completed calculation.
   Do not routinely wrap a visualization in an opening question and closing takeaway. Specify the role and exact message for each text figure`,
   need: {
-    question:
-      "Does this goal call for standalone written text on the board, such as a question posed to the learner, a stated assumption, or a spelled-out conclusion?",
+    question: "Does `goal` need a written question, note, or takeaway?",
     criteria: {
       true:
-        "The goal asks for a question the learner should answer, context or an assumption to state, or a conclusion or general principle to write out in words, beyond the labels of any figure.",
-      false:
-        "The goal only asks for figures, or any wording needed fits in a figure title, a label, or a short annotation.",
+        "The goal is teaching an idea, or it asks to write a question, note, or conclusion.",
+      false: "The goal is only to visualize.",
     },
   },
+  boardRules:
+    `- A text figure's position is its meaning. A question comes immediately before the visualization it frames, or before the next question in the same group. Nothing else sits between a question and its visualization.
+- A note or takeaway comes immediately after the visualization it refers to, or after another note or takeaway on that same visualization. It never follows a question directly.
+- Do not routinely wrap a visualization in an opening question and a closing takeaway. Each text figure must do a job the visualization, its labels, or an annotation cannot.
+- A board with only text figures is ordered for reading.`,
   rules: `- Preserve the complete message, including newlines.
 - Default to a null title. Do not add a heading that repeats the message or merely names its role, such as "Question" or "Takeaway".
 - Express the requested message directly; do not add an introduction, recap, or additional explanation beyond the instructions.
 - Do not emit font sizes, widths, colors, border styles, pixels, or additional layout fields. The renderer styles each role and wraps text.`,
+  annotationTargetParts: (figure) => [
+    ...titleTargetParts(figure),
+    { part: "text", kind: "text" },
+  ],
   annotationTargets: [
     "<id>.text — the complete text block; no per-word or border targets",
     "<id>.title — only when title is not null",
@@ -60,7 +67,8 @@ export const textFigure = {
       title: null,
       annotations: [],
       role: "takeaway",
-      text: "Students who study longer tend to score higher, but these observations alone do not show that extra study time caused the higher scores.",
+      text:
+        "Students who study longer tend to score higher, but these observations alone do not show that extra study time caused the higher scores.",
     },
   },
 } satisfies WhiteboardFigureDefinition<typeof textFigureSchema>;

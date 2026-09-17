@@ -5,7 +5,11 @@ import {
 } from "./prepare.ts";
 import type { FigureRenderOptions } from "./options.ts";
 import { contextualize, renderError, type RenderIssue } from "./issues.ts";
-import { WhiteboardOutput, type WhiteboardSpec } from "../schema.ts";
+import {
+  type WhiteboardFontMode,
+  WhiteboardOutput,
+  type WhiteboardSpec,
+} from "../schema.ts";
 import { escapeXml } from "./svg.ts";
 import {
   balanceAround,
@@ -14,7 +18,7 @@ import {
   exportBounds,
   unionBounds,
 } from "./bounds.ts";
-import { GRAPH_FONT_DEFS, GRAPH_FONT_STYLE } from "./font.ts";
+import { GRAPH_FONT_STYLE, graphFontDefs } from "./font.ts";
 import {
   figureAllocation,
   type FigurePlacement,
@@ -30,6 +34,8 @@ import { boardTitleDisplay, withTitleBox } from "./titles.ts";
 export type WhiteboardRenderOptions = PlacementOptions & {
   /** Prefix for internal SVG definitions; semantic target IDs come from the spec. */
   id?: string;
+  /** Defaults to embedding; hosted uses the shared font URL. */
+  fontMode?: WhiteboardFontMode;
   roughness?: number;
   hatchGap?: number;
   seed?: number;
@@ -122,15 +128,16 @@ function exportSvg(
   drawing: Drawing,
   title: string,
   frame: Bounds,
+  fontMode?: WhiteboardFontMode,
 ): SvgRenderStage {
   const bounds = exportBounds(frame);
   return {
     svg:
       `<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}" role="img" aria-label="${
         escapeXml(title)
-      }"><title>${
-        escapeXml(title)
-      }</title>${GRAPH_FONT_DEFS}${drawing.markup}</svg>`,
+      }"><title>${escapeXml(title)}</title>${
+        graphFontDefs(fontMode)
+      }${drawing.markup}</svg>`,
     width: bounds.width,
     height: bounds.height,
     bounds,
@@ -210,10 +217,10 @@ export function composeWhiteboard(
     exportBounds(baseDrawing.bounds),
     contentBounds,
   );
-  const base = exportSvg(baseDrawing, title, frame);
-  const emphasis = exportSvg(emphasisDrawing, title, frame);
+  const base = exportSvg(baseDrawing, title, frame, options.fontMode);
+  const emphasis = exportSvg(emphasisDrawing, title, frame, options.fontMode);
   // Future asset processing belongs before this final composition/export.
-  const callouts = exportSvg(completeDrawing, title, frame);
+  const callouts = exportSvg(completeDrawing, title, frame, options.fontMode);
   return {
     ...callouts,
     contentBounds,

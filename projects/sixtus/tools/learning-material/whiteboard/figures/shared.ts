@@ -64,27 +64,78 @@ export const figureAnnotationsField = z.array(annotationSchema).describe(
   "Teaching annotations for this figure. Use an empty array when annotations do not help the goal. Every target must reference a defined element and supported visual part in this figure.",
 );
 
-export type WhiteboardFigureDefinition<S extends z.ZodType<{ type: string }>> = {
-  type: z.infer<S>["type"];
-  schema: S;
+/** Shared envelope. Standalone renderer schemas may omit identity; generation requires it. */
+export function figureEnvelope<Type extends string>(type: Type) {
+  return z.object({
+    type: z.literal(type),
+    id: elementIdField.optional(),
+    title: figureTitleField,
+    annotations: figureAnnotationsField.optional(),
+  });
+}
 
-  // planner catalog only — not in the figure prompt
-  summary: string;
-  useWhen: string;
+/** Semantic target suffixes; visibility and measured bounds belong to rendering. */
+export type AnnotationTargetPart = { part: string; kind: "text" | "mark" };
 
-  // goal classifier (typesafe noul), evaluated against the goal text in isolation.
-  // `question` is a yes/no question about the goal where yes means this figure is needed.
-  // `criteria` pins down the boundary; put discriminators against neighbouring figures in `false`.
-  need: {
-    question: string;
-    criteria?: { true: string; false: string };
+export function titleTargetParts(
+  figure: { title: string | null },
+): AnnotationTargetPart[] {
+  return figure.title === null ? [] : [{ part: "title", kind: "text" }];
+}
+
+/**
+ * Plugin contract for one figure type. Spec generation, validation, and the
+ * classifier read these fields; they should not switch on `type`.
+ *
+ * Own on the definition: content schema, classifier need, prompt grammar, and
+ * annotation catalog. Nested objects that can be annotation targets must
+ * require `id` on this schema so generation needs no per-type wrapping.
+ * Type-specific facts belong in schema refinements, not in spec validation
+ * switches. Board packing is renderer-owned.
+ */
+export type WhiteboardFigureDefinition<S extends z.ZodType<{ type: string }>> =
+  {
+    type: z.infer<S>["type"];
+    schema: S;
+    summary: string;
+    useWhen: string;
+    need: {
+      question: string;
+      criteria: { true: string; false: string };
+    };
+    rules: string;
+    /** Board-level reading-order notes, included only when this type is selected. */
+    boardRules?: string;
+    annotationTargets: string[];
+    annotationTargetParts: (figure: z.infer<S>) => AnnotationTargetPart[];
+    example: {
+      instructions: string;
+      output: z.infer<S>;
+    };
   };
 
-  // figure-generator grammar
-  rules: string;
-  annotationTargets: string[];
-  example: {
-    instructions: string;
-    output: z.infer<S>;
-  };
-};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Nested objects with `id`, excluding the figure itself and annotations. */
+export function collectElementIds(
+  value: unknown,
+  path: (string | number)[] = [],
+  root = true,
+): { id: string; path: (string | number)[] }[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, i) =>
+      collectElementIds(item, [...path, i], false)
+    );
+  }
+  if (!isRecord(value)) return [];
+  const ids = !root && typeof value.id === "string"
+    ? [{ id: value.id, path }]
+    : [];
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "id" || key === "annotations") continue;
+    ids.push(...collectElementIds(child, [...path, key], false));
+  }
+  return ids;
+}

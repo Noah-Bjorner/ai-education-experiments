@@ -2,13 +2,18 @@ import { z } from "@zod";
 import { whiteboardFigures } from "./figures/index.ts";
 import { elementIdField } from "./figures/shared.ts";
 
+export const WHITEBOARD_FONT_MODES = ["embedded", "hosted"] as const;
+export type WhiteboardFontMode = typeof WHITEBOARD_FONT_MODES[number];
+
 export const WHITEBOARD_MODES = ["smart", "fast"] as const;
 export const WHITEBOARD_FORMATS = ["url", "svg"] as const;
 export const WHITEBOARD_ORIENTATIONS = ["portrait", "landscape"] as const;
+export const WHITEBOARD_ANIMATIONS = ["static", "animated"] as const;
 
 export type WhiteboardMode = typeof WHITEBOARD_MODES[number];
 export type WhiteboardFormat = typeof WHITEBOARD_FORMATS[number];
 export type WhiteboardOrientation = typeof WHITEBOARD_ORIENTATIONS[number];
+export type WhiteboardAnimation = typeof WHITEBOARD_ANIMATIONS[number];
 
 export const whiteboardInputSchema = z.object({
   goal: z.string().min(1).describe(
@@ -20,8 +25,14 @@ export const whiteboardInputSchema = z.object({
   format: z.enum(WHITEBOARD_FORMATS).optional().describe(
     "How to return the whiteboard: a hosted URL, or the SVG source.",
   ),
+  fontMode: z.enum(WHITEBOARD_FONT_MODES).optional().describe(
+    "Font delivery in the SVG: embedded (default) includes the font bytes; hosted references the hosted Shantell Sans Math URL.",
+  ),
   orientation: z.enum(WHITEBOARD_ORIENTATIONS).optional().describe(
     "How figures pack on the board. portrait stacks every figure in one column. landscape places at most three figures in a row, then wraps. Defaults to portrait.",
+  ),
+  animation: z.enum(WHITEBOARD_ANIMATIONS).optional().describe(
+    "Whether the SVG is a static image or draws itself with a handwriting animation. Defaults to static.",
   ),
 });
 
@@ -145,9 +156,17 @@ export const WhiteboardOutput = z.object({
 
 export type WhiteboardSpec = z.infer<typeof WhiteboardOutput>;
 
+/** A saved spec can be rendered directly without classification or generation. */
+export const whiteboardRenderRequestSchema = WhiteboardOutput.safeExtend({
+  format: whiteboardInputSchema.shape.format,
+  orientation: whiteboardInputSchema.shape.orientation,
+  fontMode: whiteboardInputSchema.shape.fontMode,
+  animation: whiteboardInputSchema.shape.animation,
+});
+
 export const whiteboardRequestSchema = z.union([
   whiteboardInputSchema,
-  WhiteboardOutput,
+  whiteboardRenderRequestSchema,
 ]);
 
 export type WhiteboardRequest = z.infer<typeof whiteboardRequestSchema>;

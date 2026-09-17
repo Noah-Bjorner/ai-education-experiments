@@ -1,0 +1,13 @@
+export const DEFAULT_RESOLUTION = 400;
+export const RDP_TOLERANCE = 1.5;
+export const BITMAP_PADDING = 0.05;
+export const SPUR_LENGTH_RATIO = 0.08;
+export const SMOOTH_KINK_MIN_ANGLE = 155;
+export const TRACE_LOOKBACK = 12;
+export const TRACE_CURVATURE_BIAS = 0.5;
+export const SMOOTH_KINK_THRESHOLD = 0.15;
+export const MERGE_THRESHOLD_RATIO = 0.08;
+export const JUNCTION_CROSSING_COS = -0.7;
+export const JUNCTION_ALIGNMENT_COS = 0.5;
+export const JUNCTION_CLEANUP_MAX_ITERATIONS = 5;
+export const DISTANCE_TRANSFORM_METHOD: "euclidean" | "chamfer" = "chamfer";

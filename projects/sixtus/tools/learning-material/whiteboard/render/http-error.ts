@@ -1,7 +1,23 @@
+import { WhiteboardSpecError } from "../spec/validation.ts";
 import { contextualize } from "./issues.ts";
 
 /** Public errors expose actionable issues, never raw provider responses or stacks. */
 export function whiteboardHttpError(cause: unknown, generated: boolean) {
+  if (cause instanceof WhiteboardSpecError) {
+    return {
+      status: cause.issues.every((issue) => issue.code === "INVALID_INPUT")
+        ? 400 as const
+        : 500 as const,
+      body: {
+        ok: false as const,
+        error: {
+          code: "WHITEBOARD_SPEC_FAILED",
+          message: "The whiteboard spec could not be generated or validated.",
+          issues: cause.issues,
+        },
+      },
+    };
+  }
   const error = contextualize(cause, {});
   const status = !generated && error.repairable ? 422 as const : 500 as const;
   return {

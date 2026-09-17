@@ -85,25 +85,22 @@ not an extra gap below the glyphs.
 | --- | ---: | ---: | --- |
 | `boardTitle` | 32 | 42 | Uppercase, boxed board heading |
 | `figureTitle` | 25 | 34 | Every figure's underlined heading |
-| `body` | 22 | 30 | Text cards and freeform normal text |
-| `label` | 16 | 22 | Axes, legends, coordinate/geometry labels, freeform small text |
+| `body` | 22 | 30 | Text cards |
+| `label` | 16 | 22 | Axes, legends, coordinate/geometry labels |
 | `supporting` | 13 | 18 | Tick values |
 | `detail` | 12 | 16 | Secondary values below pie legend labels |
 | `annotation` | 16 | 22 | Callout messages and annotation numbers |
-| `prominent` | 28 | 38 | Explicitly prominent freeform content |
 | `mathDisplay` | 36 | 48 | Main equations; actual math rows use measured ascent/descent |
 
-The primary content of a figure (a displayed equation or prominent freeform
-statement) may be larger than its identifying heading. Equivalent labels use the
-same role across figure types. In freeform, choose small for object labels,
-normal for explanatory body text, and large for deliberate prominence.
+The primary content of a figure (a displayed equation) may be larger than its
+identifying heading. Equivalent labels use the same role across figure types.
 Do not introduce figure-specific font families,
 font weights, or copies of these values. Match measurement to the same role used
 for drawing; changing a legend font must also change its measured packing width.
 
 `textBlock()` preserves explicit newlines and whitespace, splits long tokens by
 glyph, accounts for overhang, and returns both painted bounds and layout height.
-Use it for titles, text cards, freeform text, and messages. Empty visible text or
+Use it for titles, text cards, and messages. Empty visible text or
 an allocation narrower than a glyph fails explicitly. Single-line ticks and
 chart labels still use the shared font helpers; existing truncation and tick
 validation rules apply. These are explicit content-fitting policies, not
@@ -118,11 +115,9 @@ Long headings grow the export upward rather than colliding with the drawing.
 Board headings similarly wrap at the board width (with a 128-unit minimum wrap
 width), and their complete box is separated by `SPACING.boardTitleGap`.
 
-Text sizes remain fixed in board coordinates when allocations change. Freeform
-geometry scales uniformly, but text sizes, line heights, and attachment gaps are
-compensated for that transform. Text widths still follow the scene and may cause
-more wrapping. Equation rows keep the display size and grow vertically; an
-expression too wide at that size fails with an instruction to widen or split it.
+Text sizes remain fixed in board coordinates when allocations change. Equation
+rows keep the display size and grow vertically; an expression too wide at that
+size fails with an instruction to widen or split it.
 MathJax still controls fractions, subscripts, superscripts, and stretchy symbols.
 
 The final SVG may still be scaled by its viewer: displaying an 800-unit figure at
@@ -176,8 +171,8 @@ in `index.ts`. The spec and the model do not pick it.
 
 The rule is contrast with the base drawing, not a fixed annotation hue:
 
-- When the figure is drawn in ink — math expressions, and freeform scenes that
-  omit element color — annotations use `SERIES_COLORS[0]` (blue). Circles,
+- When the figure is drawn in ink — math expressions — annotations use
+  `SERIES_COLORS[0]` (blue). Circles,
   underlines, numbers, brackets, and message arrows then read as a second pen
   on top of the black work.
 - When the figure already spends the accent palette on data or categories — XY
@@ -476,7 +471,7 @@ wobble for every new visualization type.
   enclose the target's bounds, boxes add a small gap, text strokes follow the
   label orientation, and numbers sit just above/right of the target. Annotation
   color follows the Color section: ink on types that already use the accent
-  palette, `SERIES_COLORS[0]` on ink-only types (`math_expressions`, `freeform`).
+  palette, `SERIES_COLORS[0]` on ink-only types (`math_expressions`).
   Number placement is deterministic; collision avoidance and repositioning
   around other annotations are not implemented.
 - Base targets use the IDs documented in the figure schemas. Geometry remains
@@ -729,72 +724,6 @@ The gallery is `render/output-ex/coordinates/index.html`. Focused verification:
 deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/figures/coordinate-plot-test.ts projects/sixtus/tools/learning-material/whiteboard/render/coordinate-plot-test.ts
 ```
 
-## Freeform scenes
-
-The `freeform` figure is generated in the existing spec call and rendered by
-`renderFreeformDrawing`. It supports text, rectangles, ellipses (equal radii for
-circles), solid/dashed lines and arrows, and X/O/dot markers. No SVG input, images,
-rotation, arbitrary paths, or additional model calls are involved.
-
-- Use an 800 × 440 logical scene with positive Y downward beneath the shared
-  title. Rectangles use top-left coordinates; ellipses and markers use centers.
-  The renderer fits that working area uniformly into its allocation, preserving
-  aspect ratios. Content that extends past 800 × 440 is included in painted
-  bounds and grows the export rather than failing or clipping. Negative scene Y
-  is shifted down so it does not collide with the title. Array order determines
-  paint order. The default allocation is 800 × 520. Scene content starts 64
-  units below the allocation's top.
-- Every element needs a unique ID. Optional color selects `ink` (default) or
-  `accent-1` through `accent-6` from the shared palette. Specs should omit color
-  so the diagram stays in ink and leaves blue for teaching annotations (see
-  Color). Use later accents only to distinguish categories; never accent-1
-  on the base scene. Rectangle/ellipse `fill` uses seeded shared
-  hatching. Outlines are rendered with zero roughness to keep meaningful
-  positions and attachments stable. X/O markers are outlined; dots are solid.
-  Thin outline obstacles allow annotations inside container shapes.
-- Text specifies content, width, alignment, and small/normal/large size
-  (shared label/body/prominent roles: 16/22/28 board units). Explicit positions locate the top-left layout box.
-  Attached positions reference a rectangle, ellipse, or marker with a side and
-  gap (`SPACING.labelGap`, 8 board units by default). Text wraps using shared font advances, splits oversized
-  words at glyph boundaries, and preserves whitespace and explicit newlines.
-  Painted bounds use shared glyph metrics. Text is never truncated or shrunk.
-  Smaller allocations rewrap at the shared size; impossible glyph widths return
-  a typed content-fitting error. Titles use the same wrapping and measured
-  separation as all other figure types.
-- Arrow endpoints accept explicit points or shape references, including forward
-  references. Referenced endpoints meet the shape boundary toward the opposite
-  endpoint. X attachment uses the actual two round-capped strokes. Arrows are
-  straight, with a 10-unit maximum head. No automatic routing or scene repair is
-  attempted; shared annotation callouts retain their existing routing behavior.
-- Targets are `<figure>.title` (only when title is not null), `<figure>.<text>.label`, and
-  `<figure>.<element>.mark` for other primitives. Targets, painted bounds, and
-  obstacles are transformed together into figure-local allocation coordinates.
-  Parent composition owns the final translation and embedded font.
-- Reject invalid references, duplicate IDs, and invalid render sizes/options.
-  Absurd geometry is rejected before any fill generation. Degenerate attached
-  connectors, unsupported text, and invalid painted bounds (including content
-  beyond the 10k safety extent) fail preparation; no requested element is skipped.
-  Stacked labels and lines crossing text remain renderable and produce structured
-  overlap diagnostics. Rectangle and ellipse outlines are containers: labels may
-  sit inside them or meet their border. Diagnostics identify the figure and
-  involved elements. Intentional shape
-  overlap remains supported; hatch strokes are not text collision obstacles.
-  Ellipse collision outlines use 256 segments.
-
-Run the tests and generate JSON/SVG examples plus the white/tinted review gallery
-from the repository root:
-
-```sh
-deno test --allow-read projects/sixtus/tools/learning-material/whiteboard/render/freeform-test.ts
-deno run --allow-read --allow-write=projects/sixtus/tools/learning-material/whiteboard/render/output-ex/freeform projects/sixtus/tools/learning-material/whiteboard/render/freeform-gallery.ts
-```
-
-The gallery is `render/output-ex/freeform/index.html`. Its fixtures cover sports
-markers and a passing arrow, a sender/receiver diagram with attached labels, and
-an experiment diagram with wrapped text, fills, and a shared message callout.
-These are deterministic drawing fixtures, not evaluations of model-generated
-scene quality.
-
 ## Text figures
 
 `../figures/text.ts` defines `type: "text"` with a nonempty plain `text` string
@@ -893,7 +822,7 @@ exports base/emphasis/callout stages with one shared frame. `renderWhiteboardSvg
 is the deterministic convenience entry point. Neither preparation nor composition
 calls a model, uploads data, or logs warnings; diagnostics are returned to callers.
 
-Generated requests use `generation.ts`: generate and prepare each figure, then
+Legacy generated requests use `../archive/generation.ts`: generate and prepare each figure, then
 make at most one targeted correction for schema or known content failures. Supply
 the failed output, original goal/instructions, and exact issues (including visible
 compatible target IDs). Successful figures are retained. Corrections must preserve
@@ -913,7 +842,7 @@ unchanged.
 Verification from this directory:
 
 ```sh
-deno test --allow-read generation-test.ts render/*-test.ts
+deno test --allow-read archive/generation-test.ts render/*-test.ts
 deno check index.ts route.ts
 ```
 

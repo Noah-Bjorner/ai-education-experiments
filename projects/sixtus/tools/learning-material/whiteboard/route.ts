@@ -18,7 +18,7 @@ const parseWhiteboardBody = createZodJsonBodyMiddleware(
   {
     code: "INVALID_WHITEBOARD_REQUEST",
     message:
-      "Expected a JSON body with either { goal } or { layout, figures }.",
+      "Expected a JSON body with either { goal } or { title, figures } with optional format, orientation, fontMode, and animation.",
   },
 );
 
@@ -30,7 +30,6 @@ whiteboardRoutes.post(
 
     try {
       const startedAt = performance.now();
-      //fix this
       const data = await executeWhiteboard(request);
       const durationMs = Math.round(performance.now() - startedAt);
 

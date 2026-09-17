@@ -12,7 +12,7 @@ import {
 } from "../schema.ts";
 import { type Bounds, type Drawing } from "./bounds.ts";
 import { figureAllocation, placeFigures } from "./figure-placement.ts";
-import { whiteboardSpecSystemPrompt } from "../prompt-old.ts";
+import { whiteboardSpecSystemPrompt } from "../archive/prompt-old.ts";
 
 type Side = NonNullable<WhiteboardSpec["figures"][number]["side"]>;
 const figure = (

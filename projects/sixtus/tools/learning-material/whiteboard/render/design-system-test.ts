@@ -10,13 +10,11 @@ import { renderWhiteboardSvg } from "./index.ts";
 import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
-import { renderFreeformDrawing } from "./freeform.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderTextFigureDrawing } from "./text.ts";
 import { LINE_HEIGHT, SPACING, TYPE_SCALE } from "./theme.ts";
 import { textBlock } from "./text-block.ts";
 import { withFigureTitle, withTitleBox } from "./titles.ts";
-import { graphTextBounds } from "./font.ts";
 import type { TargetedDrawing } from "./targets.ts";
 
 function draw(figure: WhiteboardFigureContent) {
@@ -30,8 +28,6 @@ function draw(figure: WhiteboardFigureContent) {
       return renderGeometryDrawing(figure, options);
     case "coordinate_plot":
       return renderCoordinatePlotDrawing(figure, options);
-    case "freeform":
-      return renderFreeformDrawing(figure, options);
     case "math_expressions":
       return renderMathExpressionsDrawing(figure, options);
     case "text":
@@ -91,37 +87,6 @@ Deno.test("heading decoration and annotation targets agree at negative body coor
   for (const o of result.obstacles) {
     assert(o.bounds.y >= result.bounds!.y);
     assert(o.bounds.y + o.bounds.height <= -80 - SPACING.figureTitleGap + 1e-8);
-  }
-});
-
-Deno.test("freeform label, body, and prominent text keep their role sizes across allocations", () => {
-  for (
-    const [size, role] of [["small", "label"], ["normal", "body"], [
-      "large",
-      "prominent",
-    ]] as const
-  ) {
-    const expected = graphTextBounds("Ag", TYPE_SCALE[role], 0, 0)!;
-    for (const width of [400, 800, 1200]) {
-      const drawing = renderFreeformDrawing({
-        type: "freeform",
-        id: "scene",
-        title: null,
-        annotations: [],
-        elements: [{
-          type: "text",
-          id: "label",
-          content: "Ag",
-          size,
-          width: 200,
-          align: "left",
-          position: { x: 20, y: 20 },
-        }],
-      }, { id: "scene", width, height: width * 0.65 });
-      const actual = drawing.targets.get("scene.label.label")!.bounds;
-      assertAlmostEquals(actual.height, expected.height);
-      assertAlmostEquals(actual.width, expected.width);
-    }
   }
 });
 

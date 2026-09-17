@@ -6,7 +6,6 @@ import type { Annotation } from "./annotation-types.ts";
 import { renderAnnotations } from "./annotations.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
-import { freeformExamples } from "./freeform-examples.ts";
 import {
   clearRoute,
   inflate,
@@ -279,14 +278,22 @@ Deno.test("message XML is escaped and invalid references fail explicitly", () =>
   );
 });
 
-Deno.test("arrow callouts can reach marks inside a freeform container", () => {
-  const sports = structuredClone(freeformExamples[0]);
-  sports.annotations = [{
-    type: "arrow",
-    targetIds: ["sports.receiver.mark"],
-    content: "This attacker is onside",
-  }];
-  const result = renderWhiteboardSvg(boardExample([sports]));
+Deno.test("arrow callouts can reach marks inside a container", () => {
+  const result = renderWhiteboardSvg(boardExample([{
+    type: "coordinate_plot",
+    id: "plot",
+    title: null,
+    annotations: [{
+      type: "arrow",
+      targetIds: ["plot.inside.mark"],
+      content: "This point is inside the circle",
+    }],
+    axes: { x: { min: -3, max: 3 }, y: { min: -3, max: 3 } },
+    elements: [
+      { type: "circle", id: "ring", center: [0, 0], radius: 2 },
+      { type: "point", id: "inside", position: [0, 0] },
+    ],
+  }]));
   assertEquals(result.calloutPlacements.length, 1);
   assert(result.calloutPlacements[0].paths.length >= 1);
 });

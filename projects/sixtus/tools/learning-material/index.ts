@@ -24,7 +24,7 @@ import {
   whiteboardInputSchema,
   whiteboardResultSchema,
   WHITEBOARD_SYSTEM_PROMPT_DESCRIPTION,
-} from "./whiteboard/index-old-1.ts";
+} from "./whiteboard/index.ts";
 
 
 export const LEARNING_MATERIAL_TYPES = {
@@ -81,6 +81,7 @@ const imageBranchSchema = imageInputSchema.extend({
 });
 
 const WHITEBOARD_CHAT_INPUT = {
+  fontMode: "embedded",
   mode: "fast",
   format: "url",
   orientation: "portrait",
@@ -88,9 +89,11 @@ const WHITEBOARD_CHAT_INPUT = {
 
 const whiteboardBranchSchema = whiteboardInputSchema
   .omit({
+    fontMode: true,
     mode: true,
     format: true,
     orientation: true,
+    animation: true,
   })
   .extend({
     materialType: z.literal("whiteboard"),

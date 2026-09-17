@@ -5,7 +5,7 @@ import {
   mathExpressionsSchema,
 } from "../figures/math-expressions.ts";
 import { whiteboardInputSchema, WhiteboardOutput } from "../schema.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../archive/prompt-old.ts";
 import { normalizeMathLatex, renderMathLatex } from "./latex.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderWhiteboardSvg } from "./index.ts";

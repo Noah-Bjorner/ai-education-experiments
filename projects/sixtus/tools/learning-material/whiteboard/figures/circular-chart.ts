@@ -1,39 +1,35 @@
 import { z } from "@zod";
 import {
-  figureAnnotationsField,
-  figureTitleField,
   elementIdField,
+  figureEnvelope,
+  titleTargetParts,
   type WhiteboardFigureDefinition,
 } from "./shared.ts";
 
-const circularChartSchema = z.object({
-  type: z.literal("pie_chart"),
-  id: elementIdField.optional(),
-  title: figureTitleField,
-  annotations: figureAnnotationsField.optional(),
+const circularChartSchema = figureEnvelope("pie_chart").safeExtend({
   chartStyle: z.enum(["pie", "donut"]).optional(),
-  slices: z.array(z.object({
-    id: elementIdField.optional(),
-    label: z.string().min(1),
-    value: z.number().positive(),
-  })).min(1),
+  slices: z.array(
+    z.object({
+      id: elementIdField,
+      label: z.string().min(1),
+      value: z.number().finite().positive(),
+    }).strict(),
+  ).min(1),
 });
 
 export const circularChart = {
-  type: circularChartSchema.shape.type.value,
+  type: "pie_chart" as const,
   schema: circularChartSchema,
   summary:
     "A pie or donut chart showing how categories divide a single whole into parts.",
   useWhen:
     "the learner needs to understand proportions, such as each genre's share of a book collection. The categories should be distinct parts that together make up the whole",
   need: {
-    question:
-      "Does this goal need a pie or donut chart showing how one whole is split into parts?",
+    question: "Does `goal` need a pie or donut chart?",
     criteria: {
       true:
-        "The goal is about proportions or shares of a single total, such as the percentage of a budget spent on each item or each category's share of a collection. The parts do not overlap and together make up the whole.",
-      false:
-        "The goal compares independent quantities, tracks change over time, or uses values that do not add up to one whole.",
+        "The amounts are parts of one whole, such as a budget split by category.",
+      false: "The amounts are not parts of one whole.",
     },
   },
   rules: `- All slices must refer to the same whole and use the same unit.
@@ -43,6 +39,17 @@ export const circularChart = {
 - Omit zero-value categories because slice values must be positive.
 - Do not silently invent an "Other" slice to complete missing data.
 - Only target an interior percentage when the slice is at least 8% of the total; smaller slices have no interior percentage.`,
+  annotationTargetParts: (figure) => [
+    ...titleTargetParts(figure),
+    ...figure.slices.flatMap((s) => [
+      { part: `${s.id}.mark`, kind: "mark" as const },
+      { part: `${s.id}.legend-label`, kind: "text" as const },
+      ...(s.value /
+            figure.slices.reduce((sum, slice) => sum + slice.value, 0) >= 0.08
+        ? [{ part: `${s.id}.percentage`, kind: "text" as const }]
+        : []),
+    ]),
+  ],
   annotationTargets: [
     "<figureId>.title — only when title is not null",
     "<figureId>.<sliceId>.mark — the wedge",

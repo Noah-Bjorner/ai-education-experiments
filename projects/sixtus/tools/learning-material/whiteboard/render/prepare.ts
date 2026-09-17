@@ -1,7 +1,7 @@
 import type { WhiteboardFigureContent } from "../schema.ts";
-import { whiteboardFigures } from "../figures/index.ts";
+import { whiteboardFigureByType } from "../figures/index.ts";
+import { collectElementIds } from "../figures/shared.ts";
 import { type Drawing, unionBounds } from "./bounds.ts";
-import { renderFreeformDrawing } from "./freeform.ts";
 import { renderTextFigureDrawing } from "./text.ts";
 import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
@@ -58,8 +58,6 @@ function renderBaseFigure(
   switch (figure.type) {
     case "text":
       return renderTextFigureDrawing(figure, options);
-    case "freeform":
-      return renderFreeformDrawing(figure, options);
     case "xy_chart":
       return renderXyGraphDrawing(figure, options);
     case "pie_chart":
@@ -74,23 +72,7 @@ function renderBaseFigure(
 }
 
 function validateElementIds(figure: WhiteboardFigureContent) {
-  const elements = figure.type === "pie_chart"
-    ? figure.slices
-    : figure.type === "xy_chart"
-    ? figure.series.flatMap((series) => [series, ...series.points])
-    : figure.type === "geometry"
-    ? [
-      ...figure.points,
-      ...figure.objects,
-      ...figure.labels,
-      ...figure.markings,
-    ]
-    : figure.type === "text"
-    ? []
-    : figure.type === "math_expressions"
-    ? figure.expressions
-    : figure.elements;
-  const ids = elements.flatMap((element) => element.id ? [element.id] : []);
+  const ids = collectElementIds(figure).map((element) => element.id);
   if (new Set(ids).size !== ids.length) {
     throw renderError(
       "INVALID_SPEC",
@@ -106,9 +88,7 @@ export function prepareFigure(
 ): FigurePreparationResult {
   let stage: RenderStage = "validation";
   try {
-    const definition = whiteboardFigures.find((figure) =>
-      figure.type === input.type
-    );
+    const definition = whiteboardFigureByType(input.type);
     if (!definition) {
       throw renderError("INVALID_SPEC", "Unsupported whiteboard figure type.");
     }
@@ -128,9 +108,7 @@ export function prepareFigure(
     const annotationOptions = {
       ...opts,
       figureId: figure.id ?? options.id,
-      color: figure.type === "math_expressions" || figure.type === "freeform"
-        ? SERIES_COLORS[0]
-        : COLORS.ink,
+      color: figure.type === "math_expressions" ? SERIES_COLORS[0] : COLORS.ink,
     };
     stage = "annotations";
     const annotations = renderAnnotations(

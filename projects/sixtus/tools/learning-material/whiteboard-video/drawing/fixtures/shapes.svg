@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="150" viewBox="0 0 560 150">
+  <g fill="none" stroke="#111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <circle id="circle" cx="55" cy="70" r="35"/>
+    <path id="curve" d="M115 100 C140 10 165 130 205 40"/>
+    <path id="arrow" d="M235 75 L310 75 M292 57 L310 75 L292 93"/>
+    <rect id="rectangle" x="350" y="35" width="70" height="70" rx="9"/>
+  </g>
+  <path id="ring" fill="#111" fill-rule="evenodd" d="M465 35h70v70h-70z M472 42h56v56h-56z"/>
+</svg>

@@ -55,6 +55,7 @@ Deno.test("single slices, tiny slices, zero bars, sparse groups, and flat areas 
       title: "Whole",
       chartStyle,
       slices: [{
+        id: "all",
         label: "All",
         value: 1,
       }],
@@ -63,7 +64,11 @@ Deno.test("single slices, tiny slices, zero bars, sparse groups, and flat areas 
       type: "pie_chart",
       title: "Tiny",
       chartStyle: "donut",
-      slices: [{ label: "Most", value: 999 }, { label: "Tiny", value: 1 }],
+      slices: [{ id: "most", label: "Most", value: 999 }, {
+        id: "tiny",
+        label: "Tiny",
+        value: 1,
+      }],
     },
     {
       type: "xy_chart",
@@ -71,9 +76,14 @@ Deno.test("single slices, tiny slices, zero bars, sparse groups, and flat areas 
       chartStyle: "bar",
       xLabel: "X",
       yLabel: "Y",
-      series: [{ name: "A", points: [{ x: "A", y: 0 }] }, {
+      series: [{
+        id: "a",
+        name: "A",
+        points: [{ id: "a0", x: "A", y: 0 }],
+      }, {
+        id: "b",
         name: "B",
-        points: [{ x: "B", y: -1 }],
+        points: [{ id: "b0", x: "B", y: -1 }],
       }],
     },
     {
@@ -82,7 +92,11 @@ Deno.test("single slices, tiny slices, zero bars, sparse groups, and flat areas 
       chartStyle: "area",
       xLabel: "X",
       yLabel: "Y",
-      series: [{ name: "A", points: [{ x: 0, y: 0 }, { x: 1, y: 0 }] }],
+      series: [{
+        id: "a",
+        name: "A",
+        points: [{ id: "p0", x: 0, y: 0 }, { id: "p1", x: 1, y: 0 }],
+      }],
     },
   ];
   for (const chart of charts) {

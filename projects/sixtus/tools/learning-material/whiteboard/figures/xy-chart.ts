@@ -1,45 +1,70 @@
 import { z } from "@zod";
 import {
-  figureAnnotationsField,
-  figureTitleField,
   elementIdField,
+  figureEnvelope,
+  titleTargetParts,
   type WhiteboardFigureDefinition,
 } from "./shared.ts";
 
-const xyChartSchema = z.object({
-  type: z.literal("xy_chart"),
-  id: elementIdField.optional(),
-  title: figureTitleField,
-  annotations: figureAnnotationsField.optional(),
+const xyChartSchema = figureEnvelope("xy_chart").safeExtend({
   chartStyle: z.enum(["line", "bar", "scatter", "area"]),
   xLabel: z.string().min(1),
   yLabel: z.string().min(1),
-  series: z.array(z.object({
-    id: elementIdField.optional(),
-    name: z.string().min(1),
-    points: z.array(z.object({
-      id: elementIdField.optional(),
-      x: z.union([z.number(), z.string().min(1)]),
-      y: z.number(),
-    })).min(1),
-  })).min(1),
+  series: z.array(
+    z.object({
+      id: elementIdField,
+      name: z.string().min(1),
+      points: z.array(
+        z.object({
+          id: elementIdField,
+          x: z.union([z.number().finite(), z.string().min(1)]),
+          y: z.number().finite(),
+        }).strict(),
+      ).min(1),
+    }).strict(),
+  ).min(1),
+}).superRefine((figure, ctx) => {
+  const xType = typeof figure.series[0].points[0].x;
+  for (const [s, series] of figure.series.entries()) {
+    const categories = new Set<string | number>();
+    for (const [p, point] of series.points.entries()) {
+      if (
+        typeof point.x !== xType ||
+        (figure.chartStyle !== "bar" && typeof point.x !== "number") ||
+        (typeof point.x === "string" && !point.x.trim())
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["series", s, "points", p, "x"],
+          message:
+            "X values must have a consistent type; only bar charts accept nonempty categories.",
+        });
+      }
+      if (figure.chartStyle === "bar" && categories.has(point.x)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["series", s, "points", p, "x"],
+          message: "A bar series may have only one value per category.",
+        });
+      }
+      categories.add(point.x);
+    }
+  }
 });
 
 export const xyChart = {
-  type: xyChartSchema.shape.type.value,
+  type: "xy_chart" as const,
   schema: xyChartSchema,
   summary:
     "A bar, line, area, or scatter chart built from explicit data points, with one or more series.",
   useWhen:
     "the learner needs to compare categories (bar), follow trends over time or another numeric variable (line or area), or see relationships between measurements (scatter). Use coordinate_plot for functions defined by formulas",
   need: {
-    question:
-      "Does this goal need a bar, line, area, or scatter chart drawn from data values?",
+    question: "Does `goal` need a bar, line, area, or scatter chart?",
     criteria: {
-      true:
-        "The goal compares independent amounts across categories, shows how a quantity changes over time or another variable, or relates two measured quantities. The data values are given or can reasonably be supplied.",
+      true: "The goal has data to compare or track, such as monthly rainfall.",
       false:
-        "There is no data series to plot, or the values are shares or percentages of one whole. A curve defined by a formula or shapes placed on axes do not count either.",
+        "The data are parts of one whole, or there is no data to compare or track.",
     },
   },
   rules: `Choose \`chartStyle\` according to the relationship:
@@ -56,6 +81,18 @@ export const xyChart = {
 - All series share the chart's axis labels and units.
 - Use multiple series in one XY chart when they share axes and comparing them together is clearer than using separate figures.
 - Point marks mean the plotted point or bar; do not invent separate point-label targets.`,
+  annotationTargetParts: (figure) => [
+    ...titleTargetParts(figure),
+    { part: "x-label", kind: "text" },
+    { part: "y-label", kind: "text" },
+    ...figure.series.flatMap((s) => [
+      { part: `${s.id}.legend-label`, kind: "text" as const },
+      ...s.points.map((p) => ({
+        part: `${p.id}.mark`,
+        kind: "mark" as const,
+      })),
+    ]),
+  ],
   annotationTargets: [
     "<figureId>.title — only when title is not null",
     "<figureId>.x-label",

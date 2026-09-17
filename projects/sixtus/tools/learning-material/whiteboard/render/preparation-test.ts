@@ -109,24 +109,18 @@ Deno.test("empty coordinate planes remain valid; unavailable and wrong-kind targ
   }
 });
 
-Deno.test("freeform cannot successfully discard its only element", () => {
+Deno.test("a figure cannot successfully discard its only content", () => {
   const result = prepareFigure({
-    type: "freeform",
-    id: "free",
+    type: "text",
+    id: "note",
     title: null,
-    elements: [{
-      type: "text",
-      id: "label",
-      content: "😀",
-      width: 200,
-      align: "left",
-      size: "normal",
-      position: { x: 0, y: 0 },
-    }],
+    annotations: [],
+    role: "note",
+    text: "😀",
   }, { id: "test" });
   assert(!result.ok);
   assertEquals(result.issues[0].code, "UNSUPPORTED_GLYPH");
-  assertEquals(result.issues[0].elementId, "label");
+  assertEquals(result.issues[0].figureId, "note");
 });
 
 Deno.test("drawing builder rejects duplicate targets and invalid measured geometry", () => {

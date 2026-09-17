@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1187.464" height="414.676" viewBox="-205.444 85.5 1187.464 414.676" role="img" aria-label="Whiteboard"><title>Whiteboard</title><defs>
+  <style>@font-face {
+    font-family: "Shantell Sans Math";
+    src: url("https://static.noahbjorner.com/sixtus/fonts/shantell-sans-math-medium.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+  }</style>
+</defs><g data-figure-id="battery-drain" transform="translate(0 0)"><g style="font-family:'Shantell Sans Math',sans-serif; font-weight:500; font-style:normal; font-synthesis:none; font-kerning:none; font-variant-ligatures:none" role="img" aria-label="battery-drain"><title>battery-drain</title><path d="M 92 402 H 758" fill="none" stroke="#dadad9" stroke-width="1" stroke-dasharray="4 6"/>
+<text x="78" y="407" font-size="13" text-anchor="end" fill="#909090"><title>0</title>0</text>
+<path d="M 92 339.6 H 758" fill="none" stroke="#dadad9" stroke-width="1" stroke-dasharray="4 6"/>
+<text x="78" y="344.6" font-size="13" text-anchor="end" fill="#909090"><title>20</title>20</text>
+<path d="M 92 277.2 H 758" fill="none" stroke="#dadad9" stroke-width="1" stroke-dasharray="4 6"/>
+<text x="78" y="282.2" font-size="13" text-anchor="end" fill="#909090"><title>40</title>40</text>
+<path d="M 92 214.8 H 758" fill="none" stroke="#dadad9" stroke-width="1" stroke-dasharray="4 6"/>
+<text x="78" y="219.8" font-size="13" text-anchor="end" fill="#909090"><title>60</title>60</text>
+<path d="M 92 152.39999999999998 H 758" fill="none" stroke="#dadad9" stroke-width="1" stroke-dasharray="4 6"/>
+<text x="78" y="157.39999999999998" font-size="13" text-anchor="end" fill="#909090"><title>80</title>80</text>
+<path d="M 92 90 H 758" fill="none" stroke="#dadad9" stroke-width="1" stroke-dasharray="4 6"/>
+<text x="78" y="95" font-size="13" text-anchor="end" fill="#909090"><title>100</title>100</text>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 92.00 402.00 C 91.22 402.72 92.50 403.95 92.00 407.00"/>
+      <path d="M 92.00 402.00 C 90.65 402.46 92.46 406.24 92.00 407.00" opacity="0.45"/>
+    </g>
+  </g>
+<text x="92" y="427" font-size="13" text-anchor="middle" fill="#909090"><title>6</title>6</text>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 225.20 402.00 C 224.42 403.00 224.75 404.06 225.20 407.00"/>
+      <path d="M 225.20 402.00 C 225.85 404.71 223.96 405.99 225.20 407.00" opacity="0.45"/>
+    </g>
+  </g>
+<text x="225.20000000000002" y="427" font-size="13" text-anchor="middle" fill="#909090"><title>8</title>8</text>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 358.40 402.00 C 357.62 403.27 357.01 404.17 358.40 407.00"/>
+      <path d="M 358.40 402.00 C 358.05 403.95 358.45 405.73 358.40 407.00" opacity="0.45"/>
+    </g>
+  </g>
+<text x="358.40000000000003" y="427" font-size="13" text-anchor="middle" fill="#909090"><title>10</title>10</text>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 491.60 402.00 C 490.82 403.54 492.26 404.28 491.60 407.00"/>
+      <path d="M 491.60 402.00 C 490.24 403.19 492.94 405.48 491.60 407.00" opacity="0.45"/>
+    </g>
+  </g>
+<text x="491.59999999999997" y="427" font-size="13" text-anchor="middle" fill="#909090"><title>12</title>12</text>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 624.80 402.00 C 624.02 403.81 624.52 404.39 624.80 407.00"/>
+      <path d="M 624.80 402.00 C 625.44 402.44 624.43 405.23 624.80 407.00" opacity="0.45"/>
+    </g>
+  </g>
+<text x="624.8000000000001" y="427" font-size="13" text-anchor="middle" fill="#909090"><title>14</title>14</text>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 758.00 402.00 C 757.23 404.08 756.77 404.50 758.00 407.00"/>
+      <path d="M 758.00 402.00 C 757.64 404.68 758.93 404.98 758.00 407.00" opacity="0.45"/>
+    </g>
+  </g>
+<text x="758" y="427" font-size="13" text-anchor="middle" fill="#909090"><title>16</title>16</text>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 92.00 90.00 C 91.23 194.69 92.82 297.28 92.00 402.00"/>
+      <path d="M 92.00 90.00 C 90.64 194.26 91.22 297.40 92.00 402.00" opacity="0.45"/>
+    </g>
+  </g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 92.00 402.00 C 313.23 402.96 535.88 401.39 758.00 402.00"/>
+      <path d="M 92.00 402.00 C 314.64 401.50 536.51 401.14 758.00 402.00" opacity="0.45"/>
+    </g>
+  </g>
+<g id="battery-drain.x-label"><text x="425" y="460" font-size="16" text-anchor="middle" fill="#111111"><title>Time (24-hr)</title>Time (24-hr)</text></g>
+<g id="battery-drain.y-label"><g transform="translate(25 246) rotate(-90)"><text x="0" y="0" font-size="16" text-anchor="middle" fill="#111111"><title>Battery (%)</title>Battery (%)</text></g></g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#3c82f6" stroke-width="2.7">
+      <path d="M 158.60 90.00 C 202.23 109.95 246.33 126.94 291.80 146.16"/>
+      <path d="M 158.60 90.00 C 202.64 107.46 246.21 126.33 291.80 146.16" opacity="0.45"/>
+    </g>
+  </g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#3c82f6" stroke-width="2.7">
+      <path d="M 291.80 146.16 C 357.63 166.51 425.99 189.45 491.60 211.68"/>
+      <path d="M 291.80 146.16 C 357.04 168.98 425.10 188.48 491.60 211.68" opacity="0.45"/>
+    </g>
+  </g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#3c82f6" stroke-width="2.7">
+      <path d="M 491.60 211.68 C 535.23 228.14 580.44 246.76 624.80 264.72"/>
+      <path d="M 491.60 211.68 C 536.64 229.59 581.79 248.43 624.80 264.72" opacity="0.45"/>
+    </g>
+  </g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#3c82f6" stroke-width="2.7">
+      <path d="M 624.80 264.72 C 668.43 290.81 712.70 318.64 758.00 345.84"/>
+      <path d="M 624.80 264.72 C 668.84 291.23 713.29 319.94 758.00 345.84" opacity="0.45"/>
+    </g>
+  </g>
+<g id="battery-drain.p7.mark"><circle cx="158.60000000000002" cy="90" r="4.5" fill="#3c82f6"><title>Battery Level: 7, 100</title></circle></g>
+<g id="battery-drain.p9.mark"><circle cx="291.79999999999995" cy="146.16000000000003" r="4.5" fill="#3c82f6"><title>Battery Level: 9, 82</title></circle></g>
+<g id="battery-drain.p12.mark"><circle cx="491.59999999999997" cy="211.68" r="4.5" fill="#3c82f6"><title>Battery Level: 12, 61</title></circle></g>
+<g id="battery-drain.p14.mark"><circle cx="624.8000000000001" cy="264.72" r="4.5" fill="#3c82f6"><title>Battery Level: 14, 44</title></circle></g>
+<g id="battery-drain.p16.mark"><circle cx="758" cy="345.84000000000003" r="4.5" fill="#3c82f6"><title>Battery Level: 16, 18</title></circle></g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#3c82f6" stroke-width="2.7">
+      <path d="M 92.00 491.00 C 98.90 490.32 108.48 490.95 115.00 491.00"/>
+      <path d="M 92.00 491.00 C 98.31 489.71 108.31 491.89 115.00 491.00" opacity="0.45"/>
+    </g>
+  </g>
+<g id="battery-drain.battery-level.legend-label"><text x="123" y="496" font-size="16" text-anchor="start" fill="#111111"><title>Battery Level</title>Battery Level</text></g></g><g data-layer="emphasis" style="font-family:'Shantell Sans Math',sans-serif; font-weight:500; font-style:normal; font-synthesis:none; font-kerning:none; font-variant-ligatures:none"><g id="whiteboard-figure-0-annotation-0" data-annotation-type="circle" data-target-id="battery-drain.p16.mark"><g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="2">
+      <path d="M 768.58 344.90 C 768.87 350.14 764.28 356.08 758.50 355.82 C 751.87 355.53 744.65 349.94 745.28 344.64 C 744.50 338.25 751.80 335.42 758.46 335.38 C 764.55 334.39 767.39 340.01 768.58 344.90 Z"/>
+      <path d="M 768.42 346.39 C 766.94 352.49 767.10 357.61 759.43 356.55 C 752.18 356.23 748.17 350.13 746.79 345.26 C 746.94 340.43 749.95 334.34 757.16 334.70 C 762.30 333.66 767.12 341.17 768.42 346.39 Z" opacity="0.45"/>
+    </g>
+  </g></g></g><g data-layer="callouts" style="font-family:'Shantell Sans Math',sans-serif; font-weight:500; font-style:normal; font-synthesis:none; font-kerning:none; font-variant-ligatures:none"><g id="whiteboard-figure-0-annotation-1" data-annotation-type="arrow" data-target-ids="battery-drain.p16.mark"><g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 799.20 345.71 C 792.01 346.34 785.97 345.28 778.59 345.68"/>
+      <path d="M 799.20 345.71 C 792.60 345.41 784.83 345.30 778.59 345.68" opacity="0.45"/>
+    </g>
+  </g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 787.60 341.69 C 784.27 342.48 781.70 343.99 778.59 345.68"/>
+      <path d="M 787.60 341.69 C 784.44 342.40 781.53 343.85 778.59 345.68" opacity="0.45"/>
+    </g>
+  </g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 778.59 345.68 C 781.27 346.60 784.28 348.04 787.59 349.69"/>
+      <path d="M 778.59 345.68 C 781.00 347.37 785.08 347.75 787.59 349.69" opacity="0.45"/>
+    </g>
+  </g>
+<g data-callout-label="true" color="#111111" transform="translate(810.5 322.83200000000005)"><text x="-0.624" y="16" text-anchor="start" font-size="16" fill="currentColor" xml:space="preserve">Below 20% by end of </text><text x="-0.624" y="38" text-anchor="start" font-size="16" fill="currentColor" xml:space="preserve">day</text></g></g>
+<g id="whiteboard-figure-0-annotation-2" data-annotation-type="arrow" data-target-ids="battery-drain.p14.mark"><g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 666.00 264.72 C 659.46 265.12 653.04 264.50 647.30 264.72"/>
+      <path d="M 666.00 264.72 C 659.60 264.66 653.38 264.85 647.30 264.72" opacity="0.45"/>
+    </g>
+  </g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 656.30 260.72 C 652.99 262.57 650.69 263.22 647.30 264.72"/>
+      <path d="M 656.30 260.72 C 652.70 261.67 650.70 263.41 647.30 264.72" opacity="0.45"/>
+    </g>
+  </g>
+<g stroke-linecap="round" stroke-linejoin="round">
+    
+    <g fill="none" stroke="#111111" stroke-width="1.6">
+      <path d="M 647.30 264.72 C 649.99 266.69 653.28 267.27 656.30 268.72"/>
+      <path d="M 647.30 264.72 C 650.56 266.64 652.96 267.30 656.30 268.72" opacity="0.45"/>
+    </g>
+  </g>
+<g data-callout-label="true" color="#111111" transform="translate(677.3000000000001 243.71200000000002)"><text x="-0.368" y="16" text-anchor="start" font-size="16" fill="currentColor" xml:space="preserve">Drop speeds up after </text><text x="-0.368" y="38" text-anchor="start" font-size="16" fill="currentColor" xml:space="preserve">lunch</text></g></g></g></g></svg>

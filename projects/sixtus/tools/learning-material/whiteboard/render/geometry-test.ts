@@ -7,7 +7,7 @@ import {
 } from "@std/assert";
 import { type Geometry, geometry } from "../figures/geometry.ts";
 import { WhiteboardOutput, whiteboardRequestSchema } from "../schema.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../archive/prompt-old.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import { geometryExamples } from "./geometry-examples.ts";
 import { renderWhiteboardSvg } from "./index.ts";

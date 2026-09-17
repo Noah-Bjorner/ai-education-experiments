@@ -7,7 +7,6 @@ export const TYPE_SCALE = {
   supporting: 13,
   detail: 12,
   annotation: 16,
-  prominent: 28,
   mathDisplay: 36,
 } as const;
 
@@ -20,7 +19,6 @@ export const LINE_HEIGHT = {
   supporting: 18,
   detail: 16,
   annotation: 22,
-  prominent: 38,
   mathDisplay: 48,
 } as const satisfies Record<keyof typeof TYPE_SCALE, number>;
 

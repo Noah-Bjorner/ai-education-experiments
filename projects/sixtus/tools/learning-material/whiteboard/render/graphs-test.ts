@@ -14,17 +14,21 @@ export const examples: Graph[] = [
     xLabel: "Year",
     yLabel: "Population",
     series: [{
+      id: "population",
       name: "Population",
-      points: [{ x: 1950, y: 41800000 }, { x: 1975, y: 52600000 }],
+      points: [
+        { id: "y1950", x: 1950, y: 41800000 },
+        { id: "y1975", x: 1975, y: 52600000 },
+      ],
     }],
   },
   {
     type: "pie_chart",
     title: "Book collection",
     slices: [
-      { label: "Fiction", value: 12 },
-      { label: "Nonfiction", value: 6 },
-      { label: "Poetry", value: 2 },
+      { id: "fiction", label: "Fiction", value: 12 },
+      { id: "nonfiction", label: "Nonfiction", value: 6 },
+      { id: "poetry", label: "Poetry", value: 2 },
     ],
   },
 ];
@@ -101,7 +105,11 @@ Deno.test("line charts handle single points, flat data, negative values, and sor
       chartStyle: "line",
       xLabel: "X",
       yLabel: "Y",
-      series: [{ name: "A", points }],
+      series: [{
+        id: "a",
+        name: "A",
+        points: points.map((point, i) => ({ ...point, id: `p${i}` })),
+      }],
     };
     const before = JSON.stringify(chart);
     const { svg } = renderGraphSvg(chart, { id: "edge" });
@@ -153,7 +161,11 @@ Deno.test("invalid and unsupported data fails explicitly", () => {
       chartStyle: "line",
       xLabel: "X",
       yLabel: "Y",
-      series: [{ name: "A", points: [{ x: "Monday", y: 1 }] }],
+      series: [{
+        id: "a",
+        name: "A",
+        points: [{ id: "p0", x: "Monday", y: 1 }],
+      }],
     },
     {
       type: "xy_chart",
@@ -161,17 +173,25 @@ Deno.test("invalid and unsupported data fails explicitly", () => {
       chartStyle: "line",
       xLabel: "X",
       yLabel: "Y",
-      series: [{ name: "A", points: [{ x: 1, y: NaN }] }],
+      series: [{ id: "a", name: "A", points: [{ id: "p0", x: 1, y: NaN }] }],
     },
     {
       type: "pie_chart",
       title: "Bad",
-      slices: [{ label: "A", value: 0 }, { label: "B", value: 1 }],
+      slices: [{ id: "a", label: "A", value: 0 }, {
+        id: "b",
+        label: "B",
+        value: 1,
+      }],
     },
     {
       type: "pie_chart",
       title: "Bad",
-      slices: [{ label: "A", value: -1 }, { label: "B", value: 1 }],
+      slices: [{ id: "a", label: "A", value: -1 }, {
+        id: "b",
+        label: "B",
+        value: 1,
+      }],
     },
   ];
   for (const chart of charts) {

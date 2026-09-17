@@ -1,3 +1,4 @@
+import type { WhiteboardFontMode } from "../schema.ts";
 import { renderError } from "./issues.ts";
 import { escapeXml } from "./svg.ts";
 import metrics from "./fonts/shantell-sans-math-metrics.json" with {
@@ -19,16 +20,29 @@ const base64 = btoa(
   Array.from(fontBytes, (byte) => String.fromCharCode(byte)).join(""),
 );
 
-/** Embed once in the root SVG, even if that SVG contains several graph groups. */
-export const GRAPH_FONT_DEFS = `<defs>
+export const GRAPH_FONT_HOSTED_URL =
+  "https://static.noahbjorner.com/sixtus/fonts/shantell-sans-math-medium.woff2";
+
+function fontDefs(source: string): string {
+  return `<defs>
   <style>@font-face {
     font-family: "${GRAPH_FONT_FAMILY}";
-    src: url("data:font/woff2;base64,${base64}") format("woff2");
+    src: url("${source}") format("woff2");
     font-weight: 500;
     font-style: normal;
   }</style>
-</defs>
-<metadata>${escapeXml(license)}</metadata>`;
+</defs>`;
+}
+
+/** Include once in the root SVG, even with several graph groups. */
+// Keep the license alongside font bytes distributed inside the SVG.
+export const GRAPH_FONT_DEFS = fontDefs(`data:font/woff2;base64,${base64}`) +
+  `\n<metadata>${escapeXml(license)}</metadata>`;
+const HOSTED_FONT_DEFS = fontDefs(GRAPH_FONT_HOSTED_URL);
+
+export function graphFontDefs(mode: WhiteboardFontMode = "embedded"): string {
+  return mode === "hosted" ? HOSTED_FONT_DEFS : GRAPH_FONT_DEFS;
+}
 
 // Disable synthetic weights and optional shaping so measurements and browser
 // text use the same simple character advances. This bundled file is Medium (500).

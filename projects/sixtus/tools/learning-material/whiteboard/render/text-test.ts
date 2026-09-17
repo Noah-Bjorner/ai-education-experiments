@@ -1,6 +1,6 @@
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import { textFigure, textFigureSchema } from "../figures/text.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../archive/prompt-old.ts";
 import { WhiteboardOutput } from "../schema.ts";
 import { graphTextBounds } from "./font.ts";
 import { renderHandwritten } from "./handwritten.ts";

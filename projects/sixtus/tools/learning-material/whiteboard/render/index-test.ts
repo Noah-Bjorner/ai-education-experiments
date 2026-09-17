@@ -12,16 +12,16 @@ import {
   assertThrows,
 } from "@std/assert";
 import { mathExpressions } from "../figures/math-expressions.ts";
+import { textFigure } from "../figures/text.ts";
 import { WhiteboardOutput, type WhiteboardSpec } from "../schema.ts";
 import { coordinateExamples } from "./coordinate-gallery.ts";
-import { freeformExamples } from "./freeform-examples.ts";
 import { geometryExamples } from "./geometry-examples.ts";
 import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
-import { renderFreeformDrawing } from "./freeform.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
+import { renderTextFigureDrawing } from "./text.ts";
 
 const books = {
   type: "pie_chart",
@@ -459,15 +459,16 @@ Deno.test("untitled figures have no reserved title gap and titled figures are un
       }, options),
     ],
     [
-      renderFreeformDrawing({
-        ...freeformExamples[0],
+      renderTextFigureDrawing({
+        ...textFigure.example.output,
         title: null,
         annotations: [],
       }, options),
-      renderFreeformDrawing(
-        { ...freeformExamples[0], annotations: [] },
-        options,
-      ),
+      renderTextFigureDrawing({
+        ...textFigure.example.output,
+        title: "A heading",
+        annotations: [],
+      }, options),
     ],
   ] as const;
   for (const [untitled, titled] of pairs) {

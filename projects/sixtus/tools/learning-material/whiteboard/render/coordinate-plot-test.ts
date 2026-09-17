@@ -10,7 +10,7 @@ import {
   coordinatePlot,
 } from "../figures/coordinate-plot.ts";
 import { WhiteboardOutput, whiteboardRequestSchema } from "../schema.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../prompt-old.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "../archive/prompt-old.ts";
 import { coordinateExamples } from "./coordinate-gallery.ts";
 import {
   clipCoordinateLine,

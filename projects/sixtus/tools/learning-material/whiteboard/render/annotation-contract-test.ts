@@ -14,7 +14,6 @@ import type { Annotation } from "./annotation-types.ts";
 import { renderEmphasis } from "./emphasis.ts";
 import { connectorObstacles } from "./callouts.ts";
 import { clearRoute, obstacleHitsBox } from "./placement.ts";
-import { renderFreeformDrawing } from "./freeform.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
 import {
@@ -390,49 +389,7 @@ Deno.test("nested container permissions apply only to their own obstacles and ne
   assertEquals(obstacles[0].connectorPassThroughFor, undefined);
 });
 
-Deno.test("figure renderers declare actual containers and retain visible scaled ellipse attachments", () => {
-  const free = renderFreeformDrawing({
-    type: "freeform",
-    id: "free",
-    title: null,
-    elements: [
-      { type: "ellipse", id: "oval", x: 300, y: 200, rx: 100, ry: 80 },
-      {
-        type: "marker",
-        id: "inside",
-        x: 300,
-        y: 200,
-        variant: "dot",
-        radius: 4,
-      },
-      {
-        type: "line",
-        id: "open",
-        from: { x: 100, y: 100 },
-        to: { x: 500, y: 300 },
-      },
-    ],
-  }, { id: "test", width: 1200, height: 720 });
-  assert(
-    free.obstacles.filter((o) => o.ownerId === "free.oval.mark").every((o) =>
-      o.connectorPassThroughFor?.includes("free.inside.mark")
-    ),
-  );
-  assert(
-    free.obstacles.filter((o) => o.ownerId === "free.open.mark").every((o) =>
-      !o.connectorPassThroughFor
-    ),
-  );
-  const oval = free.targets.get("free.oval.mark")!;
-  assert(oval.attachment.type === "segments");
-  const center = {
-    x: oval.bounds.x + oval.bounds.width / 2,
-    y: oval.bounds.y + oval.bounds.height / 2,
-  };
-  // Attachment lies on the ellipse, measured separately from painted stroke padding.
-  const first = oval.attachment.segments[0].a;
-  assertAlmostEquals(first.y, center.y, 0.01);
-  assert(first.x > center.x);
+Deno.test("figure renderers declare actual containers and retain visible circle attachments", () => {
   const coordinate = renderCoordinatePlotDrawing({
     type: "coordinate_plot",
     id: "plot",
@@ -460,6 +417,15 @@ Deno.test("figure renderers declare actual containers and retain visible scaled 
       (o) => !o.connectorPassThroughFor,
     ),
   );
+  const ring = coordinate.targets.get("plot.ring.mark")!;
+  assert(ring.attachment.type === "segments");
+  const center = {
+    x: ring.bounds.x + ring.bounds.width / 2,
+    y: ring.bounds.y + ring.bounds.height / 2,
+  };
+  const first = ring.attachment.segments[0].a;
+  assertAlmostEquals(first.y, center.y, 0.01);
+  assert(first.x > center.x);
   const geometry = renderGeometryDrawing({
     type: "geometry",
     id: "geometry",
@@ -634,42 +600,31 @@ Deno.test("multiple callouts to one emphasized target reserve each other's label
 
 Deno.test("board rendering exposes structured fallback diagnostics with stable annotation identity", () => {
   const figure: WhiteboardFigureContent = {
-    type: "freeform",
+    type: "math_expressions",
     id: "blocked",
     title: null,
-    elements: [
-      {
-        type: "marker",
-        id: "target",
-        x: 250,
-        y: 200,
-        radius: 4,
-        variant: "dot",
-      },
-      {
-        type: "text",
-        id: "cover",
-        content:
-          "Covering the target\nCovering the target\nCovering the target\nCovering the target",
-        position: { x: 150, y: 140 },
-        width: 300,
-        size: "large",
-        align: "left",
-      },
-    ],
-    annotations: [{
-      type: "arrow",
-      targetIds: ["blocked.target.mark"],
-      content: "Explain this target",
-    }],
+    expressions: [{ id: "answer", latex: "x=8" }],
+    annotations: Array.from({ length: 12 }, (_, i) => ({
+      type: "arrow" as const,
+      targetIds: ["blocked.answer.expression"],
+      content:
+        `Explain this result in detail with extra words so labels collide ${i + 1}`,
+    })),
   };
-  const result = renderWhiteboardSvg(boardExample([figure]));
-  assertEquals(result.calloutPlacements.length, 1);
-  assertEquals(result.annotationDiagnostics.length, 1);
-  const diagnostic = result.annotationDiagnostics[0];
-  assertEquals(diagnostic.code, "overlap-fallback");
+  const result = renderWhiteboardSvg(boardExample([figure]), {
+    width: 160,
+    height: 140,
+  });
+  const diagnostic = result.annotationDiagnostics.find((issue) =>
+    issue.code === "overlap-fallback"
+  );
+  assert(diagnostic, "expected a crowded board to fall back");
   assertEquals(diagnostic.figureId, "blocked");
-  assertEquals(diagnostic.annotationIndex, 0);
-  assertEquals(diagnostic.targetIds, ["blocked.target.mark"]);
+  assertEquals(diagnostic.targetIds, ["blocked.answer.expression"]);
+  assert(typeof diagnostic.annotationIndex === "number");
   assert(diagnostic.message.includes("fallback"));
+  assertEquals(
+    result.calloutPlacements[diagnostic.annotationIndex]?.targetIds,
+    ["blocked.answer.expression"],
+  );
 });
