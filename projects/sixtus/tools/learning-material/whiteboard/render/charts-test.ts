@@ -20,7 +20,7 @@ Deno.test("all six charts render reproducibly without mutations and support boar
       : `${chart.id}.fiction.mark`;
     const board = renderWhiteboardSvg(boardExample([{
       ...chart,
-      annotations: [{ type: "circle", targetIds: [target], content: null }],
+      annotations: [{ type: "highlight", targetIds: [target], text: null }],
     }]));
     assert(board.svg.includes(`id="${target}"`));
     assert(board.stages.emphasis.svg !== board.stages.base.svg);

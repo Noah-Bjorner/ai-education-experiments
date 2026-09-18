@@ -124,9 +124,9 @@ export const coordinateExamples: CoordinatePlot[] = [
       { type: "point", id: "root", position: [2, 0], label: "(2, 0)" },
     ],
     annotations: [{
-      type: "arrow",
-      targetIds: ["annotated.root.mark"],
-      content: "Here, y = 0",
+      type: "callout",
+      targetIds: ["root"],
+      text: "Here, y = 0",
     }],
   },
   { ...base, id: "blank", title: "Plot the points on this grid" },

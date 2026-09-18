@@ -82,10 +82,12 @@ export function assertRepairPreservesContent(
       if (names.figure && expected.startsWith(`${names.figure[0]}.`)) {
         expected = names.figure[1] + expected.slice(names.figure[0].length);
       }
+      // Short references (`element` or `element.part`) name the element first;
+      // the canonical `figure.element.part` form names it second.
       const parts = expected.split(".");
-      if (parts.length === 3 && names.elements.has(parts[1])) {
-        parts[1] = names.elements.get(parts[1])!;
-      }
+      const elementIndex = parts.length === 3 ? 1 : 0;
+      const renamed = names.elements.get(parts[elementIndex]);
+      if (renamed !== undefined) parts[elementIndex] = renamed;
       return parts.join(".") === after;
     }
     const referenceKey = typeof path.at(-1) === "number"

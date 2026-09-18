@@ -1,4 +1,5 @@
 import type { Geometry } from "./geometry.ts";
+import { resolveTargetRef } from "./shared.ts";
 
 export type GeometryPoint = readonly [number, number];
 type Straight = {
@@ -341,28 +342,21 @@ export function resolveGeometry(spec: Geometry) {
   }
   if (spec.annotations?.length) {
     require(!!spec.id, "Geometry annotations require an explicit figure ID.");
-    const targets = new Map<string, boolean>(
-      spec.title !== null ? [[`${spec.id}.title`, true]] : [],
+    const targets = new Set<string>(
+      spec.title !== null ? [`${spec.id}.title`] : [],
     );
     [...spec.points, ...spec.objects, ...spec.markings].forEach((e) =>
-      targets.set(`${spec.id}.${e.id}.mark`, false)
+      targets.add(`${spec.id}.${e.id}.mark`)
     );
-    spec.labels.forEach((e) => targets.set(`${spec.id}.${e.id}.label`, true));
+    spec.labels.forEach((e) => targets.add(`${spec.id}.${e.id}.label`));
     spec.markings.forEach((e) => {
-      if (e.kind === "angle" && e.latex) {
-        targets.set(`${spec.id}.${e.id}.label`, true);
-      }
+      if (e.kind === "angle" && e.latex) targets.add(`${spec.id}.${e.id}.label`);
     });
     for (const annotation of spec.annotations) {
       for (const target of annotation.targetIds) {
         require(
-          targets.has(target),
+          resolveTargetRef(target, spec.id!, targets) !== undefined,
           `Unknown geometry annotation target '${target}'.`,
-        );
-        require(
-          !["underline", "strikethrough"].includes(annotation.type) ||
-            targets.get(target) === true,
-          `Annotation '${annotation.type}' requires a text target.`,
         );
       }
     }

@@ -28,21 +28,17 @@ const books = {
   id: "books",
   title: "Book collection (20 books)",
   annotations: [
-    { type: "circle", targetIds: ["books.fiction.percentage"], content: null },
+    { type: "highlight", targetIds: ["fiction.percentage"], text: null },
+    { type: "highlight", targetIds: ["fiction.legend-label"], text: null },
     {
-      type: "underline",
-      targetIds: ["books.fiction.legend-label"],
-      content: null,
+      type: "callout",
+      targetIds: ["fiction"],
+      text: "Fiction makes up more than half the collection",
     },
     {
-      type: "arrow",
-      targetIds: ["books.fiction.mark"],
-      content: "Fiction makes up more than half the collection",
-    },
-    {
-      type: "bracket",
-      targetIds: ["books.nonfiction.legend-label", "books.poetry.legend-label"],
-      content: "The remaining genres",
+      type: "group",
+      targetIds: ["nonfiction.legend-label", "poetry.legend-label"],
+      text: "The remaining genres",
     },
   ],
   slices: [
@@ -70,15 +66,10 @@ const trend = {
     }, { id: "middle", x: 1, y: 2 }],
   }],
   annotations: [
-    { type: "box", targetIds: ["trend.peak.mark"], content: null },
-    { type: "number", targetIds: ["trend.first.mark"], content: "1" },
-    { type: "number", targetIds: ["trend.last.mark"], content: "2" },
-    {
-      type: "strikethrough",
-      targetIds: ["trend.values.legend-label"],
-      content: null,
-    },
-    { type: "underline", targetIds: ["trend.y-label"], content: null },
+    { type: "highlight", targetIds: ["peak"], text: null },
+    { type: "number", targetIds: ["first", "last"], text: null },
+    { type: "strikeout", targetIds: ["values"], text: null },
+    { type: "strikeout", targetIds: ["y-label"], text: null },
   ],
 } satisfies WhiteboardFigureContent;
 
@@ -120,14 +111,18 @@ Deno.test("base and emphasis are retained before callout placement", () => {
   );
 });
 
-Deno.test("all five emphasis types render, including numbering and rotated text", () => {
+Deno.test("emphasis intents pick marks from their targets, including numbering and rotated text", () => {
   const spec: WhiteboardSpec = boardExample([books, trend]);
   const result = renderWhiteboardSvg(spec, { roughness: 0 });
-  for (
-    const type of ["circle", "box", "underline", "strikethrough", "number"]
-  ) {
+  for (const type of ["highlight", "number", "strikeout"]) {
     assert(result.svg.includes(`data-annotation-type="${type}"`));
   }
+  // Compact marks and text get circles; elongated text gets a box; striking
+  // out text uses the strikethrough segment.
+  for (const mark of ["circle", "box", "strikethrough", "number"]) {
+    assert(result.svg.includes(`data-annotation-mark="${mark}"`), mark);
+  }
+  // One number annotation fans out in target order.
   assert(result.svg.includes(">1</text>"));
   assert(result.svg.includes(">2</text>"));
   const base = renderXyGraphDrawing(trend, { id: "test" });
@@ -138,14 +133,14 @@ Deno.test("all five emphasis types render, including numbering and rotated text"
   const vertical = base.targets.get("trend.y-label")!;
   assert(vertical.kind === "text");
   assertEquals(
-    vertical.decorations.underline.a.x,
-    vertical.decorations.underline.b.x,
+    vertical.decorations.strikethrough.a.x,
+    vertical.decorations.strikethrough.b.x,
   );
   const b = vertical.bounds;
-  const x = (b.x + b.width + 3).toFixed(2);
+  const x = (b.x + b.width / 2).toFixed(2);
   assert(
     result.svg.includes(`M ${x} ${b.y.toFixed(2)} C ${x}`),
-    "Y-axis underline must run vertically beside the label",
+    "Y-axis strikethrough must run vertically through the label",
   );
 });
 
@@ -153,9 +148,9 @@ Deno.test("emphasis follows resized targets and enlarges tight export bounds", (
   const figure = {
     ...trend,
     annotations: [{
-      type: "circle" as const,
-      targetIds: ["trend.title"],
-      content: null,
+      type: "highlight" as const,
+      targetIds: ["title"],
+      text: null,
     }],
   };
   const small = renderWhiteboardSvg(boardExample([figure]), {
@@ -233,9 +228,9 @@ Deno.test("export balances annotation overflow so the base stays centered", () =
     id: "combine",
     title: "Combine like terms",
     annotations: [{
-      type: "arrow" as const,
-      targetIds: ["combine.group.expression"],
-      content: "Constants: 5 - 1 = 4, not -4",
+      type: "callout" as const,
+      targetIds: ["group"],
+      text: "Constants: 5 - 1 = 4, not -4",
     }],
     expressions: [
       { id: "start", latex: "3x + 5 + 2x - 1" },
@@ -278,29 +273,34 @@ Deno.test("export balances annotation overflow so the base stays centered", () =
   assertAlmostEquals(titleX(titled.svg), titleX(titledPlain.svg));
 });
 
-Deno.test("invalid references, duplicate IDs, and unsupported text targets fail clearly", () => {
+Deno.test("invalid references and duplicate IDs fail clearly; striking out a mark draws a cross", () => {
   const renderTarget = (
     targetId: string,
-    type: "circle" | "underline" = "circle",
+    type: "highlight" | "strikeout" = "highlight",
   ) =>
     renderWhiteboardSvg(boardExample([{
       ...books,
-      annotations: [{ type, targetIds: [targetId], content: null }],
+      annotations: [{ type, targetIds: [targetId], text: null }],
     }]));
-  assertThrows(
-    () => renderTarget("books.missing.percentage"),
-    Error,
-    "Unknown or unavailable",
+  for (
+    const target of [
+      "missing.percentage",
+      "books.missing.percentage",
+      "other.fiction.percentage",
+      "fiction.wedge",
+    ]
+  ) {
+    assertThrows(() => renderTarget(target), Error, "Unknown or unavailable");
+  }
+  assert(
+    renderTarget("fiction", "strikeout").svg.includes(
+      'data-annotation-mark="cross"',
+    ),
   );
-  assertThrows(
-    () => renderTarget("other.fiction.percentage"),
-    Error,
-    "Unknown or unavailable",
-  );
-  assertThrows(
-    () => renderTarget("books.fiction.mark", "underline"),
-    Error,
-    "requires a text target",
+  assert(
+    renderTarget("fiction.legend-label", "strikeout").svg.includes(
+      'data-annotation-mark="strikethrough"',
+    ),
   );
   assertThrows(
     () => renderWhiteboardSvg(boardExample([books, books], "right")),
@@ -325,7 +325,7 @@ Deno.test("invalid references, duplicate IDs, and unsupported text targets fail 
   );
 });
 
-Deno.test("tiny slices do not expose nonexistent percentage labels", () => {
+Deno.test("tiny slices keep a percentage target on the legend detail line", () => {
   const figure = {
     ...books,
     slices: [{ id: "majority", label: "Majority", value: 99 }, {
@@ -337,20 +337,21 @@ Deno.test("tiny slices do not expose nonexistent percentage labels", () => {
   };
   const base = renderCircularGraphDrawing(figure, { id: "test" });
   assert(base.targets.has("books.tiny.mark"));
-  assert(!base.targets.has("books.tiny.percentage"));
-  assertThrows(
-    () =>
-      renderWhiteboardSvg(boardExample([{
-        ...figure,
-        annotations: [{
-          type: "circle",
-          targetIds: ["books.tiny.percentage"],
-          content: null,
-        }],
-      }])),
-    Error,
-    "Unknown or unavailable",
-  );
+  const fallback = base.targets.get("books.tiny.percentage")!;
+  const legend = base.targets.get("books.tiny.legend-label")!;
+  assert(fallback.kind === "text");
+  // The interior label is omitted, so the target sits under the legend name.
+  assert(fallback.bounds.y > legend.bounds.y);
+  assert(fallback.bounds.x >= legend.bounds.x - 0.01);
+  const result = renderWhiteboardSvg(boardExample([{
+    ...figure,
+    annotations: [{
+      type: "highlight",
+      targetIds: ["tiny.percentage"],
+      text: null,
+    }],
+  }]));
+  assert(result.svg.includes('data-target-id="books.tiny.percentage"'));
 });
 
 Deno.test("board figures require explicit IDs and placement; legacy layout is rejected", () => {
@@ -405,9 +406,9 @@ Deno.test("null figure titles omit the title target and reject title annotations
       renderWhiteboardSvg(boardExample([{
         ...untitled,
         annotations: [{
-          type: "circle",
-          targetIds: ["books.title"],
-          content: null,
+          type: "highlight",
+          targetIds: ["title"],
+          text: null,
         }],
       }])),
     Error,
@@ -434,7 +435,10 @@ Deno.test("untitled figures have no reserved title gap and titled figures are un
         ...mathExpressions.example.output,
         title: null,
       }, options),
-      renderMathExpressionsDrawing(mathExpressions.example.output, options),
+      renderMathExpressionsDrawing({
+        ...mathExpressions.example.output,
+        title: "Solve for x",
+      }, options),
     ],
     [
       renderGeometryDrawing({

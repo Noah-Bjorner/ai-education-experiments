@@ -11,9 +11,9 @@ if (import.meta.main) {
     ...definition.example.output,
     annotations: definition.example.output.type === "math_expressions"
       ? [{
-        type: "arrow",
-        targetIds: [`${definition.example.output.id}.answer.expression`],
-        content: "The solution",
+        type: "callout",
+        targetIds: ["answer"],
+        text: "The solution",
       }]
       : [],
   }));

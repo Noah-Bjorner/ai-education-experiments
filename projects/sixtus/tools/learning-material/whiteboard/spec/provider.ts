@@ -1,7 +1,7 @@
 import { generateText, NoObjectGeneratedError, Output } from "@ai";
 import {
-  WHITEBOARD_SPEC_SYSTEM_PROMPT,
-  WHITEBOARD_SPEC_USER_PROMPT,
+  _TEST_WHITEBOARD_SPEC_SYSTEM_PROMPT,
+  _TEST_WHITEBOARD_SPEC_USER_PROMPT,
 } from "./prompt.ts";
 import {
   InvalidSpecOutput,
@@ -9,10 +9,10 @@ import {
   type SpecGenerationResult,
 } from "./index.ts";
 import type { WhiteboardMode } from "../schema.ts";
+import { cerebras } from "../../../../../../lib/cerebras.ts";
 
-async function modelOptions(mode?: WhiteboardMode) {
+function modelOptions(mode?: WhiteboardMode) {
   if (mode === "fast") {
-    const { cerebras } = await import("../../../../../../lib/cerebras.ts");
     return {
       model: cerebras("qwen-3.8-27b"),
       providerOptions: { cerebras: { reasoningEffort: "medium" as const } },
@@ -42,19 +42,25 @@ export async function generateSpecOutput(
   request: SpecGenerationRequest,
 ): Promise<SpecGenerationResult> {
   const { input, availableFigures, showTitle, schema, repair } = request;
-  const system = WHITEBOARD_SPEC_SYSTEM_PROMPT({ availableFigures, showTitle });
-  console.log("system", system);
+  const system = _TEST_WHITEBOARD_SPEC_SYSTEM_PROMPT({ availableFigures });
+  console.log("system ->\n", system);
   const prompt = [
-    WHITEBOARD_SPEC_USER_PROMPT({ goal: input.goal, showTitle }),
+    _TEST_WHITEBOARD_SPEC_USER_PROMPT({
+      goal: input.goal,
+      showTitle,
+      availableFigures,
+    }),
     repair
       ? `${SPEC_REPAIR_INSTRUCTIONS}\nPrevious output:\n${
         JSON.stringify(repair.previous)
       }\nValidation issues:\n${JSON.stringify(repair.issues)}`
       : "",
   ].filter(Boolean).join("\n\n");
+  console.log("prompt ->\n", prompt);
+
   try {
     const { output, usage } = await generateText({
-      ...await modelOptions(input.mode),
+      ...modelOptions(input.mode),
       maxRetries: 1,
       system,
       prompt,

@@ -36,19 +36,19 @@ const chart = {
   }],
   annotations: [
     {
-      type: "arrow",
-      targetIds: ["motion.peak.mark"],
-      content: "Maximum height\nThe descent begins here",
+      type: "callout",
+      targetIds: ["peak"],
+      text: "Maximum height\nThe descent begins here",
     },
     {
-      type: "line",
-      targetIds: ["motion.finish.mark"],
-      content: "Still above the starting height",
+      type: "callout",
+      targetIds: ["finish"],
+      text: "Still above the starting height",
     },
     {
-      type: "arrow",
+      type: "callout",
       targetIds: ["motion.start.mark"],
-      content: "Start at ground level",
+      text: "Start at ground level",
     },
   ],
 } satisfies WhiteboardFigureContent;
@@ -147,9 +147,9 @@ Deno.test("a crowded plot uses an outside gutter, with full untruncated text", (
   const text =
     "AntidisestablishmentarianismABCDEFGHIJKLMNOPQRSTUVWXYZ\nA second explanatory line";
   const annotations: Annotation[] = [{
-    type: "arrow",
-    targetIds: ["scene.target.mark"],
-    content: text,
+    type: "callout",
+    targetIds: ["target"],
+    text,
   }];
   const result = renderAnnotations(annotations, scene, {
     id: "demo",
@@ -174,9 +174,9 @@ Deno.test("brackets support vertical groups, horizontal spans, and no message", 
       value: 6,
     }, { id: "c", label: "Poetry", value: 2 }],
     annotations: [{
-      type: "bracket" as const,
-      targetIds: ["books.b.legend-label", "books.c.legend-label"],
-      content: "The remaining genres",
+      type: "group" as const,
+      targetIds: ["b.legend-label", "c.legend-label"],
+      text: "The remaining genres",
     }],
   };
   const vertical = renderWhiteboardSvg(boardExample([pie]))
@@ -185,9 +185,9 @@ Deno.test("brackets support vertical groups, horizontal spans, and no message", 
   const horizontal = renderWhiteboardSvg(boardExample([{
     ...chart,
     annotations: [{
-      type: "bracket",
-      targetIds: ["motion.start.mark", "motion.finish.mark"],
-      content: null,
+      type: "group",
+      targetIds: ["start", "finish"],
+      text: null,
     }],
   }]));
   assert(["top", "bottom"].includes(horizontal.calloutPlacements[0].side));
@@ -209,15 +209,18 @@ Deno.test("pie arrows use wedge boundaries and can also reach interior percentag
   const result = renderWhiteboardSvg(boardExample([{
     ...pie,
     annotations: [
-      { type: "arrow", targetIds: ["pie.a.mark"], content: "Largest share" },
-      {
-        type: "line",
-        targetIds: ["pie.b.percentage"],
-        content: "Two fifths",
-      },
+      { type: "callout", targetIds: ["a"], text: "Largest share" },
+      { type: "callout", targetIds: ["b.percentage"], text: "Two fifths" },
     ],
   }]));
   assertEquals(result.calloutPlacements.length, 2);
+  // The mark follows the target: arrows point at wedges, plain leaders reach text.
+  assertEquals(
+    [...result.calloutPlacements].sort((a, b) =>
+      a.annotationIndex - b.annotationIndex
+    ).map((p) => p.type),
+    ["arrow", "line"],
+  );
   const mark = result.calloutPlacements.find((p) => p.annotationIndex === 0)!;
   const anchor = base.targets.get("pie.a.mark")!.attachment;
   assert(anchor.type === "anchor");
@@ -256,9 +259,9 @@ Deno.test("message XML is escaped and invalid references fail explicitly", () =>
   const result = renderWhiteboardSvg(boardExample([{
     ...chart,
     annotations: [{
-      type: "line",
-      targetIds: ["motion.peak.mark"],
-      content: "<tag> & value",
+      type: "callout",
+      targetIds: ["peak"],
+      text: "<tag> & value",
     }],
   }]));
   assert(result.svg.includes("&lt;tag&gt; &amp; value"));
@@ -268,9 +271,9 @@ Deno.test("message XML is escaped and invalid references fail explicitly", () =>
       renderWhiteboardSvg(boardExample([{
         ...chart,
         annotations: [{
-          type: "arrow",
-          targetIds: ["missing.mark"],
-          content: "Missing",
+          type: "callout",
+          targetIds: ["missing"],
+          text: "Missing",
         }],
       }])),
     Error,
@@ -284,9 +287,9 @@ Deno.test("arrow callouts can reach marks inside a container", () => {
     id: "plot",
     title: null,
     annotations: [{
-      type: "arrow",
-      targetIds: ["plot.inside.mark"],
-      content: "This point is inside the circle",
+      type: "callout",
+      targetIds: ["inside"],
+      text: "This point is inside the circle",
     }],
     axes: { x: { min: -3, max: 3 }, y: { min: -3, max: 3 } },
     elements: [
@@ -307,13 +310,13 @@ if (import.meta.main) {
       boardExample([{
         ...chart,
         annotations: [{
-          type: "bracket",
-          targetIds: ["motion.start.mark", "motion.finish.mark"],
-          content: "The complete journey",
+          type: "group",
+          targetIds: ["start", "finish"],
+          text: "The complete journey",
         }, {
-          type: "arrow",
-          targetIds: ["motion.peak.mark"],
-          content: "Highest point",
+          type: "callout",
+          targetIds: ["peak"],
+          text: "Highest point",
         }],
       }]),
     ],
@@ -324,9 +327,9 @@ if (import.meta.main) {
         id: "comparison",
         title: "A second view",
         annotations: [{
-          type: "line",
-          targetIds: ["comparison.peak.mark"],
-          content: "Compare the same maximum",
+          type: "callout",
+          targetIds: ["peak"],
+          text: "Compare the same maximum",
         }],
       }], "right"),
     ],

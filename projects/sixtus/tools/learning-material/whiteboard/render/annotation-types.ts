@@ -1,28 +1,38 @@
-import type { WhiteboardFigureContent } from "../schema.ts";
+import type { Annotation, AnnotationType } from "../figures/shared.ts";
 import type { RenderTarget } from "./targets.ts";
 
-export type Annotation = NonNullable<
-  WhiteboardFigureContent["annotations"]
->[number];
-type Content<K extends Annotation["type"]> = K extends
-  "arrow" | "line" | "number" ? string
-  : K extends "bracket" ? string | null
-  : null;
-export type ResolvedAnnotation = {
-  [K in Annotation["type"]]: {
-    type: K;
-    content: Content<K>;
+export type { Annotation, AnnotationType };
+
+/** Drawn marks. The spec names an intent; `resolveAnnotations` picks the mark per target. */
+export const EMPHASIS_MARKS = [
+  "circle",
+  "box",
+  "strikethrough",
+  "cross",
+  "number",
+] as const;
+export const CALLOUT_MARKS = ["arrow", "line", "bracket"] as const;
+export type EmphasisMark = typeof EMPHASIS_MARKS[number];
+export type CalloutMark = typeof CALLOUT_MARKS[number];
+export type MarkType = EmphasisMark | CalloutMark;
+
+type Resolved<M extends MarkType> = M extends MarkType ? {
+    type: M;
+    intent: AnnotationType;
+    /** Callout message, group label, or the number to draw. */
+    text: string | null;
     targetIds: string[];
     targets: RenderTarget[];
     figureId: string;
     annotationIndex: number;
-  };
-}[Annotation["type"]];
-export type ResolvedCallout = Extract<
-  ResolvedAnnotation,
-  { type: "arrow" | "line" | "bracket" }
->;
-export type ResolvedEmphasis = Exclude<ResolvedAnnotation, ResolvedCallout>;
+    /** Position within a fanned-out annotation (numbers), for stable element IDs. */
+    sequence?: number;
+  }
+  : never;
+export type ResolvedCallout = Resolved<CalloutMark>;
+export type ResolvedEmphasis = Resolved<EmphasisMark>;
+export type ResolvedAnnotation = ResolvedCallout | ResolvedEmphasis;
+
 export type AnnotationOptions = {
   figureId: string;
   id: string;

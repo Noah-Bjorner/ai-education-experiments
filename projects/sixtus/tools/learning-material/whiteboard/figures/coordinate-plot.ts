@@ -240,7 +240,7 @@ export const coordinatePlot = {
 - The visible axes window and a function's domain are independent. Undefined values and discontinuities must produce breaks, never connecting strokes.
 
 ### Rendering contract
-- Annotated plots require a figure id. A mark means the entire element; add a point to target a specific location. Use text emphasis only on text targets.
+- Annotated plots require a figure id. An element target means the entire element; add a point to target a specific location.
 - Geometry is clipped to the window. The renderer owns typography, colors, sampling, and label placement. Labels and annotations must not imply visibility for entirely clipped elements.
 - Supply explicit coordinates for intersections, tangent lines, and other constructions; the renderer is not a symbolic solver.
 - Rendering uses bounded adaptive numerical sampling, not symbolic analysis. Extremely rapid oscillations or tiny features can require a narrower window. Unsupported numerical ranges, excessive ticks, and invisible annotation targets produce explicit errors.`,
@@ -254,11 +254,10 @@ export const coordinatePlot = {
     ]),
   ],
   annotationTargets: [
-    "<figureId>.title — only when title is not null",
-    "<figureId>.x-label",
-    "<figureId>.y-label",
-    "<figureId>.<elementId>.mark — the entire element",
-    "<figureId>.<elementId>.label — only with an explicit label",
+    "<elementId> — the entire element",
+    "<elementId>.label — only when the element has a label",
+    "x-label, y-label — the axis labels",
+    "title — only when title is not null",
   ],
   example: {
     instructions: "Show that y = 2x rises by 2 for a run of 1.",

@@ -57,17 +57,17 @@ Deno.test("preparation reports typed glyph, target, and content-fit failures", (
     [{
       ...math,
       annotations: [{
-        type: "box",
-        targetIds: ["figure-1.final.result"],
-        content: null,
+        type: "highlight",
+        targetIds: ["final.result"],
+        text: null,
       }],
     }, "UNKNOWN_TARGET"],
     [{
       ...math,
       annotations: [{
-        type: "underline",
-        targetIds: ["figure-1.title"],
-        content: null,
+        type: "highlight",
+        targetIds: ["title"],
+        text: null,
       }],
     }, "UNKNOWN_TARGET"],
   ];
@@ -80,7 +80,7 @@ Deno.test("preparation reports typed glyph, target, and content-fit failures", (
   }
 });
 
-Deno.test("empty coordinate planes remain valid; unavailable and wrong-kind targets fail centrally", () => {
+Deno.test("empty coordinate planes remain valid; clipped targets fail centrally and marks accept every intent", () => {
   const plane: WhiteboardFigureContent = {
     type: "coordinate_plot",
     id: "plane",
@@ -89,24 +89,20 @@ Deno.test("empty coordinate planes remain valid; unavailable and wrong-kind targ
     elements: [],
   };
   assert(prepareFigure(plane, { id: "test" }).ok);
-  for (
-    const [position, expected] of [[[100, 100], "UNKNOWN_TARGET"], [
-      [0, 0],
-      "INVALID_ANNOTATION",
-    ]] as const
-  ) {
-    const result = prepareFigure({
-      ...plane,
-      elements: [{ type: "point", id: "point", position: [...position] }],
-      annotations: [{
-        type: "underline",
-        targetIds: ["plane.point.mark"],
-        content: null,
-      }],
-    }, { id: "test" });
-    assert(!result.ok);
-    assertEquals(result.issues[0].code, expected);
-  }
+  const clipped = prepareFigure({
+    ...plane,
+    elements: [{ type: "point", id: "point", position: [100, 100] }],
+    annotations: [{ type: "strikeout", targetIds: ["point"], text: null }],
+  }, { id: "test" });
+  assert(!clipped.ok);
+  assertEquals(clipped.issues[0].code, "UNKNOWN_TARGET");
+  const visible = prepareFigure({
+    ...plane,
+    elements: [{ type: "point", id: "point", position: [0, 0] }],
+    annotations: [{ type: "strikeout", targetIds: ["point"], text: null }],
+  }, { id: "test" });
+  assert(visible.ok);
+  assert(visible.figure.emphasis.markup.includes('data-annotation-mark="cross"'));
 });
 
 Deno.test("a figure cannot successfully discard its only content", () => {

@@ -5,9 +5,9 @@ export const geometryExamples: Geometry[] = [
   {
     ...geometry.example.output,
     annotations: [{
-      type: "arrow",
-      targetIds: ["triangle.height.mark"],
-      content: "Perpendicular height",
+      type: "callout",
+      targetIds: ["height"],
+      text: "Perpendicular height",
     }],
     labels: [
       ...geometry.example.output.labels,
@@ -110,9 +110,9 @@ export const geometryExamples: Geometry[] = [
     ],
     labels: [],
     annotations: [{
-      type: "circle",
-      targetIds: ["angles.large.label"],
-      content: null,
+      type: "highlight",
+      targetIds: ["large.label"],
+      text: null,
     }],
   },
   {

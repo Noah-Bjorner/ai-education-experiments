@@ -8,6 +8,8 @@ import {
 import {
   type AnnotationTargetPart,
   collectElementIds,
+  resolveTargetRef,
+  shortTargetRefs,
 } from "../figures/shared.ts";
 import {
   type FigureDefinition,
@@ -160,25 +162,15 @@ function figureIssues(
     seen.add(id);
   }
   const targets = semanticTargets(figure, definition);
+  const canonicalIds = new Set(targets.keys());
+  const availableTargetIds = shortTargetRefs(figure.id, canonicalIds);
   figure.annotations.forEach((annotation, a) => {
-    const needsText = annotation.type === "underline" ||
-      annotation.type === "strikethrough";
-    const availableTargetIds = [...targets].filter(([, kind]) =>
-      !needsText || kind === "text"
-    ).map(([id]) => id);
-    annotation.targetIds.forEach((id, t) => {
-      const kind = targets.get(id);
-      if (!kind || (needsText && kind !== "text")) {
+    annotation.targetIds.forEach((ref, t) => {
+      if (resolveTargetRef(ref, figure.id, canonicalIds) === undefined) {
         add(
           ["annotations", a, "targetIds", t],
-          !kind
-            ? `Unknown or unavailable target '${id}' in this figure.`
-            : `'${annotation.type}' requires a text target.`,
-          {
-            code: !kind ? "UNKNOWN_TARGET" : "INVALID_ANNOTATION",
-            annotationIndex: a,
-            availableTargetIds,
-          },
+          `Unknown or unavailable target '${ref}' in this figure.`,
+          { code: "UNKNOWN_TARGET", annotationIndex: a, availableTargetIds },
         );
       }
     });

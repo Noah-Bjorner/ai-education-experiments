@@ -193,6 +193,7 @@ Deno.test("malformed or unsupported LaTeX fails and does not poison the next ren
 Deno.test("math renders in the board font with pen paths and measured row targets", () => {
   const input = {
     ...figure,
+    title: "Formulas",
     expressions: [
       {
         id: "quadratic",
@@ -237,15 +238,11 @@ Deno.test("math annotations and mixed chart boards compose without ID collisions
   const annotated = {
     ...figure,
     annotations: [
+      { type: "highlight" as const, targetIds: ["answer"], text: null },
       {
-        type: "circle" as const,
-        targetIds: ["solve.answer.expression"],
-        content: null,
-      },
-      {
-        type: "arrow" as const,
-        targetIds: ["solve.subtract.expression"],
-        content: "Subtract 3 from both sides",
+        type: "callout" as const,
+        targetIds: ["subtract"],
+        text: "Subtract 3 from both sides",
       },
     ],
   };
@@ -256,7 +253,7 @@ Deno.test("math annotations and mixed chart boards compose without ID collisions
     slices: [{ id: "part", label: "Whole", value: 1 }],
   }], "right"));
   assertEquals(result.calloutPlacements.length, 1);
-  assert(result.svg.includes('data-annotation-type="circle"'));
+  assert(result.svg.includes('data-annotation-type="highlight"'));
   assert(!result.stages.base.svg.includes("data-annotation-type"));
   const ids = [...result.svg.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
   assertEquals(ids.length, new Set(ids).size);
@@ -274,9 +271,9 @@ Deno.test("math annotations and mixed chart boards compose without ID collisions
       renderWhiteboardSvg(boardExample([{
         ...figure,
         annotations: [{
-          type: "circle",
-          targetIds: ["solve.missing.expression"],
-          content: null,
+          type: "highlight",
+          targetIds: ["missing"],
+          text: null,
         }],
       }])),
     Error,
@@ -360,9 +357,9 @@ if (import.meta.main) {
     {
       ...figure,
       annotations: [{
-        type: "circle",
-        targetIds: ["solve.answer.expression"],
-        content: null,
+        type: "highlight",
+        targetIds: ["answer"],
+        text: null,
       }],
     },
     {

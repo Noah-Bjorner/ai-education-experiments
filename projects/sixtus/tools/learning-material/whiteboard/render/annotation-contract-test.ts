@@ -10,7 +10,8 @@ import { boardExample } from "./board-example.ts";
 import { renderWhiteboardSvg } from "./index.ts";
 import { prepareFigure } from "./prepare.ts";
 import { renderAnnotations, resolveAnnotations } from "./annotations.ts";
-import type { Annotation } from "./annotation-types.ts";
+import type { Annotation, AnnotationType } from "./annotation-types.ts";
+import { ANNOTATION_TYPES } from "../figures/shared.ts";
 import { renderEmphasis } from "./emphasis.ts";
 import { connectorObstacles } from "./callouts.ts";
 import { clearRoute, obstacleHitsBox } from "./placement.ts";
@@ -84,26 +85,13 @@ for (const definition of whiteboardFigures) {
     const markId = [...base.targets].find(([, target]) =>
       target.kind === "mark"
     )?.[0];
-    for (
-      const type of [
-        "circle",
-        "box",
-        "underline",
-        "strikethrough",
-        "number",
-        "arrow",
-        "line",
-        "bracket",
-      ] as const
-    ) {
+    const text = (type: AnnotationType) =>
+      type === "callout" ? "Explanation" : null;
+    for (const type of ANNOTATION_TYPES) {
       const annotations: Annotation[] = [{
         type,
         targetIds: [textId],
-        content: type === "number"
-          ? "2"
-          : ["arrow", "line", "bracket"].includes(type)
-          ? "Explanation"
-          : null,
+        text: text(type),
       }];
       const spec = boardExample([{ ...figure, annotations }]);
       const result = quiet(() =>
@@ -120,81 +108,46 @@ for (const definition of whiteboardFigures) {
       assert(result.stages.callouts.svg.includes(base.markup));
       assert(!result.svg.includes("NaN"));
     }
-    for (
-      const type of [
-        "circle",
-        "box",
-        "underline",
-        "strikethrough",
-        "number",
-        "arrow",
-        "line",
-        "bracket",
-      ] as const
-    ) {
-      const content = type === "number"
-        ? "1"
-        : type === "arrow" || type === "line"
-        ? "Heading"
-        : null;
-      const result = quiet(() =>
-        renderAnnotations([{ type, targetIds: [title], content }], base, {
-          ...options,
-          figureId: figure.id!,
-        })
-      ).result;
-      assert(
-        (result.emphasis.markup + result.callouts.markup).includes(
-          `data-annotation-type="${type}"`,
-        ),
-      );
+    // Short references resolve against this figure: `title` and the canonical form agree.
+    for (const type of ANNOTATION_TYPES) {
+      const render = (ref: string) =>
+        quiet(() =>
+          renderAnnotations([{ type, targetIds: [ref], text: text(type) }], base, {
+            ...options,
+            figureId: figure.id!,
+          })
+        ).result;
+      const result = render("title");
+      const markup = result.emphasis.markup + result.callouts.markup;
+      assert(markup.includes(`data-annotation-type="${type}"`));
+      assert(markup.includes(`data-target-id`));
+      assertEquals(render(title), result);
     }
     if (markId) {
-      for (
-        const type of [
-          "circle",
-          "box",
-          "number",
-          "arrow",
-          "line",
-          "bracket",
-        ] as const
-      ) {
-        const content = type === "number"
-          ? "1"
-          : type === "arrow" || type === "line"
-          ? "This mark"
-          : null;
+      for (const type of ANNOTATION_TYPES) {
         const result = quiet(() =>
           renderAnnotations(
-            [{ type, targetIds: [markId], content }],
+            [{ type, targetIds: [markId], text: text(type) }],
             base,
             options,
           )
         ).result;
-        assert(
-          (result.emphasis.markup + result.callouts.markup).includes(
-            `data-annotation-type="${type}"`,
-          ),
-        );
-      }
-      for (const type of ["underline", "strikethrough"] as const) {
-        assertThrows(
-          () =>
-            renderAnnotations(
-              [{ type, targetIds: [markId], content: null }],
-              base,
-              options,
-            ),
-          Error,
-          "requires a text target",
-        );
+        const markup = result.emphasis.markup + result.callouts.markup;
+        assert(markup.includes(`data-annotation-type="${type}"`));
+        // Marks are chosen from the target: callouts to marks point with arrows;
+        // striking out a mark draws a cross rather than a text strikethrough.
+        if (type === "callout") {
+          assert(markup.includes(`data-annotation-mark="arrow"`));
+        }
+        if (type === "strikeout") {
+          assert(markup.includes(`data-annotation-mark="cross"`));
+        }
       }
     }
     assertThrows(
       () =>
         renderAnnotations(
-          [{ type: "box", targetIds: ["missing"], content: null }],
+          [{ type: "highlight", targetIds: ["missing"], text: null }],
           base,
           options,
         ),
@@ -453,15 +406,14 @@ Deno.test("emphasis boundaries accumulate per target while numbers reserve indep
     "target",
     mark({ x: 100, y: 100, width: 20, height: 20 }),
   ]]);
-  const requests = resolveAnnotations(
-    [{ type: "circle", targetIds: ["target"], content: null }, {
-      type: "box",
-      targetIds: ["target"],
-      content: null,
-    }, { type: "number", targetIds: ["target"], content: "1" }],
-    targets,
-    "scene",
-  );
+  const input: Annotation[] = [
+    { type: "highlight", targetIds: ["target"], text: null },
+    { type: "highlight", targetIds: ["target"], text: null },
+    { type: "number", targetIds: ["target"], text: null },
+  ];
+  const requests = resolveAnnotations(input, targets, "scene");
+  assertEquals(requests.map((r) => r.type), ["circle", "circle", "number"]);
+  assertEquals(requests[2].text, "1");
   const emphasis = renderEmphasis(
     requests.filter((r) =>
       r.type === "circle" || r.type === "box" || r.type === "number"
@@ -480,12 +432,8 @@ Deno.test("emphasis boundaries accumulate per target while numbers reserve indep
   assertEquals(number.attachmentBounds.size, 0);
   const result = renderAnnotations(
     [
-      ...requests.map(({ type, targetIds, content }) => ({
-        type,
-        targetIds,
-        content,
-      })),
-      { type: "arrow", targetIds: ["target"], content: "Explanation" },
+      ...input,
+      { type: "callout", targetIds: ["target"], text: "Explanation" },
     ],
     scene(targets),
     options,
@@ -518,7 +466,7 @@ Deno.test("bracket geometry is invariant under group target order, including fix
   ]);
   const render = (targetIds: string[]) =>
     renderAnnotations(
-      [{ type: "bracket", targetIds, content: "Group" }],
+      [{ type: "group", targetIds, text: "Group" }],
       scene(targets),
       options,
     ).placements[0];
@@ -534,9 +482,9 @@ Deno.test("bracket geometry is invariant under group target order, including fix
 Deno.test("blocked routes report best-effort fallback and numerically unusable routes are skipped", () => {
   const target = mark({ x: 196, y: 146, width: 8, height: 8 });
   const input: Annotation[] = [{
-    type: "arrow",
+    type: "callout",
     targetIds: ["target"],
-    content: "Explain <this>",
+    text: "Explain <this>",
   }];
   const blocked = scene(new Map([["target", target]]), [{
     kind: "text",
@@ -570,10 +518,10 @@ Deno.test("multiple callouts to one emphasized target reserve each other's label
   }]);
   const result = renderAnnotations(
     [
-      { type: "circle", targetIds: ["target"], content: null },
-      { type: "arrow", targetIds: ["target"], content: "First explanation" },
-      { type: "arrow", targetIds: ["target"], content: "Second explanation" },
-      { type: "line", targetIds: ["target"], content: "Third explanation" },
+      { type: "highlight", targetIds: ["target"], text: null },
+      { type: "callout", targetIds: ["target"], text: "First explanation" },
+      { type: "callout", targetIds: ["target"], text: "Second explanation" },
+      { type: "callout", targetIds: ["target"], text: "Third explanation" },
     ],
     base,
     options,
@@ -605,9 +553,9 @@ Deno.test("board rendering exposes structured fallback diagnostics with stable a
     title: null,
     expressions: [{ id: "answer", latex: "x=8" }],
     annotations: Array.from({ length: 12 }, (_, i) => ({
-      type: "arrow" as const,
-      targetIds: ["blocked.answer.expression"],
-      content:
+      type: "callout" as const,
+      targetIds: ["answer"],
+      text:
         `Explain this result in detail with extra words so labels collide ${i + 1}`,
     })),
   };

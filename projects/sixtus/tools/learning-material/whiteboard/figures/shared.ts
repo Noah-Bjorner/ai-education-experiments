@@ -8,57 +8,108 @@ export const elementIdField = z.string().regex(/^[a-z][a-z0-9-]*$/).describe(
   "Stable lowercase ID using letters, digits, and hyphens. Figure IDs are unique across the board; series, point, and slice IDs are unique within their figure. Preserve IDs when editing content.",
 );
 
+/**
+ * Annotations name a teaching intent; the renderer chooses the mark. Group and
+ * number take several targets, everything else exactly one.
+ */
+export const ANNOTATION_TYPES = [
+  "highlight",
+  "callout",
+  "group",
+  "number",
+  "strikeout",
+] as const;
+export type AnnotationType = typeof ANNOTATION_TYPES[number];
+const MULTI_TARGET_TYPES: readonly AnnotationType[] = ["group", "number"];
+
 export const annotationSchema = z.object({
-  type: z.enum([
-    "circle",
-    "box",
-    "underline",
-    "strikethrough",
-    "number",
-    "arrow",
-    "line",
-    "bracket",
-  ]),
-  targetIds: z.array(z.string().min(1)).min(1).describe(
-    "Visual target IDs in this figure, using the documented figure.element.part naming rules. Exactly one target except for brackets, which can group multiple targets.",
+  type: z.enum(ANNOTATION_TYPES),
+  targetIds: z.array(z.string().trim().min(1)).min(1).describe(
+    "Targets in this figure: an element ID, `<elementId>.<part>`, or a figure-level part such as `title`. One target, except group and number which take several.",
   ),
-  content: z.string().trim().min(1).nullable().describe(
-    "Null for circle, box, underline, and strikethrough; a positive integer as text for number; nonempty message text for arrow and line; optional label text or null for bracket.",
+  text: z.string().trim().min(1).nullable().describe(
+    "Callout message (required) or group label (optional). Null for highlight, number, and strikeout.",
   ),
 }).superRefine((annotation, ctx) => {
-  if (annotation.type !== "bracket" && annotation.targetIds.length !== 1) {
+  const { type, text, targetIds } = annotation;
+  if (!MULTI_TARGET_TYPES.includes(type) && targetIds.length !== 1) {
     ctx.addIssue({
       code: "custom",
       path: ["targetIds"],
-      message: "Only brackets support multiple targets.",
+      message: "Only group and number take several targets.",
     });
   }
-  const { type, content } = annotation;
-  if (
-    ["circle", "box", "underline", "strikethrough"].includes(type) &&
-    content !== null
-  ) {
+  if (new Set(targetIds).size !== targetIds.length) {
     ctx.addIssue({
       code: "custom",
-      path: ["content"],
-      message: "Emphasis shapes require null content.",
+      path: ["targetIds"],
+      message: "Targets must not repeat.",
     });
   }
-  if (type === "number" && (content === null || !/^[1-9]\d*$/.test(content))) {
+  if (type === "callout" && text === null) {
     ctx.addIssue({
       code: "custom",
-      path: ["content"],
-      message: "Number content must be a positive integer as text.",
+      path: ["text"],
+      message: "Callouts require message text.",
     });
   }
-  if ((type === "arrow" || type === "line") && content === null) {
+  if (type !== "callout" && type !== "group" && text !== null) {
     ctx.addIssue({
       code: "custom",
-      path: ["content"],
-      message: "Arrow and line callouts require message text.",
+      path: ["text"],
+      message: `'${type}' takes no text.`,
     });
   }
 });
+export type Annotation = z.infer<typeof annotationSchema>;
+
+/**
+ * Resolve a spec target reference against the canonical `<figureId>.<part>`
+ * target IDs of one figure. Accepts the canonical form, `<part>`,
+ * `<elementId>.<part>`, and a bare `<elementId>` meaning its mark or its only part.
+ */
+export function resolveTargetRef(
+  ref: string,
+  figureId: string,
+  canonicalIds: Iterable<string>,
+): string | undefined {
+  const ids = canonicalIds instanceof Set
+    ? canonicalIds as Set<string>
+    : new Set(canonicalIds);
+  if (ids.has(ref)) return ref;
+  const full = `${figureId}.${ref}`;
+  if (ids.has(full)) return full;
+  if (ids.has(`${full}.mark`)) return `${full}.mark`;
+  const matches = [...ids].filter((id) => id.startsWith(`${full}.`));
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+/** Shortest accepted spelling of each canonical target, for prompts and diagnostics. */
+export function shortTargetRefs(
+  figureId: string,
+  canonicalIds: Iterable<string>,
+): string[] {
+  const prefix = `${figureId}.`;
+  const parts = [...canonicalIds].map((id) =>
+    id.startsWith(prefix) ? id.slice(prefix.length) : id
+  );
+  const partsByElement = new Map<string, number>();
+  for (const part of parts) {
+    const dot = part.indexOf(".");
+    if (dot > 0) {
+      const element = part.slice(0, dot);
+      partsByElement.set(element, (partsByElement.get(element) ?? 0) + 1);
+    }
+  }
+  return parts.map((part) => {
+    const dot = part.indexOf(".");
+    if (dot < 0) return part;
+    const element = part.slice(0, dot), suffix = part.slice(dot + 1);
+    return suffix === "mark" || partsByElement.get(element) === 1
+      ? element
+      : part;
+  });
+}
 
 export const figureAnnotationsField = z.array(annotationSchema).describe(
   "Teaching annotations for this figure. Use an empty array when annotations do not help the goal. Every target must reference a defined element and supported visual part in this figure.",

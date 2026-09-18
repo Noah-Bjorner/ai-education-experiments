@@ -24,21 +24,23 @@ export function renderEmphasis(
   const attachmentBounds = new Map<string, Bounds>();
   const obstacles: RenderObstacle[] = [];
   annotations.forEach((annotation) => {
-    const { annotationIndex } = annotation;
+    const { annotationIndex, sequence } = annotation;
     const target = annotation.targets[0];
     const b = target.bounds;
-    const id = `${options.id}-annotation-${annotationIndex}`;
+    const id = `${options.id}-annotation-${annotationIndex}${
+      sequence === undefined ? "" : `-${sequence}`
+    }`;
     // A stable seed per annotation, independent of the base renderer's strokes.
     const pen = {
       id,
-      seed: (options.seed ?? 10) + annotationIndex,
+      seed: (options.seed ?? 10) + annotationIndex + (sequence ?? 0) * 101,
       roughness: options.roughness ?? 1.5,
       stroke: color,
       strokeWidth: 2,
     };
     let drawing: Drawing;
     if (annotation.type === "number") {
-      const value = annotation.content;
+      const value = annotation.text ?? "";
       const x = b.x + b.width + SPACING.labelGap;
       const y = b.y - SPACING.labelGap;
       drawing = {
@@ -48,12 +50,26 @@ export function renderEmphasis(
           }">${escapeXml(value)}</text>`,
         bounds: graphTextBounds(value, TYPE_SCALE.annotation, x, y),
       };
+    } else if (annotation.type === "cross") {
+      // Two diagonal strokes across the target; used to strike out non-text marks.
+      const pad = 4;
+      const strokes = [
+        { x1: b.x - pad, y1: b.y - pad, x2: b.x + b.width + pad, y2: b.y + b.height + pad },
+        { x1: b.x - pad, y1: b.y + b.height + pad, x2: b.x + b.width + pad, y2: b.y - pad },
+      ].map((line, i) =>
+        renderHandwritten({ type: "line", ...line }, {
+          ...pen,
+          id: `${id}-stroke-${i}`,
+          seed: pen.seed + i,
+        })
+      );
+      drawing = {
+        markup: strokes.map((s) => s.markup).join(""),
+        bounds: unionBounds(strokes.map((s) => s.bounds)),
+      };
     } else {
       let shape: Shape;
-      // Wide targets use the existing box outline to keep emphasis close to ink.
-      const useBox = annotation.type === "box" ||
-        (annotation.type === "circle" && b.width > b.height * 3);
-      if (annotation.type === "circle" && !useBox) {
+      if (annotation.type === "circle") {
         shape = target.kind === "text"
           ? {
             type: "ellipse",
@@ -69,7 +85,7 @@ export function renderEmphasis(
             cy: b.y + b.height / 2,
             r: Math.hypot(b.width, b.height) / 2 + 5,
           };
-      } else if (useBox) {
+      } else if (annotation.type === "box") {
         shape = {
           type: "rectangle",
           x: b.x - 5,
@@ -80,14 +96,12 @@ export function renderEmphasis(
       } else {
         if (target.kind !== "text") {
           throw new Error(
-            `Annotation '${annotation.type}' requires a text target: '${
+            `Mark '${annotation.type}' requires a text target: '${
               annotation.targetIds[0]
             }'.`,
           );
         }
-        const { a, b } = target.decorations[
-          annotation.type === "underline" ? "underline" : "strikethrough"
-        ];
+        const { a, b } = target.decorations.strikethrough;
         shape = { type: "line", x1: a.x, y1: a.y, x2: b.x, y2: b.y };
       }
       drawing = renderHandwritten(shape, pen);
@@ -95,7 +109,7 @@ export function renderEmphasis(
     parts.push({
       ...drawing,
       markup:
-        `<g id="${id}" data-annotation-type="${annotation.type}" data-target-id="${
+        `<g id="${id}" data-annotation-type="${annotation.intent}" data-annotation-mark="${annotation.type}" data-target-id="${
           escapeXml(annotation.targetIds[0])
         }">${drawing.markup}</g>`,
     });

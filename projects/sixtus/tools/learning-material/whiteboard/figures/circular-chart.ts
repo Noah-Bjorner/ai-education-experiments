@@ -37,42 +37,38 @@ export const circularChart = {
 - Use the supplied amounts directly; counts do not need conversion to percentages.
 - If values describe a complete percentage breakdown, they should total approximately 100, allowing for rounding.
 - Omit zero-value categories because slice values must be positive.
-- Do not silently invent an "Other" slice to complete missing data.
-- Only target an interior percentage when the slice is at least 8% of the total; smaller slices have no interior percentage.`,
+- Do not silently invent an "Other" slice to complete missing data.`,
   annotationTargetParts: (figure) => [
     ...titleTargetParts(figure),
     ...figure.slices.flatMap((s) => [
       { part: `${s.id}.mark`, kind: "mark" as const },
       { part: `${s.id}.legend-label`, kind: "text" as const },
-      ...(s.value /
-            figure.slices.reduce((sum, slice) => sum + slice.value, 0) >= 0.08
-        ? [{ part: `${s.id}.percentage`, kind: "text" as const }]
-        : []),
+      { part: `${s.id}.percentage`, kind: "text" as const },
     ]),
   ],
   annotationTargets: [
-    "<figureId>.title — only when title is not null",
-    "<figureId>.<sliceId>.mark — the wedge",
-    "<figureId>.<sliceId>.legend-label",
-    "<figureId>.<sliceId>.percentage — only when the slice is at least 8% of the total",
+    "<sliceId> — the wedge",
+    "<sliceId>.legend-label — the slice name in the legend",
+    "<sliceId>.percentage — the slice's percentage figure",
+    "title — only when title is not null",
   ],
   example: {
     instructions:
-      "Help a learner understand how each genre contributes to a whole collection of 20 books: 12 fiction, 6 nonfiction, and 2 poetry. Circle Fiction's percentage and use an arrow callout to explain that Fiction is more than half the collection.",
+      "Help a learner understand how each genre contributes to a whole collection of 20 books: 12 fiction, 6 nonfiction, and 2 poetry. They should notice Fiction's share and that Fiction is more than half the collection.",
     output: {
       "type": "pie_chart",
       "id": "books",
       "title": "Book collection",
       "annotations": [
         {
-          "type": "circle",
-          "targetIds": ["books.fiction.percentage"],
-          "content": null,
+          "type": "highlight",
+          "targetIds": ["fiction.percentage"],
+          "text": null,
         },
         {
-          "type": "arrow",
-          "targetIds": ["books.fiction.mark"],
-          "content": "More than half the collection",
+          "type": "callout",
+          "targetIds": ["fiction"],
+          "text": "More than half the collection",
         },
       ],
       "slices": [

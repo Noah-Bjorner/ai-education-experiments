@@ -11,6 +11,7 @@ import { renderWhiteboardSvg } from "./index.ts";
 import { resolveAnnotations } from "./annotations.ts";
 import { renderEmphasis } from "./emphasis.ts";
 import type { ResolvedEmphasis } from "./annotation-types.ts";
+import { type RenderTarget, textDecorations } from "./targets.ts";
 import { overlaps } from "./placement.ts";
 import type { Point } from "./bounds.ts";
 
@@ -81,10 +82,10 @@ Deno.test("geometry and coordinate callouts terminate beside visible strokes, no
       o.ownerId === target && o.segment
     ).map((o) => o.segment!);
     assert(segments.length > 0);
-    for (const type of ["arrow", "line"] as const) {
+    for (const ref of [target, "s"]) {
       const spec: WhiteboardSpec = boardExample([{
         ...figure,
-        annotations: [{ type, targetIds: [target], content: "This shape" }],
+        annotations: [{ type: "callout", targetIds: [ref], text: "This shape" }],
       }]);
       const result = renderWhiteboardSvg(spec);
       const path = result.calloutPlacements[0].paths[0];
@@ -118,9 +119,9 @@ Deno.test("circling an equation encloses its bounds without reaching the title o
   for (const expression of figure.expressions) {
     const targetId = `solve.${expression.id}.expression`;
     const annotations = [{
-      type: "circle" as const,
-      targetIds: [targetId],
-      content: null,
+      type: "highlight" as const,
+      targetIds: [expression.id],
+      text: null,
     }];
     const result = renderEmphasis(
       resolveAnnotations(
@@ -146,19 +147,33 @@ Deno.test("circling an equation encloses its bounds without reaching the title o
     const board = renderWhiteboardSvg(
       boardExample([{ ...figure, annotations }]),
     );
-    assert(board.svg.includes('data-annotation-type="circle"'));
+    assert(board.svg.includes('data-annotation-mark="circle"'));
   }
-  // Wide text uses a tight box; extra width does not increase its height.
+  // Elongated text gets a tight box; extra width does not increase its height.
   const target = scene.targets.get("solve.answer.expression")!;
+  const widened = (width: number): RenderTarget => {
+    const bounds = { ...target.bounds, width };
+    return {
+      kind: "text",
+      bounds,
+      attachment: { type: "bounds" },
+      decorations: textDecorations(bounds),
+    };
+  };
+  const resolve = (width: number) =>
+    resolveAnnotations(
+      [{ type: "highlight", targetIds: ["row"], text: null }],
+      new Map([["row", widened(width)]]),
+      "solve",
+    )[0] as ResolvedEmphasis;
+  assertEquals(resolve(target.bounds.height * 2).type, "circle");
+  assertEquals(resolve(600).type, "box");
   const measure = (width: number) =>
-    renderEmphasis(
-      resolveAnnotations(
-        [{ type: "circle", targetIds: ["row"], content: null }],
-        new Map([["row", { ...target, bounds: { ...target.bounds, width } }]]),
-        "solve",
-      ) as ResolvedEmphasis[],
-      { id: "test", figureId: "solve", roughness: 0 },
-    ).drawing.bounds!;
+    renderEmphasis([resolve(width)], {
+      id: "test",
+      figureId: "solve",
+      roughness: 0,
+    }).drawing.bounds!;
   assertAlmostEquals(measure(200).height, measure(600).height, 0.01);
   assertAlmostEquals(measure(600).height, target.bounds.height + 12, 0.01);
   assertAlmostEquals(measure(600).width, 612, 0.01);

@@ -559,7 +559,7 @@ function createJobs(
       preferred: length
         ? { x: direction.x / length, y: direction.y / length }
         : { x: 0, y: -1 },
-      label: request.content === null ? null : measureLabel(request.content),
+      label: request.text === null ? null : measureLabel(request.text),
       candidates: [],
     };
     job.candidates = request.type === "bracket"
@@ -631,9 +631,10 @@ function drawCallout(
   }
   const bounds = unionBounds(strokes.map((s) => s.bounds))!;
   const drawing: Drawing = {
-    markup: `<g id="${id}" data-annotation-type="${type}" data-target-ids="${
-      escapeXml(request.targetIds.join(" "))
-    }">${strokes.map((s) => s.markup).join("\n")}</g>`,
+    markup:
+      `<g id="${id}" data-annotation-type="${request.intent}" data-annotation-mark="${type}" data-target-ids="${
+        escapeXml(request.targetIds.join(" "))
+      }">${strokes.map((s) => s.markup).join("\n")}</g>`,
     bounds,
   };
   const placement: CalloutPlacement = {

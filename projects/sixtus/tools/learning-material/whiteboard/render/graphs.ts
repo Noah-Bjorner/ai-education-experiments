@@ -682,7 +682,8 @@ export function renderCircularGraphDrawing(
       );
       const percent = `${Number((fraction * 100).toFixed(1))}%`;
       // Small slices use the legend only, avoiding overlapping interior labels.
-      if (fraction >= 0.08) {
+      const interiorPercentage = fraction >= 0.08;
+      if (interiorPercentage) {
         const mid = (angle + endAngle) / 2;
         percentages.push(
           scene.add({
@@ -740,16 +741,22 @@ export function renderCircularGraphDrawing(
           kind: "text",
         }),
       );
+      const detail = text(
+        `${slice.value.toLocaleString("en-US")} · ${percent}`,
+        lx + 18 + SPACING.labelGap,
+        ly + LINE_HEIGHT.label,
+        TYPE_SCALE.detail,
+        "start",
+        MUTED,
+        c.width - lx - 60,
+      );
+      // The percentage target always resolves: it falls back to the legend detail line.
       parts.push(
-        text(
-          `${slice.value.toLocaleString("en-US")} · ${percent}`,
-          lx + 18 + SPACING.labelGap,
-          ly + LINE_HEIGHT.label,
-          TYPE_SCALE.detail,
-          "start",
-          MUTED,
-          c.width - lx - 60,
-        ),
+        interiorPercentage || !slice.id ? detail : scene.add({
+          id: `${namespace}.${slice.id}.percentage`,
+          drawing: detail,
+          kind: "text",
+        }),
       );
     },
   );

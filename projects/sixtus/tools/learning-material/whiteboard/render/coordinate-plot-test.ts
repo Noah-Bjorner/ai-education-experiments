@@ -269,9 +269,9 @@ Deno.test("clipped content has no ghost labels or annotation targets", () => {
       renderWhiteboardSvg(boardExample([{
         ...p,
         annotations: [{
-          type: "arrow",
-          targetIds: ["slope.off.mark"],
-          content: "Invisible",
+          type: "callout",
+          targetIds: ["off"],
+          text: "Invisible",
         }],
       }])),
     Error,

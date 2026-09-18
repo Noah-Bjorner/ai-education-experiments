@@ -162,7 +162,7 @@ export const geometry = {
 - LaTeX follows math_expressions conventions; escape backslashes in JSON.
 
 ### Validation
-Unknown/wrong-kind references, duplicate IDs, cyclic dependencies, degenerate objects, impossible intersections, self-crossing polygons, and contradictory mathematical markings are errors. This is deterministic construction, not a constraint solver. It does not interpret mathematical assertions in free-form LaTeX labels. Only text targets support underline/strikethrough.`,
+Unknown/wrong-kind references, duplicate IDs, cyclic dependencies, degenerate objects, impossible intersections, self-crossing polygons, and contradictory mathematical markings are errors. This is deterministic construction, not a constraint solver. It does not interpret mathematical assertions in free-form LaTeX labels.`,
   annotationTargetParts: (figure) => [
     ...titleTargetParts(figure),
     ...[...figure.points, ...figure.objects, ...figure.markings].map((e) => ({
@@ -180,12 +180,10 @@ Unknown/wrong-kind references, duplicate IDs, cyclic dependencies, degenerate ob
     ),
   ],
   annotationTargets: [
-    "<figureId>.title — only when title is not null",
-    "<figureId>.<pointId>.mark",
-    "<figureId>.<objectId>.mark",
-    "<figureId>.<markingId>.mark",
-    "<figureId>.<labelId>.label",
-    "<figureId>.<markingId>.label — angle markings with latex only",
+    "<pointId>, <objectId>, <markingId> — the drawn point, object, or marking",
+    "<labelId> — a label's text",
+    "<markingId>.label — an angle marking's latex, only when present",
+    "title — only when title is not null",
   ],
   example: {
     instructions:

@@ -23,9 +23,9 @@ const spec: WhiteboardSpec = {
     side: i === 0 ? null : "bottom",
     expressions: [{ id: "answer", latex: "x = 8" }],
     annotations: [{
-      type: "box",
-      targetIds: [`${id}.answer.expression`],
-      content: null,
+      type: "highlight",
+      targetIds: ["answer"],
+      text: null,
     }],
   })),
 };
@@ -72,7 +72,7 @@ Deno.test("goal → classification → spec → real SVG, with no upload", async
     assertEquals(result, {
       svg: renderWhiteboardSvg(spec, { orientation }).svg,
     });
-    assert(result.svg?.includes('data-annotation-type="box"'));
+    assert(result.svg?.includes('data-annotation-type="highlight"'));
     assertEquals(result.url, undefined);
   }
 });
@@ -127,7 +127,7 @@ Deno.test("invalid input and failed generation/rendering never upload", async ()
     WhiteboardSpecError,
   );
   const invalid = structuredClone(spec);
-  invalid.figures[0].annotations![0].targetIds = ["first.missing.expression"];
+  invalid.figures[0].annotations![0].targetIds = ["missing"];
   await assertRejects(() =>
     executeWhiteboardWith({ goal: "Show" }, {
       generateSpec: () => Promise.resolve(invalid),

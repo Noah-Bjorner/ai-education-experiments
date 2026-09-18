@@ -52,15 +52,15 @@ export const mathExpressions = {
     })),
   ],
   annotationTargets: [
-    "<figureId>.title — only when title is not null",
-    "<figureId>.<expressionId>.expression — the whole row; text emphasis and callouts allowed. Individual terms are not targets yet.",
+    "<expressionId> — the whole row. Individual terms are not targets.",
+    "title — only when title is not null",
   ],
   example: {
     instructions: "Show the steps for solving x/2 + 3 = 7.",
     output: {
       type: "math_expressions",
       id: "solve",
-      title: "Solve for x",
+      title: null,
       annotations: [],
       expressions: [
         { id: "start", latex: String.raw`\frac{x}{2} + 3 = 7` },

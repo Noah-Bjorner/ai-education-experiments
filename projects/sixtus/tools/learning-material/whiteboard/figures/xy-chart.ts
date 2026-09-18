@@ -94,11 +94,10 @@ export const xyChart = {
     ]),
   ],
   annotationTargets: [
-    "<figureId>.title — only when title is not null",
-    "<figureId>.x-label",
-    "<figureId>.y-label",
-    "<figureId>.<seriesId>.legend-label",
-    "<figureId>.<pointId>.mark — the plotted point or bar",
+    "<pointId> — the plotted point or bar",
+    "<seriesId> — the series name in the legend",
+    "x-label, y-label — the axis labels",
+    "title — only when title is not null",
   ],
   example: {
     instructions:

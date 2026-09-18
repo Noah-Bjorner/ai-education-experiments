@@ -26,7 +26,9 @@ Deno.test("text is registered in the output schema and generation prompt", () =>
       JSON.stringify(textFigure.example.output.text),
     ),
   );
-  assert(WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("<id>.text"));
+  assert(
+    WHITEBOARD_SPEC_SYSTEM_PROMPT.includes("text — the complete text block"),
+  );
   assert(
     WHITEBOARD_SPEC_SYSTEM_PROMPT.includes(
       "The renderer styles each role and wraps text",
@@ -208,11 +210,11 @@ Deno.test("title and text targets participate in the complete annotation pipelin
     ...textExample("note", "Text with a teaching annotation."),
     title: "A title that wraps across several lines without losing any words",
     annotations: [
-      { type: "underline" as const, targetIds: ["note.title"], content: null },
+      { type: "highlight" as const, targetIds: ["title"], text: null },
       {
-        type: "arrow" as const,
-        targetIds: ["note.text"],
-        content: "Read the complete message.",
+        type: "callout" as const,
+        targetIds: ["text"],
+        text: "Read the complete message.",
       },
     ],
   };
@@ -334,11 +336,11 @@ Deno.test("invalid glyphs, targets, duplicate IDs, and unusable widths fail expl
   }
   const spec = structuredClone(hardTextBoard);
   spec.figures[2].annotations = [{
-    type: "circle",
-    targetIds: ["note.missing"],
-    content: null,
+    type: "highlight",
+    targetIds: ["missing"],
+    text: null,
   }];
-  assertThrows(() => renderWhiteboardSvg(spec), Error, "note.missing");
+  assertThrows(() => renderWhiteboardSvg(spec), Error, "'missing'");
   spec.figures[2].id = "question";
   assert(!WhiteboardOutput.safeParse(spec).success);
 });

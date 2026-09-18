@@ -467,17 +467,27 @@ wobble for every new visualization type.
   final board translations. The renderer does not write files;
   `../local-test.ts` saves base, emphasis, and final SVG files under `output-ex/`
   and logs the chosen callout sides and outside-gutter placements.
-- Emphasis supports circle, box, underline, strikethrough, and number. Circles
-  enclose the target's bounds, boxes add a small gap, text strokes follow the
-  label orientation, and numbers sit just above/right of the target. Annotation
-  color follows the Color section: ink on types that already use the accent
-  palette, `SERIES_COLORS[0]` on ink-only types (`math_expressions`).
-  Number placement is deterministic; collision avoidance and repositioning
-  around other annotations are not implemented.
-- Base targets use the IDs documented in the figure schemas. Geometry remains
-  local to the figure; base and emphasis share its board translation. XY point
-  IDs survive sorting. Missing targets (including omitted tiny-slice percentage
-  labels), duplicate content IDs, and invalid text targets fail explicitly.
+- The spec names an intent (`highlight`, `callout`, `group`, `number`,
+  `strikeout`) with `targetIds` and `text`; `resolveAnnotations` chooses the
+  drawn mark from each target. Highlight circles compact targets and boxes
+  elongated ones (never an automatic underline, since figure titles are already
+  underlined). Callouts use arrows to marks and plain leaders to text. Group
+  draws a bracket. Number fans out to one numeral per target in listed order.
+  Strikeout uses the text strikethrough segment on text and a diagonal cross on
+  marks. Emphasis markup carries both `data-annotation-type` (intent) and
+  `data-annotation-mark`. Annotation color follows the Color section: ink on
+  types that already use the accent palette, `SERIES_COLORS[0]` on ink-only
+  types (`math_expressions`). Number placement is deterministic; collision
+  avoidance and repositioning around other annotations are not implemented.
+- Base targets register under canonical `<figureId>.<element>.<part>` IDs.
+  Specs reference them in short form: a bare element ID (its mark, or its only
+  part), `<element>.<part>`, or a figure-level part such as `title`; the
+  canonical form is also accepted. `resolveTargetRef` in `figures/shared.ts` is
+  the single resolver used by spec validation, geometry construction, and the
+  renderer. Geometry remains local to the figure; base and emphasis share its
+  board translation. XY point IDs survive sorting. Pie `<slice>.percentage`
+  always resolves: slices below 8% register it on the legend detail line instead
+  of an interior label. Unknown targets and duplicate content IDs fail explicitly.
 - Every target has measured bounds, a text/mark kind, and one explicit attachment:
   bounds, visible segments, or a fixed anchor with outward direction. Text targets
   also carry underline and strikethrough segments. Primitive geometry supplies

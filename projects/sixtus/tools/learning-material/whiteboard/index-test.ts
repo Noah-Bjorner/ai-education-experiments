@@ -9,6 +9,7 @@ import { assertRepairPreservesContent } from "./spec/repair.ts";
 import { assert, assertEquals, assertRejects, assertThrows } from "@std/assert";
 import { z } from "@zod";
 import { whiteboardFigures } from "./figures/index.ts";
+import { ANNOTATION_TYPES } from "./figures/shared.ts";
 import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "./spec/prompt.ts";
 import { WhiteboardOutput } from "./schema.ts";
 import {
@@ -117,31 +118,19 @@ for (const d of whiteboardFigures) {
     assert(
       !semanticTargets({ ...figure, title: null }, d).has(`${figure.id}.title`),
     );
-    for (
-      const type of [
-        "circle",
-        "box",
-        "underline",
-        "strikethrough",
-        "number",
-        "arrow",
-        "line",
-        "bracket",
-      ] as const
-    ) {
-      const annotated = {
-        ...titled,
-        annotations: [{
-          type,
-          targetIds: [`${figure.id}.title`],
-          content: type === "number"
-            ? "1"
-            : ["arrow", "line", "bracket"].includes(type)
-            ? "Look here"
-            : null,
-        }],
-      };
-      validate(board(annotated), [d.type]);
+    for (const type of ANNOTATION_TYPES) {
+      // Short (`title`) and canonical (`<figureId>.title`) references both resolve.
+      for (const target of ["title", `${figure.id}.title`]) {
+        const annotated = {
+          ...titled,
+          annotations: [{
+            type,
+            targetIds: [target],
+            text: type === "callout" ? "Look here" : null,
+          }],
+        };
+        validate(board(annotated), [d.type]);
+      }
     }
   });
 }
@@ -298,12 +287,14 @@ Deno.test("semantic IDs, chart data, and figure refinements", () => {
   assert(expressionError.issues.some((i) => i.path.at(-1) === "expression"));
 });
 
-Deno.test("annotation target ownership, parts, text kind, counts, and content", () => {
+Deno.test("annotation target ownership, parts, counts, and text", () => {
   const m = math();
   for (
     const target of [
       "other.answer.expression",
+      "answer.term",
       "math.answer.term",
+      "title",
       "math.title",
     ]
   ) {
@@ -312,31 +303,35 @@ Deno.test("annotation target ownership, parts, text kind, counts, and content", 
         validate(
           board({
             ...m,
-            annotations: [{ type: "box", targetIds: [target], content: null }],
+            annotations: [{ type: "highlight", targetIds: [target], text: null }],
           }),
         ),
       WhiteboardSpecError,
     );
+    assertEquals(error.issues[0].code, "UNKNOWN_TARGET");
     assertEquals(error.issues[0].annotationIndex, 0);
     assertEquals(error.issues[0].figureId, "math");
-    assertEquals(error.issues[0].availableTargetIds, [
-      "math.answer.expression",
-    ]);
+    assertEquals(error.issues[0].availableTargetIds, ["answer"]);
+  }
+  // A bare element ID, `<element>.<part>`, and the canonical form all name the row.
+  for (
+    const target of ["answer", "answer.expression", "math.answer.expression"]
+  ) {
+    validate(
+      board({
+        ...m,
+        annotations: [{ type: "highlight", targetIds: [target], text: null }],
+      }),
+    );
   }
   for (
     const annotation of [
-      { type: "arrow", targetIds: ["math.answer.expression"], content: null },
-      { type: "number", targetIds: ["math.answer.expression"], content: "0" },
-      {
-        type: "circle",
-        targetIds: ["math.answer.expression"],
-        content: "Wrong",
-      },
-      {
-        type: "box",
-        targetIds: ["math.answer.expression", "math.answer.expression"],
-        content: null,
-      },
+      { type: "callout", targetIds: ["answer"], text: null },
+      { type: "number", targetIds: ["answer"], text: "1" },
+      { type: "highlight", targetIds: ["answer"], text: "Wrong" },
+      { type: "strikeout", targetIds: ["answer"], text: "Wrong" },
+      { type: "highlight", targetIds: ["answer", "answer"], text: null },
+      { type: "group", targetIds: ["answer", "answer"], text: null },
     ]
   ) {
     assertThrows(
@@ -348,36 +343,46 @@ Deno.test("annotation target ownership, parts, text kind, counts, and content", 
       WhiteboardSpecError,
     );
   }
+  // Marks and text targets accept every intent; the renderer picks the mark.
   const xy = example("xy_chart");
   assert(xy.type === "xy_chart");
-  for (const type of ["underline", "strikethrough"] as const) {
-    assertThrows(
-      () =>
-        validate(
-          board({
-            ...xy,
-            annotations: [{
-              type,
-              targetIds: [`${xy.id}.${xy.series[0].points[0].id}.mark`],
-              content: null,
-            }],
-          }),
-        ),
-      WhiteboardSpecError,
+  for (const type of ANNOTATION_TYPES) {
+    validate(
+      board({
+        ...xy,
+        annotations: [{
+          type,
+          targetIds: [xy.series[0].points[0].id],
+          text: type === "callout" ? "Here" : null,
+        }],
+      }),
     );
   }
+  // A bare slice ID means the wedge; parts are addressed explicitly.
+  const pie = example("pie_chart");
+  assert(pie.type === "pie_chart");
+  const slice = pie.slices[0].id;
+  validate(
+    board({
+      ...pie,
+      annotations: [
+        { type: "highlight", targetIds: [slice], text: null },
+        { type: "highlight", targetIds: [`${slice}.legend-label`], text: null },
+        { type: "strikeout", targetIds: [`${slice}.percentage`], text: null },
+      ],
+    }),
+  );
   const grouped = math();
   assert(grouped.type === "math_expressions");
   grouped.expressions.push({ id: "other", latex: "2x=16" });
-  grouped.annotations = [{
-    type: "bracket",
-    targetIds: ["math.answer.expression", "math.other.expression"],
-    content: null,
-  }];
+  grouped.annotations = [
+    { type: "group", targetIds: ["answer", "other"], text: null },
+    { type: "number", targetIds: ["answer", "other"], text: null },
+  ];
   validate(board(grouped));
 });
 
-Deno.test("conditional targets: percentages, coordinate labels, geometry marking labels", () => {
+Deno.test("conditional targets: coordinate labels and geometry marking labels; percentages always resolve", () => {
   const pie = example("pie_chart");
   assert(pie.type === "pie_chart");
   pie.slices = [{ id: "small", label: "Small", value: 7 }, {
@@ -386,21 +391,18 @@ Deno.test("conditional targets: percentages, coordinate labels, geometry marking
     value: 93,
   }];
   pie.annotations = [{
-    type: "circle",
-    targetIds: [`${pie.id}.small.percentage`],
-    content: null,
+    type: "highlight",
+    targetIds: ["small.percentage"],
+    text: null,
   }];
-  assertThrows(() => validate(board(pie)), WhiteboardSpecError);
-  pie.slices[0].value = 8;
-  pie.slices[1].value = 92;
   validate(board(pie));
   const plot = example("coordinate_plot");
   assert(plot.type === "coordinate_plot");
   plot.elements = [{ type: "point", id: "point", position: [0, 0] }];
   plot.annotations = [{
-    type: "underline",
-    targetIds: [`${plot.id}.point.label`],
-    content: null,
+    type: "highlight",
+    targetIds: ["point.label"],
+    text: null,
   }];
   assertThrows(() => validate(board(plot)), WhiteboardSpecError);
   plot.elements[0].label = "Origin";
@@ -414,9 +416,9 @@ Deno.test("conditional targets: percentages, coordinate labels, geometry marking
     sweep: "minor",
   }];
   geometry.annotations = [{
-    type: "box",
-    targetIds: [`${geometry.id}.angle.label`],
-    content: null,
+    type: "highlight",
+    targetIds: ["angle.label"],
+    text: null,
   }];
   assertThrows(() => validate(board(geometry)), WhiteboardSpecError);
   assert(geometry.markings[0].kind === "angle");
@@ -517,9 +519,9 @@ Deno.test("orchestration: one correction with original policy and actionable iss
   const bad = {
     ...math(),
     annotations: [{
-      type: "box" as const,
-      targetIds: ["math.answer.wrong"],
-      content: null,
+      type: "highlight" as const,
+      targetIds: ["answer.wrong"],
+      text: null,
     }],
   };
   const result = await whiteboardSpecWith({ goal: "Solve x", mode: "fast" }, {
@@ -544,7 +546,7 @@ Deno.test("orchestration: one correction with original policy and actionable iss
           ...bad,
           annotations: [{
             ...bad.annotations[0],
-            targetIds: ["math.answer.expression"],
+            targetIds: ["answer"],
           }],
         }),
       });
@@ -579,9 +581,9 @@ Deno.test("orchestration: malformed JSON correction and exhausted validation", a
 Deno.test("repair cannot delete content, change unaffected facts, or remove annotations", () => {
   const previous = board(math(), math("second"));
   previous.figures[0].annotations = [{
-    type: "box",
-    targetIds: ["math.answer.bad"],
-    content: null,
+    type: "highlight",
+    targetIds: ["answer.bad"],
+    text: null,
   }];
   const repair = {
     previous,
@@ -592,7 +594,7 @@ Deno.test("repair cannot delete content, change unaffected facts, or remove anno
     }],
   };
   const corrected = structuredClone(previous);
-  corrected.figures[0].annotations[0].targetIds[0] = "math.answer.expression";
+  corrected.figures[0].annotations[0].targetIds[0] = "answer";
   assertRepairPreservesContent(repair, corrected);
   const removed = structuredClone(corrected);
   removed.figures.pop();
@@ -618,10 +620,11 @@ Deno.test("repair cannot delete content, change unaffected facts, or remove anno
 Deno.test("correction can fix a duplicate figure ID and its dependent annotation references", async () => {
   const first = math();
   const second = math();
+  // Canonical references carry the figure ID and must follow a figure rename.
   second.annotations = [{
-    type: "box",
+    type: "highlight",
     targetIds: ["math.answer.expression"],
-    content: null,
+    text: null,
   }];
   let calls = 0;
   const result = await whiteboardSpecWith({ goal: "Show two steps" }, {
@@ -633,9 +636,9 @@ Deno.test("correction can fix a duplicate figure ID and its dependent annotation
           ...second,
           id: "second",
           annotations: [{
-            type: "box",
+            type: "highlight",
             targetIds: ["second.answer.expression"],
-            content: null,
+            text: null,
           }],
         }),
       });
@@ -648,9 +651,9 @@ Deno.test("correction can fix a duplicate figure ID and its dependent annotation
 Deno.test("validation reports independent title, annotation, and ordering issues together", () => {
   const figure = math();
   figure.annotations = [{
-    type: "box",
-    targetIds: ["math.missing.expression"],
-    content: null,
+    type: "highlight",
+    targetIds: ["missing"],
+    text: null,
   }];
   const error = assertThrows(
     () => validate({ ...board(figure, text("question")), title: "Forbidden" }),
@@ -669,12 +672,12 @@ Deno.test("public entry point imports and validates input without provider crede
 Deno.test("repair can fix annotation target count without removing the annotation", async () => {
   const figure = math();
   figure.annotations = [{
-    type: "box",
-    targetIds: ["math.answer.expression", "math.answer.expression"],
-    content: null,
+    type: "highlight",
+    targetIds: ["answer", "answer"],
+    text: null,
   }];
   let calls = 0;
-  await whiteboardSpecWith({ goal: "Box the answer" }, {
+  await whiteboardSpecWith({ goal: "Highlight the answer" }, {
     classify: () => Promise.resolve(scores(["math_expressions"])),
     generate: () => {
       const output = board(structuredClone(figure));

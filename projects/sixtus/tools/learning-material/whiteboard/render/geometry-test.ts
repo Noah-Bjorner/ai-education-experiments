@@ -218,13 +218,13 @@ Deno.test("geometry fills stay under labels and use unique definitions in anchor
 Deno.test("geometry handles text annotations and rejects unreadable labels and bad options", () => {
   const spec: Geometry = structuredClone(geometry.example.output);
   spec.annotations = [{
-    type: "underline",
-    targetIds: ["triangle.base-label.label"],
-    content: null,
+    type: "highlight",
+    targetIds: ["base-label"],
+    text: null,
   }, {
-    type: "arrow",
-    targetIds: ["triangle.foot.mark"],
-    content: "Right angle",
+    type: "callout",
+    targetIds: ["foot"],
+    text: "Right angle",
   }];
   const result = renderWhiteboardSvg(boardExample([spec]));
   assert(result.stages.base.svg !== result.stages.emphasis.svg);

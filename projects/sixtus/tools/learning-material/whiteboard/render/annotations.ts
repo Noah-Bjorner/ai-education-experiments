@@ -1,8 +1,13 @@
 import { renderError } from "./issues.ts";
-import { annotationSchema } from "../figures/shared.ts";
+import {
+  annotationSchema,
+  resolveTargetRef,
+  shortTargetRefs,
+} from "../figures/shared.ts";
 import type {
   Annotation,
   AnnotationOptions,
+  EmphasisMark,
   ResolvedAnnotation,
   ResolvedCallout,
   ResolvedEmphasis,
@@ -15,59 +20,85 @@ import {
   validateTarget,
 } from "./targets.ts";
 
-/** Validate once, retaining measured targets throughout every annotation stage. */
+/**
+ * Highlight encloses the target: a circle around compact targets, a tight box
+ * around elongated ones (an ellipse around a long row grows far beyond it).
+ * Underlines are not chosen automatically because figure titles are already underlined.
+ */
+function highlightMark(target: RenderTarget): EmphasisMark {
+  const { width, height } = target.bounds;
+  return Math.max(width, height) > Math.min(width, height) * 3
+    ? "box"
+    : "circle";
+}
+
+/** Validate once, resolve short target references, and choose each mark from its target. */
 export function resolveAnnotations(
   annotations: Annotation[],
   targets: Map<string, RenderTarget>,
   figureId: string,
 ): ResolvedAnnotation[] {
-  return annotations.map((input, annotationIndex) => {
+  const canonicalIds = new Set(targets.keys());
+  return annotations.flatMap((input, annotationIndex) => {
     const annotation = annotationSchema.parse(input);
-    const availableTargetIds = [...targets].filter(([, target]) =>
-      (annotation.type !== "underline" &&
-        annotation.type !== "strikethrough") || target.kind === "text"
-    ).map(([id]) => id);
-    const selected = annotation.targetIds.map((id) => {
-      const target = targets.get(id);
-      if (!target) {
+    const selected = annotation.targetIds.map((ref) => {
+      const id = resolveTargetRef(ref, figureId, canonicalIds);
+      const target = id === undefined ? undefined : targets.get(id);
+      if (id === undefined || !target) {
         throw renderError(
           "UNKNOWN_TARGET",
-          `Unknown or unavailable annotation target '${id}' in figure '${figureId}'.`,
+          `Unknown or unavailable annotation target '${ref}' in figure '${figureId}'.`,
           {
             stage: "annotations",
             figureId,
             annotationIndex,
             path: ["annotations", annotationIndex, "targetIds"],
-            availableTargetIds,
+            availableTargetIds: shortTargetRefs(figureId, canonicalIds),
           },
         );
       }
       validateTarget(target, id);
-      if (
-        (annotation.type === "underline" ||
-          annotation.type === "strikethrough") && target.kind !== "text"
-      ) {
-        throw renderError(
-          "INVALID_ANNOTATION",
-          `Annotation '${annotation.type}' requires a text target: '${id}'.`,
-          {
-            stage: "annotations",
-            figureId,
-            annotationIndex,
-            path: ["annotations", annotationIndex, "targetIds"],
-            availableTargetIds,
-          },
-        );
-      }
-      return target;
+      return { id, target };
     });
-    // The schema enforces type/content combinations; downstream code uses this union.
-    return {
-      ...annotation,
-      targets: selected,
+    const base = {
+      intent: annotation.type,
+      text: annotation.text,
       figureId,
       annotationIndex,
-    } as ResolvedAnnotation;
+    };
+    const single = (type: ResolvedAnnotation["type"]): ResolvedAnnotation =>
+      ({
+        ...base,
+        type,
+        targetIds: [selected[0].id],
+        targets: [selected[0].target],
+      }) as ResolvedAnnotation;
+    switch (annotation.type) {
+      case "highlight":
+        return [single(highlightMark(selected[0].target))];
+      case "strikeout":
+        return [
+          single(selected[0].target.kind === "text" ? "strikethrough" : "cross"),
+        ];
+      case "callout":
+        return [single(selected[0].target.kind === "mark" ? "arrow" : "line")];
+      case "group":
+        return [{
+          ...base,
+          type: "bracket",
+          targetIds: selected.map((s) => s.id),
+          targets: selected.map((s) => s.target),
+        }];
+      case "number":
+        return selected.map(({ id, target }, sequence): ResolvedEmphasis => ({
+          ...base,
+          type: "number",
+          text: String(sequence + 1),
+          targetIds: [id],
+          targets: [target],
+          sequence,
+        }));
+    }
   });
 }
 

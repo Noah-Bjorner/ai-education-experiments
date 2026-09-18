@@ -55,8 +55,8 @@ export const textFigure = {
     { part: "text", kind: "text" },
   ],
   annotationTargets: [
-    "<id>.text — the complete text block; no per-word or border targets",
-    "<id>.title — only when title is not null",
+    "text — the complete text block; no per-word or border targets",
+    "title — only when title is not null",
   ],
   example: {
     instructions:
