@@ -1,9 +1,9 @@
 import { z } from "@zod";
 import {
   classifyWhiteboardGoal,
+  type FigureSelection,
   parseClassification,
   selectFigures,
-  type FigureSelection,
   type WhiteboardGoalClassification,
 } from "./classifier.ts";
 import { generateWhiteboardSpec, type SpecDependencies } from "./spec/index.ts";
@@ -14,14 +14,18 @@ import {
 } from "./spec/validation.ts";
 import {
   type WhiteboardInput,
+  whiteboardRenderRequestSchema,
   type WhiteboardRequest,
   type WhiteboardResult,
   type WhiteboardSpec,
-  whiteboardRenderRequestSchema,
 } from "./schema.ts";
-import { applyDrawingAnimation } from "../whiteboard-video/drawing/index.ts";
+import {
+  applyDrawingAnimation,
+  type DrawingAnimationOptions,
+} from "./animation/index.ts";
 
 export { whiteboardInputSchema, whiteboardResultSchema } from "./schema.ts";
+export { applyDrawingAnimation, type DrawingAnimationOptions };
 export const WHITEBOARD_SYSTEM_PROMPT_DESCRIPTION = [
   "Use when a composed diagram would help the learner understand a relationship, comparison, quantity, or math idea.",
   "Prefer whiteboard over image when the visual should be a chart, graph, geometry diagram, or math layout rather than a photo or illustration.",
@@ -139,10 +143,20 @@ export async function executeWhiteboardWith(
 
   // 3. Render: the same renderer serves generated and supplied specs.
   const { renderWhiteboardSvg } = await import("./render/index.ts");
-  const { svg: rendered } = renderWhiteboardSvg(spec, { orientation, fontMode });
+  const { svg: rendered } = renderWhiteboardSvg(spec, {
+    orientation,
+    fontMode,
+  });
   // 4. Optional handwriting animation is a last-step rewrite of the finished SVG.
   const svg = animation === "animated"
-    ? applyDrawingAnimation(rendered, { speed: 1.25 })
+    ? applyDrawingAnimation(rendered, {
+      speed: 1.25,
+      markSpeed: 1.15,
+      textSpeed: 1.0,
+      figureSpeeds: {
+        text: { textSpeed: 1.75, markSpeed: 2.0 },
+      },
+    })
     : rendered;
   //console.log(svg); // temporary
   if (format === "svg") return { svg };
@@ -151,7 +165,8 @@ export async function executeWhiteboardWith(
 
 if (import.meta.main) {
   const result = await executeWhiteboard({
-    goal: Deno.args[0] ?? "A middle-schooler is confused about why their phone is dead by last period. Help them see battery percent falling through the school day: 7:00 100%, 9:00 82%, 12:00 61%, 14:00 44%, 16:00 18%. They should notice the drop speeds up after lunch. Circle the 16:00 point and add a callout that they are below 20% by the end of the day.",
+    goal: Deno.args[0] ??
+      "A middle-schooler is confused about why their phone is dead by last period. Help them see battery percent falling through the school day: 7:00 100%, 9:00 82%, 12:00 61%, 14:00 44%, 16:00 18%. They should notice the drop speeds up after lunch. Circle the 16:00 point and add a callout that they are below 20% by the end of the day.",
     mode: Deno.args[1] === "smart" ? "smart" : "fast",
     format: Deno.args[2] === "svg" ? "svg" : "url",
     fontMode: "hosted",

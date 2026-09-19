@@ -1,9 +1,10 @@
 import {
   figureOptionsKey,
+  type FigurePreparationResult,
   type PreparedFigure,
   prepareFigure,
 } from "./prepare.ts";
-import type { FigureRenderOptions } from "./options.ts";
+import { ALLOCATION_GROWTH, type FigureRenderOptions } from "./options.ts";
 import { contextualize, renderError, type RenderIssue } from "./issues.ts";
 import {
   type WhiteboardFontMode,
@@ -27,7 +28,13 @@ import {
 } from "./figure-placement.ts";
 import type { AnnotationDiagnostic } from "./annotation-types.ts";
 import { type CalloutPlacement } from "./callouts.ts";
-import { COLORS, LINE_HEIGHT, SPACING, TYPE_SCALE } from "./theme.ts";
+import {
+  COLORS,
+  HAND_DRAWING,
+  LINE_HEIGHT,
+  SPACING,
+  TYPE_SCALE,
+} from "./theme.ts";
 import { textBlock } from "./text-block.ts";
 import { boardTitleDisplay, withTitleBox } from "./titles.ts";
 
@@ -36,6 +43,7 @@ export type WhiteboardRenderOptions = PlacementOptions & {
   id?: string;
   /** Defaults to embedding; hosted uses the shared font URL. */
   fontMode?: WhiteboardFontMode;
+  /** Hand imperfection: 0 clean, 0.7 steady, 1.5 natural, 3 loose. */
   roughness?: number;
   hatchGap?: number;
   seed?: number;
@@ -64,13 +72,13 @@ export type WhiteboardRenderResult = SvgRenderStage & {
 function compose(
   figures: Drawing[],
   placements: FigurePlacement[],
-  figureIds: string[],
+  meta: { id: string; type: string }[],
 ): Drawing {
   return {
     markup: figures.map((drawing, i) => {
       const { x, y } = placements[i];
-      return `<g data-figure-id="${
-        escapeXml(figureIds[i])
+      return `<g data-figure-id="${escapeXml(meta[i].id)}" data-figure-type="${
+        escapeXml(meta[i].type)
       }" transform="translate(${x} ${y})">${drawing.markup}</g>`;
     }).join("\n"),
     bounds: unionBounds(figures.map((drawing, i) =>
@@ -111,7 +119,7 @@ function renderBoardTitle(
   const dy = union.y - SPACING.boardTitleGap - (b.y + b.height);
   return {
     markup:
-      `<g data-board-title="" style="${GRAPH_FONT_STYLE}" transform="translate(${dx} ${dy})">${boxed.markup}</g>`,
+      `<g data-board-title="" data-drawing="static" style="${GRAPH_FONT_STYLE}" transform="translate(${dx} ${dy})">${boxed.markup}</g>`,
     bounds: { ...b, x: b.x + dx, y: b.y + dy },
   };
 }
@@ -153,13 +161,27 @@ export function renderWhiteboardSvg(
   options: WhiteboardRenderOptions = {},
 ): WhiteboardRenderResult {
   const spec = WhiteboardOutput.parse(input);
-  const prepared = spec.figures.map((figure, i) => {
-    const { anchor: _anchor, side: _side, ...content } = figure;
-    const result = prepareFigure(content, figureOptions(options, i));
+  const prepared = prepareWhiteboardFigures(spec, options).map((result) => {
     if (!result.ok) throw result.error;
     return result.figure;
   });
   return composeWhiteboard(spec, prepared, options);
+}
+
+/**
+ * Prepare every figure with the same options the board will render with.
+ * Deterministic and model-free, so the spec stage can run it to catch content
+ * that cannot be drawn before the board is reported as generated.
+ */
+export function prepareWhiteboardFigures(
+  input: WhiteboardSpec,
+  options: WhiteboardRenderOptions = {},
+): FigurePreparationResult[] {
+  const spec = WhiteboardOutput.parse(input);
+  return spec.figures.map((figure, i) => {
+    const { anchor: _anchor, side: _side, ...content } = figure;
+    return prepareFigure(content, figureOptions(options, i));
+  });
 }
 
 /** Compose drawings prepared with the same figure order/options in this request. */
@@ -182,7 +204,10 @@ export function composeWhiteboard(
       { stage: "composition" },
     );
   }
-  const figureIds = spec.figures.map((figure) => figure.id);
+  const figureMeta = spec.figures.map((figure, i) => ({
+    id: figure.id,
+    type: prepared[i].type,
+  }));
   const title = spec.title ??
     (spec.figures.map((figure) => figure.title).filter(Boolean).join("; ") ||
       "Whiteboard");
@@ -191,21 +216,21 @@ export function composeWhiteboard(
   const completeFigures = prepared.map((figure) => figure.complete);
   // 4. Place complete measured figures once, then reuse translations in every stage.
   const figurePlacements = placeFigures(spec, completeFigures, options);
-  const baseComposed = compose(baseFigures, figurePlacements, figureIds);
+  const baseComposed = compose(baseFigures, figurePlacements, figureMeta);
   const emphasisComposed = compose(
     emphasizedFigures,
     figurePlacements,
-    figureIds,
+    figureMeta,
   );
   const completeComposed = compose(
     completeFigures,
     figurePlacements,
-    figureIds,
+    figureMeta,
   );
   const boardTitle = spec.title !== null
     ? prepareBoardTitle(spec.title, completeComposed, baseComposed, {
       id: `${options.id ?? "whiteboard"}-board-title`,
-      roughness: options.roughness ?? 1.5,
+      roughness: options.roughness ?? HAND_DRAWING.roughness,
       seed: options.seed ?? 10,
     })
     : null;
@@ -244,6 +269,9 @@ function prepareBoardTitle(
   }
 }
 
+/** Landscape packs figures side by side, so width grows less freely than in a single column. */
+const LANDSCAPE_WIDTH_GROWTH = 1.5;
+
 export function figureOptions(
   options: WhiteboardRenderOptions,
   index: number,
@@ -253,6 +281,11 @@ export function figureOptions(
     id: `${options.id ?? "whiteboard"}-figure-${index}`,
     width,
     height,
+    maxWidth: width *
+      (options.orientation === "landscape"
+        ? LANDSCAPE_WIDTH_GROWTH
+        : ALLOCATION_GROWTH.maxScale),
+    maxHeight: height * ALLOCATION_GROWTH.maxScale,
     roughness: options.roughness,
     hatchGap: options.hatchGap,
     seed: options.seed,

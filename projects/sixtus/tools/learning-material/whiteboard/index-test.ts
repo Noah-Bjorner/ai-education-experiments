@@ -10,7 +10,7 @@ import { assert, assertEquals, assertRejects, assertThrows } from "@std/assert";
 import { z } from "@zod";
 import { whiteboardFigures } from "./figures/index.ts";
 import { ANNOTATION_TYPES } from "./figures/shared.ts";
-import { WHITEBOARD_SPEC_SYSTEM_PROMPT } from "./spec/prompt.ts";
+import { WHITEBOARD_SPEC_SYSTEM_PROMPT_V2 } from "./spec/prompt.ts";
 import { WhiteboardOutput } from "./schema.ts";
 import {
   createGeneratedBoardSchema,
@@ -18,6 +18,7 @@ import {
   generatedFigureSchema,
 } from "./spec/schema.ts";
 import { InvalidSpecOutput, type SpecGenerationEvent } from "./spec/index.ts";
+import { renderError, WhiteboardRenderError } from "./render/issues.ts";
 import {
   semanticTargets,
   validateGeneratedBoard,
@@ -90,13 +91,15 @@ for (const d of whiteboardFigures) {
     assertEquals(spec.figures[0].anchor, null);
     assertEquals(spec.figures[0].side, null);
     assert(WhiteboardOutput.safeParse(spec).success);
-    const system = WHITEBOARD_SPEC_SYSTEM_PROMPT({ availableFigures: [d] });
+    const system = WHITEBOARD_SPEC_SYSTEM_PROMPT_V2({ availableFigures: [d] });
     const snippets = [...system.matchAll(/```json\n([\s\S]*?)\n```/g)].map((
       m,
     ) => JSON.parse(m[1]));
-    assertEquals(snippets.length, 2);
+    assertEquals(snippets.length, 1);
     assert(generatedFigureSchema(d).safeParse(snippets[0]).success);
-    assert(schema.safeParse(snippets[1]).success);
+    for (const target of d.annotationTargets) {
+      assert(system.includes(target), target);
+    }
     for (
       const other of whiteboardFigures.filter((other) => other.type !== d.type)
     ) {
@@ -358,7 +361,7 @@ Deno.test("annotation target ownership, parts, counts, and text", () => {
       }),
     );
   }
-  // A bare slice ID means the wedge; parts are addressed explicitly.
+  // A bare slice ID is the wedge and accepts callout only.
   const pie = example("pie_chart");
   assert(pie.type === "pie_chart");
   const slice = pie.slices[0].id;
@@ -366,12 +369,23 @@ Deno.test("annotation target ownership, parts, counts, and text", () => {
     board({
       ...pie,
       annotations: [
-        { type: "highlight", targetIds: [slice], text: null },
+        { type: "callout", targetIds: [slice], text: "More than half" },
         { type: "highlight", targetIds: [`${slice}.legend-label`], text: null },
         { type: "strikeout", targetIds: [`${slice}.percentage`], text: null },
       ],
     }),
   );
+  const highlightWedge = assertThrows(
+    () =>
+      validate(
+        board({
+          ...pie,
+          annotations: [{ type: "highlight", targetIds: [slice], text: null }],
+        }),
+      ),
+    WhiteboardSpecError,
+  );
+  assertEquals(highlightWedge.issues[0].code, "INVALID_ANNOTATION");
   const grouped = math();
   assert(grouped.type === "math_expressions");
   grouped.expressions.push({ id: "other", latex: "2x=16" });
@@ -667,6 +681,115 @@ Deno.test("validation reports independent title, annotation, and ordering issues
 Deno.test("public entry point imports and validates input without provider credentials", async () => {
   const { whiteboardSpec } = await import("./index.ts");
   await assertRejects(() => whiteboardSpec({ goal: " " }), WhiteboardSpecError);
+});
+
+Deno.test("orchestration: content that outgrows the ceiling is corrected once, scoped to the figure, and may be split", async () => {
+  const rows = (
+    expressions: { id: string; latex: string }[],
+  ): GeneratedFigure => ({
+    type: "math_expressions",
+    id: "math",
+    title: null,
+    annotations: [],
+    expressions,
+  });
+  const long = rows([{ id: "budget", latex: "x+".repeat(60) + "x" }]);
+  let calls = 0;
+  const events: SpecGenerationEvent[] = [];
+  const result = await whiteboardSpecWith({ goal: "Split the budget" }, {
+    classify: () => Promise.resolve(scores(["math_expressions"])),
+    generate: (request) => {
+      calls++;
+      if (calls === 1) return Promise.resolve({ output: board(long) });
+      const issue = request.repair!.issues[0];
+      assertEquals(issue.code, "CONTENT_DOES_NOT_FIT");
+      assertEquals(issue.path, ["figures", 0, "expressions"]);
+      assertEquals(issue.figureId, "math");
+      assertEquals(issue.elementId, "budget");
+      // The renderer already grew the allocation; the message asks for a content change.
+      assert(!/increase the (width|height|board)/i.test(issue.message));
+      assert(/split/i.test(issue.message));
+      return Promise.resolve({
+        output: board(rows([
+          { id: "budget", latex: "x+".repeat(8) + "x" },
+          { id: "budget-rest", latex: "x+".repeat(8) + "x" },
+        ])),
+      });
+    },
+    report: (event) => events.push(event),
+  });
+  assertEquals(calls, 2);
+  const figure = result.figures[0];
+  assert(figure.type === "math_expressions");
+  assertEquals(figure.expressions.length, 2);
+  assertEquals(
+    events.map((e) => e.outcome),
+    ["success", "invalid", "success"],
+  );
+  assertEquals(events[1].issues, [{
+    code: "CONTENT_DOES_NOT_FIT",
+    path: ["figures", 0, "expressions"],
+  }]);
+
+  // Content that fits after growth needs no correction at all.
+  calls = 0;
+  await whiteboardSpecWith({ goal: "Show the budget" }, {
+    classify: () => Promise.resolve(scores(["math_expressions"])),
+    generate: () => {
+      calls++;
+      return Promise.resolve({
+        output: board(rows([{
+          id: "budget",
+          latex: String
+            .raw`\$50 = \$20\ \text{food} + \$15\ \text{transit} + \$10\ \text{fun} + \$5\ \text{savings}`,
+        }])),
+      });
+    },
+  });
+  assertEquals(calls, 1);
+
+  // A second unrenderable board exhausts the correction as a spec failure.
+  calls = 0;
+  const exhausted = await assertRejects(
+    () =>
+      whiteboardSpecWith({ goal: "Split the budget" }, {
+        classify: () => Promise.resolve(scores(["math_expressions"])),
+        generate: () => {
+          calls++;
+          return Promise.resolve({ output: board(long) });
+        },
+      }),
+    WhiteboardSpecError,
+  );
+  assertEquals(calls, 2);
+  assertEquals(exhausted.issues[0].code, "CONTENT_DOES_NOT_FIT");
+});
+
+Deno.test("orchestration: operational rendering failures are not corrected", async () => {
+  let calls = 0;
+  const internal = renderError(
+    "INTERNAL_RENDER_ERROR",
+    "An internal whiteboard rendering error occurred.",
+  );
+  const error = await assertRejects(
+    () =>
+      whiteboardSpecWith({ goal: "Solve" }, {
+        classify: () => Promise.resolve(scores(["math_expressions"])),
+        generate: () => {
+          calls++;
+          return Promise.resolve({ output: board(math()) });
+        },
+        prepare: () =>
+          Promise.resolve([{
+            ok: false as const,
+            issues: internal.issues,
+            error: internal,
+          }]),
+      }),
+    WhiteboardRenderError,
+  );
+  assert(error === internal);
+  assertEquals(calls, 1);
 });
 
 Deno.test("repair can fix annotation target count without removing the annotation", async () => {

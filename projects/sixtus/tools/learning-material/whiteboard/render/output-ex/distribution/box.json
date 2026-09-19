@@ -1,0 +1,50 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "distribution",
+      "id": "box",
+      "title": "Two class quizzes",
+      "annotations": [
+        {
+          "type": "callout",
+          "targetIds": [
+            "class-b"
+          ],
+          "text": "Higher median"
+        }
+      ],
+      "chartStyle": "box",
+      "xLabel": "Class",
+      "yLabel": "Score",
+      "groups": [
+        {
+          "id": "class-a",
+          "name": "Class A",
+          "min": 48,
+          "q1": 62,
+          "median": 71,
+          "q3": 80,
+          "max": 92,
+          "outliers": [
+            {
+              "id": "a-low",
+              "value": 31
+            }
+          ]
+        },
+        {
+          "id": "class-b",
+          "name": "Class B",
+          "min": 55,
+          "q1": 70,
+          "median": 81,
+          "q3": 88,
+          "max": 97
+        }
+      ],
+      "anchor": null,
+      "side": null
+    }
+  ]
+}

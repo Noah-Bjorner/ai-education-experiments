@@ -1,0 +1,43 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "distribution",
+      "id": "dot-plot",
+      "title": "Siblings",
+      "annotations": [],
+      "chartStyle": "dot_plot",
+      "xLabel": "Number of siblings",
+      "yLabel": null,
+      "stacks": [
+        {
+          "id": "none",
+          "x": 0,
+          "count": 4
+        },
+        {
+          "id": "one",
+          "x": 1,
+          "count": 8
+        },
+        {
+          "id": "two",
+          "x": 2,
+          "count": 6
+        },
+        {
+          "id": "three",
+          "x": 3,
+          "count": 2
+        },
+        {
+          "id": "five",
+          "x": 5,
+          "count": 1
+        }
+      ],
+      "anchor": null,
+      "side": null
+    }
+  ]
+}

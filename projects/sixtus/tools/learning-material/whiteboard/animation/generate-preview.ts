@@ -51,4 +51,4 @@ function tick(now){if(playing){let next=time+(now-previous)/1000;if(next>6.2)nex
 seek(0);requestAnimationFrame(tick);
 </script></html>`,
 );
-console.log("Generated drawing/example.svg, shapes.svg and preview.html");
+console.log("Generated animation/example.svg, shapes.svg and preview.html");

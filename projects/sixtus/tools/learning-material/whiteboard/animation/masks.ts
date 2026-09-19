@@ -1,5 +1,6 @@
 import { distance, pathData } from "./geometry.ts";
 import type { StrokePlan } from "./stroke-plan.ts";
+import { markWeight, motionSlice, strokeMotion } from "./motion.ts";
 
 export type CreateSvg = (
   name: string,
@@ -15,12 +16,17 @@ export function appendStrokeMasks(
   strokeGap: number,
   transform: string,
   create: CreateSvg,
+  natural = false,
+  pauses = plan.strokes.slice(1).map(() => strokeGap),
 ) {
-  const total = plan.strokes.reduce((sum, stroke) => sum + stroke.length, 0);
-  const inkTime = duration - (plan.strokes.length - 1) * strokeGap;
+  const weights = plan.strokes.map((stroke) =>
+    natural ? markWeight(stroke.length) : stroke.length
+  );
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  const inkTime = duration - pauses.reduce((sum, pause) => sum + pause, 0);
   let cursor = begin;
   plan.strokes.forEach((stroke, index) => {
-    const strokeDuration = inkTime * stroke.length / total;
+    const strokeDuration = inkTime * weights[index] / total;
     const group = create("g", {
       transform,
       "data-drawing-stroke": index,
@@ -47,6 +53,7 @@ export function appendStrokeMasks(
       );
       group.appendChild(dot);
     } else {
+      const profile = natural ? strokeMotion(stroke) : undefined;
       // A direct SVG stroke needs only one brush. Inferred strokes use shorter
       // brushes to track changing ink widths without exposing nearby ink early.
       const segments = plan.kind === "path"
@@ -60,8 +67,16 @@ export function appendStrokeMasks(
       segments.forEach((segment, i) => {
         if (lengths[i] <= 1e-8) return;
         const width = Math.max(...segment.map((p) => p.width));
-        const start = cursor + strokeDuration * offset / length;
-        const time = strokeDuration * lengths[i] / length;
+        const slice = profile
+          ? motionSlice(
+            profile,
+            offset / length,
+            (offset + lengths[i]) / length,
+          )
+          : undefined;
+        const start = cursor +
+          strokeDuration * (slice?.start ?? offset / length);
+        const time = strokeDuration * (slice?.duration ?? lengths[i] / length);
         const brush = create("path", {
           d: pathData(segment),
           pathLength: lengths[i],
@@ -94,8 +109,12 @@ export function appendStrokeMasks(
         brush.appendChild(
           create("animate", {
             attributeName: "stroke-dashoffset",
-            from: lengths[i],
-            to: 0,
+            ...(slice
+              ? {
+                values: slice.values.map((v) => v * lengths[i]).join(";"),
+                keyTimes: slice.times.join(";"),
+              }
+              : { from: lengths[i], to: 0 }),
             begin: `${start}s`,
             dur: `${time}s`,
             fill: "freeze",
@@ -107,6 +126,6 @@ export function appendStrokeMasks(
       });
     }
     mask.appendChild(group);
-    cursor += strokeDuration + strokeGap;
+    cursor += strokeDuration + (pauses[index] ?? 0);
   });
 }

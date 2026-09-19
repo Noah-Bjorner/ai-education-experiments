@@ -21,7 +21,7 @@ export function renderTextFigureDrawing(
   if (width <= style.padding * 2) {
     throw renderError(
       "INVALID_OPTIONS",
-      "Text rendering needs a width greater than 32.",
+      `Text rendering needs a width greater than ${style.padding * 2}.`,
     );
   }
   const scene = drawingBuilder();
@@ -50,15 +50,14 @@ export function renderTextFigureDrawing(
     roughness,
     stroke: colors.border,
     strokeWidth: style.strokeWidth,
-    strokeDasharray: style.dashArray,
-    singlePass: true,
   });
   const borderBounds = border.bounds!;
   scene.add({
     id: undefined,
     kind: "mark",
     drawing: {
-      markup: `<g data-text-border="${figure.role}">${border.markup}</g>`,
+      markup:
+        `<g data-figure-part="box" data-text-border="${figure.role}">${border.markup}</g>`,
       bounds: borderBounds,
       obstacles: [{
         bounds: borderBounds,
@@ -70,7 +69,8 @@ export function renderTextFigureDrawing(
   scene.add({
     id: `${figure.id}.text`,
     drawing: {
-      markup: `<g transform="translate(0 ${cardY})">${body.markup}</g>`,
+      markup:
+        `<g data-figure-part="writing" transform="translate(0 ${cardY})">${body.markup}</g>`,
       bounds: { ...body.bounds!, y: body.bounds!.y + cardY },
     },
     kind: "text",

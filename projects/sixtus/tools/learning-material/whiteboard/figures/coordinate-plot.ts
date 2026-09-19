@@ -213,7 +213,7 @@ export const coordinatePlot = {
     criteria: {
       true:
         "A function or points belong on an x/y grid, such as plotting y = 2x - 3.",
-      false: "A chart of data, or a shape with no axes.",
+      false: "A chart of data or a probability curve, or a shape with no axes.",
     },
   },
   rules: `An empty elements array produces a blank coordinate exercise.

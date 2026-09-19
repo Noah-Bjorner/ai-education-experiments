@@ -58,13 +58,13 @@ export const xyChart = {
   summary:
     "A bar, line, area, or scatter chart built from explicit data points, with one or more series.",
   useWhen:
-    "the learner needs to compare categories (bar), follow trends over time or another numeric variable (line or area), or see relationships between measurements (scatter). Use coordinate_plot for functions defined by formulas",
+    "the learner needs to compare categories (bar), follow trends over time or another numeric variable (line or area), or see relationships between measurements (scatter). Use a distribution for spreads of one variable, and a coordinate plane for functions defined by formulas",
   need: {
     question: "Does `goal` need a bar, line, area, or scatter chart?",
     criteria: {
       true: "The goal has data to compare or track, such as monthly rainfall.",
       false:
-        "The data are parts of one whole, or there is no data to compare or track.",
+        "The data are parts of one whole, a spread of one variable, or there is no data to compare or track.",
     },
   },
   rules: `Choose \`chartStyle\` according to the relationship:

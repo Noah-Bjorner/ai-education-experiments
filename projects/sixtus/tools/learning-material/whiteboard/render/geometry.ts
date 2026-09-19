@@ -16,7 +16,7 @@ import {
 } from "./bounds.ts";
 import { GRAPH_FONT_STYLE } from "./font.ts";
 import type { FigureRenderOptions as GraphOptions } from "./options.ts";
-import { renderHandwritten } from "./handwritten.ts";
+import { renderHandwritten, renderHandwrittenDot } from "./handwritten.ts";
 import { renderMathLatex } from "./latex.ts";
 import { center, distance, obstacleHitsBox } from "./placement.ts";
 import {
@@ -27,6 +27,7 @@ import {
   type TargetedDrawing,
 } from "./targets.ts";
 import { COLORS, SERIES_COLORS, SPACING, TYPE_SCALE } from "./theme.ts";
+import { escapeXml } from "./svg.ts";
 import { withFigureTitle } from "./titles.ts";
 
 const TAU = 2 * Math.PI;
@@ -147,10 +148,15 @@ export function renderGeometryDrawing(
     id: string,
     drawing: ScenePart,
     kind: "text" | "mark" = "mark",
+    partName: "construction" | "points" | "labels" | "markings" =
+      "construction",
   ) => {
     const part = scene.add({
       id: `${namespace}.${id}`,
-      drawing: drawing,
+      drawing: {
+        ...drawing,
+        markup: `<g data-figure-part="${partName}">${drawing.markup}</g>`,
+      },
       kind: kind,
     });
     parts.push(part);
@@ -207,6 +213,46 @@ export function renderGeometryDrawing(
     }
     return { anchor, directions: [n, mul(n, -1)] };
   };
+  // Record where declared points lie along an authored construction path.
+  // These are geometric identities/progress, not animation times.
+  function constructionPath(ps: Point[], closed: boolean, dashed: boolean) {
+    const drawing = path(ps, closed, dashed);
+    const vertices = closed ? [...ps, ps[0]] : ps;
+    const total = vertices.slice(1).reduce(
+      (n, p, i) => n + distance(vertices[i], p),
+      0,
+    );
+    const hits: { id: string; progress: number }[] = [];
+    let travelled = 0;
+    for (let i = 1; i < vertices.length; i++) {
+      const a = vertices[i - 1], b = vertices[i], length = distance(a, b);
+      if (!length) continue;
+      for (const [id, p] of points) {
+        const t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) /
+          (length * length);
+        if (
+          t >= -1e-8 && t <= 1 + 1e-8 &&
+          distance(p, add(a, mul(sub(b, a), t))) < 1e-6 && !hits.some((h) =>
+            h.id === id
+          )
+        ) {
+          hits.push({
+            id,
+            progress: Math.max(
+              0,
+              Math.min(1, (travelled + t * length) / total),
+            ),
+          });
+        }
+      }
+      travelled += length;
+    }
+    drawing.markup = drawing.markup.replace(
+      "<path ",
+      `<path data-geometry-points="${escapeXml(JSON.stringify(hits))}" `,
+    );
+    return drawing;
+  }
   const straightEnds = new Map<string, [Point, Point]>();
   for (const o of spec.objects) {
     const r = resolved.objects.get(o.id)!;
@@ -234,7 +280,7 @@ export function renderGeometryDrawing(
         local.push(arrow(b, v));
         if (r.kind === "line") local.push(arrow(a, mul(v, -1)));
       }
-      local.unshift(path([a, b], false, o.dashed));
+      local.unshift(constructionPath([a, b], false, !!o.dashed));
       straightEnds.set(o.id, [a, b]);
       anchors.set(o.id, sideAnchor(a, b));
     } else if (r.kind === "polygon" || r.kind === "circle") {
@@ -245,7 +291,7 @@ export function renderGeometryDrawing(
         clip = `<polygon points="${
           ps.map((p) => `${p.x},${p.y}`).join(" ")
         }"/>`;
-        local.push(path(ps, true, o.dashed));
+        local.push(constructionPath(ps, true, !!o.dashed));
         const anchor = { x: bounds.x + bounds.width / 2, y: bounds.y };
         anchors.set(o.id, {
           anchor,
@@ -267,11 +313,17 @@ export function renderGeometryDrawing(
           ),
         );
         local.push({
-          markup:
-            `<circle cx="${c.x}" cy="${c.y}" r="${radius}" fill="none" stroke="${COLORS.ink}" stroke-width="2"${
-              o.dashed ? ' stroke-dasharray="7 5"' : ""
-            }/>`,
-          bounds: expandBounds(bounds, 1),
+          ...renderHandwritten(
+            { type: "circle", cx: c.x, cy: c.y, r: radius },
+            {
+              id: `${options.id}-circle-${o.id}`,
+              seed: seed + spec.objects.indexOf(o),
+              roughness,
+              stroke: COLORS.ink,
+              strokeWidth: 2,
+              ...(o.dashed ? { strokeDasharray: [7, 5] } : {}),
+            },
+          ),
           attachment: circleOutline.attachment,
           obstacles: circleOutline.obstacles,
           container: {
@@ -331,11 +383,22 @@ export function renderGeometryDrawing(
     }
     addPart(`${o.id}.mark`, combine(local));
   }
-  for (const [id, p] of points) {
-    addPart(`${id}.mark`, {
-      markup: `<circle cx="${p.x}" cy="${p.y}" r="3" fill="${COLORS.ink}"/>`,
-      bounds: { x: p.x - 3, y: p.y - 3, width: 6, height: 6 },
-    });
+  for (const [index, [id, p]] of [...points].entries()) {
+    const dot = addPart(
+      `${id}.mark`,
+      renderHandwrittenDot(p.x, p.y, 3, {
+        id: `${options.id}-point-${id}`,
+        seed: seed + index,
+        roughness,
+        fill: COLORS.ink,
+      }),
+      "mark",
+      "points",
+    );
+    dot.markup = dot.markup.replace(
+      'data-figure-part="points"',
+      `data-figure-part="points" data-geometry-point="${escapeXml(id)}"`,
+    );
     anchors.set(id, { anchor: p, directions: [radial(p)] });
   }
   // Connected equality/parallel groups share a style, including overlapping declarations.
@@ -380,7 +443,8 @@ export function renderGeometryDrawing(
       if (radius < 5) {
         throw renderError(
           "CONTENT_DOES_NOT_FIT",
-          `Marking '${m.id}' is too small to display; increase the board size or simplify the figure.`,
+          `Marking '${m.id}' is too small to display; move its points further apart or simplify the figure.`,
+          { elementId: m.id, required: "grow" },
         );
       }
       if (m.kind === "right-angle") {
@@ -440,7 +504,8 @@ export function renderGeometryDrawing(
         if ((count - 1) * 5 + 14 > distance(a, b)) {
           throw renderError(
             "CONTENT_DOES_NOT_FIT",
-            `Marking '${m.id}' does not fit its segment.`,
+            `Marking '${m.id}' does not fit its segment; use fewer grouped markings or a longer segment.`,
+            { elementId: m.id, required: "grow" },
           );
         }
         for (let i = 0; i < count; i++) {
@@ -459,7 +524,7 @@ export function renderGeometryDrawing(
       const first = straightEnds.get(m.objects[0])!;
       anchors.set(m.id, sideAnchor(...first));
     }
-    addPart(`${m.id}.mark`, combine(local));
+    addPart(`${m.id}.mark`, combine(local), "mark", "markings");
   }
   function math(latex: string, id: string): Drawing {
     try {
@@ -553,13 +618,15 @@ export function renderGeometryDrawing(
     if (!placement) {
       throw renderError(
         "CONTENT_DOES_NOT_FIT",
-        `Geometry label '${job.id}' does not fit without overlap; increase the board size, shorten labels, or split the diagram.`,
+        `Geometry label '${job.id}' does not fit without overlap; shorten labels or split the diagram.`,
+        { elementId: job.id.replace(/\.label$/, ""), required: "grow" },
       );
     }
     const part = addPart(
       job.id,
       translate(job.drawing, placement.x - ink.x, placement.y - ink.y),
       "text",
+      "labels",
     );
     obstacles.push(...part.obstacles ?? []);
   }

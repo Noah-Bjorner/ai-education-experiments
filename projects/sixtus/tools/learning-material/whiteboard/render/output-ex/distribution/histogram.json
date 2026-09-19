@@ -1,0 +1,56 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "distribution",
+      "id": "histogram",
+      "title": "Quiz scores",
+      "annotations": [
+        {
+          "type": "highlight",
+          "targetIds": [
+            "high"
+          ],
+          "text": null
+        }
+      ],
+      "chartStyle": "histogram",
+      "xLabel": "Score",
+      "yLabel": "Students",
+      "bins": [
+        {
+          "id": "low",
+          "start": 50,
+          "end": 60,
+          "count": 2
+        },
+        {
+          "id": "mid-low",
+          "start": 60,
+          "end": 70,
+          "count": 5
+        },
+        {
+          "id": "mid",
+          "start": 70,
+          "end": 80,
+          "count": 9
+        },
+        {
+          "id": "high",
+          "start": 80,
+          "end": 90,
+          "count": 6
+        },
+        {
+          "id": "top",
+          "start": 90,
+          "end": 100,
+          "count": 3
+        }
+      ],
+      "anchor": null,
+      "side": null
+    }
+  ]
+}

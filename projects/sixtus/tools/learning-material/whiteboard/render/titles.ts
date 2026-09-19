@@ -8,11 +8,18 @@ import {
 } from "./targets.ts";
 import { GRAPH_FONT_STYLE } from "./font.ts";
 import { textBlock } from "./text-block.ts";
-import { COLORS, LINE_HEIGHT, SPACING, TYPE_SCALE } from "./theme.ts";
+import {
+  COLORS,
+  HAND_DRAWING,
+  LINE_HEIGHT,
+  SPACING,
+  TYPE_SCALE,
+} from "./theme.ts";
 
 type TitleEmphasisOptions = {
   id: string;
   seed?: number;
+  /** Hand imperfection: 0 clean, 0.7 steady, 1.5 natural, 3 loose. */
   roughness?: number;
   color?: string;
 };
@@ -24,7 +31,7 @@ function titlePen(options: TitleEmphasisOptions) {
   return {
     id: options.id,
     seed: options.seed ?? 10,
-    roughness: options.roughness ?? 1.5,
+    roughness: options.roughness ?? HAND_DRAWING.roughness,
     stroke: options.color ?? COLORS.ink,
     strokeWidth: 2,
   };
@@ -141,8 +148,10 @@ export function withFigureTitle(
     targets: drawing.targets,
     id: `${namespace}.title`,
     drawing: {
+      // Override inherited visibility when the animated base is still hidden.
+      // Keeping the title here preserves all fitting/placement transforms.
       markup:
-        `<g style="${GRAPH_FONT_STYLE}" transform="translate(${dx} ${dy})">${marked.markup}</g>`,
+        `<g data-figure-part="title" data-drawing="static" visibility="visible" style="${GRAPH_FONT_STYLE}" transform="translate(${dx} ${dy})">${marked.markup}</g>`,
       bounds: shift(b),
       obstacles: [
         { bounds: shift(text.bounds!), kind: "text" },

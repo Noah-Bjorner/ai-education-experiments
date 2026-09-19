@@ -182,9 +182,12 @@ Deno.test("geometry supports concave polygons, derived intersections, clockwise 
   const drawing = renderGeometryDrawing(circle, { id: "cw" });
   assert(drawing.markup.includes('stroke-dasharray="7 5"'));
   const arc = drawing.targets.get("cw.arc.mark")!.bounds,
-    full = drawing.targets.get("cw.circle.mark")!.bounds;
-  assertAlmostEquals(arc.width, (full.width - 2) / 2 + 2);
-  assertAlmostEquals(arc.y, full.y);
+    target = drawing.targets.get("cw.circle.mark")!;
+  assert(target.attachment.type === "segments");
+  const nominal = target.attachment.segments.flatMap((s) => [s.a, s.b]);
+  const xs = nominal.map((p) => p.x), ys = nominal.map((p) => p.y);
+  assertAlmostEquals(arc.width, (Math.max(...xs) - Math.min(...xs)) / 2 + 2);
+  assertAlmostEquals(arc.y, Math.min(...ys) - 1);
   const line: Geometry = {
     type: "geometry",
     title: "Horizontal line",

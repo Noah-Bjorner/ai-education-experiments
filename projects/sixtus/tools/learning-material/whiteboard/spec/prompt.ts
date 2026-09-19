@@ -159,16 +159,14 @@ ${
 
 
 
-// _TEST: exploration prompts. Not wired into provider.ts.
-
-function _TEST_figureExample(figure: FigureDefinition) {
+function figureExampleV2(figure: FigureDefinition) {
   return {
     ...figure.example.output,
     annotations: figure.example.output.annotations ?? [],
   };
 }
 
-function _TEST_figureType(figure: FigureDefinition): string {
+function figureTypeV2(figure: FigureDefinition): string {
   const fields = formatFigureSchemaFields(generatedFigureSchema(figure))
     .split("\n")
     .map((line) => line.replace(/ — .*$/, ""))
@@ -183,12 +181,12 @@ function _TEST_figureType(figure: FigureDefinition): string {
       figure.annotationTargets.map((target) => `- ${target}`).join("\n")
     }`,
     `### Example figure\n\n\`\`\`json\n${
-      JSON.stringify(_TEST_figureExample(figure), null, 2)
+      JSON.stringify(figureExampleV2(figure), null, 2)
     }\n\`\`\``,
   ].filter(Boolean).join("\n\n");
 }
 
-export const _TEST_WHITEBOARD_SPEC_USER_PROMPT = (
+export const WHITEBOARD_SPEC_USER_PROMPT_V2 = (
   { goal, showTitle, availableFigures }: WhiteboardSpecUserInput & {
     availableFigures: readonly FigureDefinition[];
   },
@@ -209,7 +207,7 @@ ${
   }
 `;
 
-export const _TEST_WHITEBOARD_SPEC_SYSTEM_PROMPT = (
+export const WHITEBOARD_SPEC_SYSTEM_PROMPT_V2 = (
   { availableFigures }: WhiteboardSpecSystemInput,
 ): string =>
   `# Task
@@ -274,5 +272,5 @@ A target is an element ID, \`<elementId>.<part>\` for elements with several part
 
 Use only the figure types listed in the user message. Each section is one figure type: when to use it, its fields, its rules, and its annotation targets.
 
-${availableFigures.map(_TEST_figureType).join("\n\n")}`;
+${availableFigures.map(figureTypeV2).join("\n\n")}`;
 

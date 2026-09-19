@@ -1,3 +1,4 @@
+import { renderHandwritten, renderHandwrittenDot } from "./handwritten.ts";
 import { drawingBuilder } from "./drawing.ts";
 import { textLabel } from "./label.ts";
 import { renderError } from "./issues.ts";
@@ -85,7 +86,7 @@ export function renderCoordinatePlotDrawing(
   options: GraphOptions,
 ): TargetedDrawing {
   const plot = coordinatePlotSchema.parse(input);
-  const { width, height } = resolveFigureOptions(options);
+  const { width, height, roughness, seed } = resolveFigureOptions(options);
   if (width < 600 || height < 400) {
     throw renderError(
       "INVALID_OPTIONS",
@@ -109,7 +110,8 @@ export function renderCoordinatePlotDrawing(
   ) {
     throw renderError(
       "CONTENT_DOES_NOT_FIT",
-      "Coordinate ranges cannot fit a readable plane; use independent scaling or a different window.",
+      "Coordinate ranges cannot fit a readable plane; use independent scaling or a narrower window.",
+      { path: ["axes"], required: "grow" },
     );
   }
   const project = (x: number, y: number): Point => ({
@@ -245,7 +247,8 @@ export function renderCoordinatePlotDrawing(
     ) {
       throw renderError(
         "CONTENT_DOES_NOT_FIT",
-        "X tick labels overlap; increase tick spacing or shorten labels.",
+        "X tick labels overlap; use a larger tickStep, fewer explicit ticks, or shorter tick labels.",
+        { path: ["axes", "x"], required: "grow" },
       );
     }
     if (part.bounds) tickBoxes.push(part.bounds);
@@ -277,7 +280,8 @@ export function renderCoordinatePlotDrawing(
     ) {
       throw renderError(
         "CONTENT_DOES_NOT_FIT",
-        "Y tick labels overlap; increase tick spacing or shorten labels.",
+        "Y tick labels overlap; use a larger tickStep, fewer explicit ticks, or shorter tick labels.",
+        { path: ["axes", "y"], required: "grow" },
       );
     }
     if (part.bounds) yTickBoxes.push(part.bounds);
@@ -466,14 +470,48 @@ export function renderCoordinatePlotDrawing(
         kind: "stroke",
         segment: { a, b },
       }));
+      const circleInk = element.type === "circle"
+        ? renderHandwritten({
+          type: "ellipse",
+          cx: project(element.center[0], element.center[1]).x,
+          cy: project(element.center[0], element.center[1]).y,
+          rx: element.radius * sx,
+          ry: element.radius * sy,
+        }, {
+          id: `${options.id}-circle-${element.id}`,
+          seed: seed + plot.elements.indexOf(element),
+          roughness,
+          stroke: color,
+          strokeWidth: 2.5,
+          ...(element.stroke === "dashed" ? { strokeDasharray: [7, 5] } : {}),
+        })
+        : null;
       parts.push({
-        markup:
-          `<path d="${path}" fill="none" stroke="${color}" stroke-width="2.5"${
+        markup: circleInk
+          ? `<g mask="url(#${maskId})">${circleInk.markup}</g>`
+          : `<path d="${path}" fill="none" stroke="${color}" stroke-width="2.5"${
             "stroke" in element && element.stroke === "dashed"
               ? ' stroke-dasharray="7 5"'
               : ""
           } mask="url(#${maskId})"/>`,
-        bounds: unionBounds(segmentObstacles.map((o) => o.bounds)),
+        bounds: circleInk?.bounds
+          ? (() => {
+            const b = circleInk.bounds!;
+            const x = Math.max(b.x, box.x - 5), y = Math.max(b.y, box.y - 5);
+            return {
+              x,
+              y,
+              width: Math.max(
+                0,
+                Math.min(b.x + b.width, box.x + box.width + 5) - x,
+              ),
+              height: Math.max(
+                0,
+                Math.min(b.y + b.height, box.y + box.height + 5) - y,
+              ),
+            };
+          })()
+          : unionBounds(segmentObstacles.map((o) => o.bounds)),
         obstacles: segmentObstacles,
       });
     }
@@ -487,17 +525,34 @@ export function renderCoordinatePlotDrawing(
         parts.push(stroke(p, b, color, 2.5));
       }
     }
-    for (const { p, open } of markers) {
-      const bounds = { x: p.x - 5, y: p.y - 5, width: 10, height: 10 };
+    for (const [index, { p, open }] of markers.entries()) {
+      const pen = {
+        id: `${options.id}-point-${element.id}-${index}`,
+        seed: seed + index + plot.elements.indexOf(element) * 31,
+        roughness,
+        fill: color,
+        stroke: color,
+      };
+      const mark = open
+        ? renderHandwritten({ type: "circle", cx: p.x, cy: p.y, r: 4 }, {
+          ...pen,
+          fill: "none",
+          strokeWidth: 2,
+          roughness: Math.min(roughness * 0.4, 0.8),
+        })
+        : renderHandwrittenDot(p.x, p.y, 4, pen);
+      const bounds = mark.bounds!;
       parts.push({
-        markup: `<circle cx="${fmt(p.x)}" cy="${fmt(p.y)}" r="4" fill="${
-          open ? "none" : color
-        }" stroke="${color}" stroke-width="2"/>`,
+        ...mark,
         bounds,
         obstacles: [{
           bounds,
           kind: "shape",
-          circle: { cx: p.x, cy: p.y, r: 5 },
+          circle: {
+            cx: p.x,
+            cy: p.y,
+            r: Math.max(bounds.width, bounds.height) / 2,
+          },
         }],
       });
     }

@@ -126,7 +126,67 @@ export function figureEnvelope<Type extends string>(type: Type) {
 }
 
 /** Semantic target suffixes; visibility and measured bounds belong to rendering. */
-export type AnnotationTargetPart = { part: string; kind: "text" | "mark" };
+export type AnnotationTargetPart = {
+  part: string;
+  kind: "text" | "mark";
+  /** Annotation types this part accepts. Omit to allow every type. */
+  intents?: readonly AnnotationType[];
+};
+
+export function partAcceptsIntent(
+  part: AnnotationTargetPart,
+  type: AnnotationType,
+): boolean {
+  return part.intents === undefined ||
+    (part.intents as readonly AnnotationType[]).includes(type);
+}
+
+/** Intents the catalog forbids on a resolved target. Unknown refs are left to target resolution. */
+export function disallowedAnnotationTargets(
+  annotations: Annotation[],
+  figureId: string,
+  parts: readonly AnnotationTargetPart[],
+): {
+  ref: string;
+  targetIndex: number;
+  annotationIndex: number;
+  type: AnnotationType;
+  availableTargetIds: string[];
+}[] {
+  const canonicalIds = parts.map((part) => `${figureId}.${part.part}`);
+  const issues: {
+    ref: string;
+    targetIndex: number;
+    annotationIndex: number;
+    type: AnnotationType;
+    availableTargetIds: string[];
+  }[] = [];
+  annotations.forEach((annotation, annotationIndex) => {
+    const allowedRefs = shortTargetRefs(
+      figureId,
+      parts.filter((part) => partAcceptsIntent(part, annotation.type)).map(
+        (part) => `${figureId}.${part.part}`,
+      ),
+    );
+    annotation.targetIds.forEach((ref, targetIndex) => {
+      const id = resolveTargetRef(ref, figureId, canonicalIds);
+      if (id === undefined) return;
+      const part = parts.find((candidate) =>
+        `${figureId}.${candidate.part}` === id
+      );
+      if (part && !partAcceptsIntent(part, annotation.type)) {
+        issues.push({
+          ref,
+          targetIndex,
+          annotationIndex,
+          type: annotation.type,
+          availableTargetIds: allowedRefs,
+        });
+      }
+    });
+  });
+  return issues;
+}
 
 export function titleTargetParts(
   figure: { title: string | null },

@@ -12,7 +12,7 @@ import {
   textExamples,
 } from "./text-examples.ts";
 import { renderTextFigureDrawing } from "./text.ts";
-import { COLORS, SERIES_COLORS, TEXT_FIGURE_STYLE } from "./theme.ts";
+import { SERIES_COLORS, TEXT_FIGURE_STYLE } from "./theme.ts";
 
 Deno.test("text is registered in the output schema and generation prompt", () => {
   const example = { ...textFigure.example.output, anchor: null, side: null };
@@ -52,24 +52,20 @@ Deno.test("text is registered in the output schema and generation prompt", () =>
   }
 });
 
-Deno.test("roles share dimensions and typography with the requested dashed colors", () => {
+Deno.test("roles share dimensions and typography with the requested solid colors", () => {
   const drawings = (["note", "question", "takeaway"] as const).map((role) =>
     renderTextFigureDrawing(textExample(role, "Identical content."), {
       id: "test",
     })
   );
-  const borders = [SERIES_COLORS[5], SERIES_COLORS[1], SERIES_COLORS[3]];
+  const borders = [SERIES_COLORS[5], SERIES_COLORS[0], SERIES_COLORS[3]];
   drawings.forEach((drawing, i) => {
     assertEquals(drawing.bounds, drawings[0].bounds);
     assert(drawing.markup.includes(`stroke="${borders[i]}"`));
+    assert(!drawing.markup.includes("stroke-dasharray"));
     assert(
       drawing.markup.includes(
-        `stroke-dasharray="${TEXT_FIGURE_STYLE.dashArray.join(" ")}"`,
-      ),
-    );
-    assert(
-      drawing.markup.includes(
-        `fill="${i === 2 ? SERIES_COLORS[3] : COLORS.ink}" xml:space`,
+        `fill="${borders[i]}" xml:space`,
       ),
     );
     assert(
@@ -172,7 +168,7 @@ Deno.test("titles center over compact text borders without widening them", () =>
   assert(result.width >= title.width);
 });
 
-Deno.test("text borders use one repeatable handwritten dashed pass with rounded ends", () => {
+Deno.test("text borders use one repeatable handwritten solid pass with rounded ends", () => {
   const figure = textExample("note", "A handwritten border.");
   const drawing = renderTextFigureDrawing(figure, { id: "test", seed: 10 });
   const clean = renderTextFigureDrawing(figure, { id: "test", roughness: 0 });
@@ -193,7 +189,7 @@ Deno.test("text borders use one repeatable handwritten dashed pass with rounded 
   assert(drawing.markup.includes('stroke-linejoin="round"'));
   assert(!drawing.markup.includes('opacity="0.45"'));
   assert(!drawing.markup.includes("<rect"));
-  // Existing annotation outlines retain their normal two solid passes.
+  // Solid annotation outlines use the same single-pass contract.
   const annotation = renderHandwritten({
     type: "rectangle",
     x: 0,
@@ -201,7 +197,7 @@ Deno.test("text borders use one repeatable handwritten dashed pass with rounded 
     width: 100,
     height: 50,
   }, { id: "annotation" });
-  assertEquals((annotation.markup.match(/<path\b/g) ?? []).length, 2);
+  assertEquals((annotation.markup.match(/<path\b/g) ?? []).length, 1);
   assert(!annotation.markup.includes("stroke-dasharray"));
 });
 

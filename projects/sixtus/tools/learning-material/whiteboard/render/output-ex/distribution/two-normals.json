@@ -1,0 +1,39 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "distribution",
+      "id": "two-normals",
+      "title": "A wider spread",
+      "annotations": [],
+      "chartStyle": "density",
+      "xLabel": "x",
+      "yLabel": null,
+      "curves": [
+        {
+          "id": "narrow",
+          "name": "N(0, 1)",
+          "family": "normal",
+          "mean": 0,
+          "sd": 1
+        },
+        {
+          "id": "wide",
+          "name": "N(0, 2)",
+          "family": "normal",
+          "mean": 0,
+          "sd": 2
+        }
+      ],
+      "guides": [
+        {
+          "id": "mu",
+          "at": 0,
+          "label": "μ"
+        }
+      ],
+      "anchor": null,
+      "side": null
+    }
+  ]
+}

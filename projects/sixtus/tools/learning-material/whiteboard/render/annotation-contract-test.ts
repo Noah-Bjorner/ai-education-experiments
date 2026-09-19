@@ -11,7 +11,11 @@ import { renderWhiteboardSvg } from "./index.ts";
 import { prepareFigure } from "./prepare.ts";
 import { renderAnnotations, resolveAnnotations } from "./annotations.ts";
 import type { Annotation, AnnotationType } from "./annotation-types.ts";
-import { ANNOTATION_TYPES } from "../figures/shared.ts";
+import {
+  type AnnotationTargetPart,
+  ANNOTATION_TYPES,
+  partAcceptsIntent,
+} from "../figures/shared.ts";
 import { renderEmphasis } from "./emphasis.ts";
 import { connectorObstacles } from "./callouts.ts";
 import { clearRoute, obstacleHitsBox } from "./placement.ts";
@@ -124,13 +128,28 @@ for (const definition of whiteboardFigures) {
       assertEquals(render(title), result);
     }
     if (markId) {
+      const parts = (definition.annotationTargetParts as (
+        value: WhiteboardFigureContent,
+      ) => AnnotationTargetPart[])(figure);
+      const markPart = parts.find((part) =>
+        `${figure.id}.${part.part}` === markId
+      );
       for (const type of ANNOTATION_TYPES) {
+        const annotations: Annotation[] = [{
+          type,
+          targetIds: [markId],
+          text: text(type),
+        }];
+        if (markPart && !partAcceptsIntent(markPart, type)) {
+          const blocked = prepareFigure({ ...figure, annotations }, {
+            id: "whiteboard-figure-0",
+          });
+          assert(!blocked.ok, `${definition.type}/${type} on mark`);
+          assertEquals(blocked.issues[0].code, "INVALID_ANNOTATION");
+          continue;
+        }
         const result = quiet(() =>
-          renderAnnotations(
-            [{ type, targetIds: [markId], text: text(type) }],
-            base,
-            options,
-          )
+          renderAnnotations(annotations, base, options)
         ).result;
         const markup = result.emphasis.markup + result.callouts.markup;
         assert(markup.includes(`data-annotation-type="${type}"`));

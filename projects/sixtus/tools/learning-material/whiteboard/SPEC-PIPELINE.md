@@ -17,6 +17,7 @@ whiteboard/
 ├── archive/              # Legacy pipeline and historical reference files
 ├── figures/              # Shared figure definitions and annotation targets
 ├── render/               # Existing visual rendering stage
+├── animation/            # Optional handwriting SMIL rewrite of the finished SVG
 └── schema.ts             # Public input, placed spec, and result contracts
 ```
 
@@ -38,9 +39,9 @@ inventory.
 
 `whiteboardSpec(input)` returns a `WhiteboardSpec`. It validates input,
 classifies once, generates ordered content, validates the content, assigns a
-bottom-anchor chain, and returns the board. It does not render, upload, or
-initialize rendering modules. `input.mode` chooses the existing fast or smart
-model.
+bottom-anchor chain, prepares every figure with the production renderer to
+confirm it can be drawn, and returns the board. It does not upload or export.
+`input.mode` chooses the existing fast or smart model.
 
 Classification probabilities must be finite and between 0 and 1. Figure
 selection uses a strict `> 0.6` threshold; board titles use `> 0.7`. If no type
@@ -66,7 +67,12 @@ receives the original output and goal.
 compatible annotation target IDs. Selection/schema/validation modules do not
 require credentials or network access. Semantic targets describe eligibility,
 not measured visibility: clipping, LaTeX compilation, font glyphs, callout
-space, and collisions are checked in the later rendering phase. Tests compare
+space, and collisions are checked by preparing each figure after validation.
+Content that needs more room than the default allocation grows the figure
+(up to a ceiling) without a correction; content that still cannot be drawn is
+reported with codes such as `CONTENT_DOES_NOT_FIT`, `UNSUPPORTED_GLYPH`, and
+`INVALID_LATEX`, scoped to the figure, and receives the same single correction.
+Internal rendering failures are operational and are not corrected. Tests compare
 semantic catalogs with renderer targets on known visible examples to detect
 drift.
 
@@ -126,10 +132,11 @@ returning a placeholder. URL output requires the existing Cloudflare/R2
 environment configuration. Generated requests also need classifier and
 selected-model credentials.
 
-Spec corrections remain inside the spec stage. Render failures (unsupported
-glyphs, clipped annotation targets, unplaceable callouts, etc.) are reported
-explicitly; this wiring does not add a second model-driven render correction
-loop. HTTP errors retain actionable spec or render diagnostics.
+Spec corrections remain inside the spec stage, which now includes the
+deterministic preparation check, so a generated board that reaches execution
+renders. Execution-stage render failures can only come from saved specs and are
+reported explicitly; there is no second model-driven correction loop. HTTP
+errors retain actionable spec or render diagnostics.
 
 The CLI runs the full pipeline:
 
@@ -150,5 +157,18 @@ pins it to `"embedded"` in `WHITEBOARD_CHAT_INPUT`.
 
 Optional `animation: "static" | "animated"` is also accepted on goal and
 saved-spec requests. The default is static. `"animated"` rewrites the finished
-SVG with a handwriting drawing animation after rendering and before upload.
-The learning-material tool omits `animation` so chat whiteboards stay static.
+SVG in `animation/` with a handwriting drawing animation after rendering and
+before upload. The rewrite lives with the SVG because it is part of the
+document; later video work can pause and seek that timeline when it wants
+parts to appear. The learning-material tool omits `animation` so chat
+whiteboards stay static.
+
+Animation treatment and order are owned by `FIGURE_ANIMATION_POLICIES` in
+`animation/policy.ts`, not by the spec model. Figures follow spec order; each
+base is one beat or an optional sequence of semantic parts, then its annotations.
+Prefer showing dense scaffolding together and drawing the key explanatory parts.
+Line charts currently appear as framework, then draw their plotted data; other
+types retain their whole-base policies. New figures must register an explicit
+policy alongside renderer dispatch. See the
+[animation contract](animation/README.md#figure-animation-policy) and
+[renderer checklist](render/DESIGN.md#adding-a-new-visualization-type).

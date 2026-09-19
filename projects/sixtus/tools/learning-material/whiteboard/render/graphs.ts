@@ -4,7 +4,11 @@ import { renderError } from "./issues.ts";
 import { resolveFigureOptions } from "./options.ts";
 import type { WhiteboardFigureContent } from "../schema.ts";
 import { escapeXml } from "./svg.ts";
-import { handwritten, renderHandwritten } from "./handwritten.ts";
+import {
+  handwritten,
+  renderHandwritten,
+  renderHandwrittenDot,
+} from "./handwritten.ts";
 import {
   fitGraphText,
   GRAPH_FONT_DEFS,
@@ -234,10 +238,23 @@ export function renderXyGraphDrawing(
     top: 90,
     bottom: c.height - 88 - legendRows * legendRowHeight,
   };
-  if (plot.bottom - plot.top < 150) {
+  const minimumPlotHeight = 150;
+  if (plot.bottom - plot.top < minimumPlotHeight) {
+    // Keep the plot the size a one-row legend would leave, and add the extra legend rows.
+    const preferredPlotHeight = Math.max(
+      minimumPlotHeight,
+      c.height - 90 - 88 - legendRowHeight,
+    );
     throw renderError(
       "CONTENT_DOES_NOT_FIT",
-      "Increase graph height to fit the series legend.",
+      "The series legend leaves too little room for the plot; use fewer series or shorter series names.",
+      {
+        path: ["series"],
+        required: {
+          height: 90 + preferredPlotHeight + 88 +
+            legendRows * legendRowHeight,
+        },
+      },
     );
   }
   const xAxis = isBar
@@ -247,10 +264,18 @@ export function renderXyGraphDrawing(
   const yAxis = axis(series.flatMap((s) => s.points.map((p) => p.y)), true);
   const band = (plot.right - plot.left) / categories.length;
   const barWidth = band * 0.72 / series.length;
-  if (isBar && barWidth < 3) {
+  const minimumBarWidth = 3;
+  if (isBar && barWidth < minimumBarWidth) {
     throw renderError(
       "CONTENT_DOES_NOT_FIT",
-      "Increase graph width or reduce bar categories/series.",
+      "Bars are too narrow to read; use fewer categories or series.",
+      {
+        path: ["series"],
+        required: {
+          width: c.width - (plot.right - plot.left) +
+            minimumBarWidth * categories.length * series.length / 0.72,
+        },
+      },
     );
   }
   const x = (value: number | string) =>
@@ -288,6 +313,7 @@ export function renderXyGraphDrawing(
     };
   };
   const parts: ScenePart[] = [];
+  const seriesParts = new Set<ScenePart>();
   for (const tick of yAxis.ticks) {
     parts.push(
       {
@@ -367,6 +393,7 @@ export function renderXyGraphDrawing(
   );
 
   series.forEach((s, i) => {
+    const seriesStart = parts.length;
     const color = GRAPH_COLORS[i % GRAPH_COLORS.length];
     if (chart.chartStyle === "area" && s.points.length > 1) {
       const coords = s.points.map((p) => `${x(p.x)} ${y(p.y)}`).join(" L ");
@@ -404,13 +431,24 @@ export function renderXyGraphDrawing(
         j > 0 && (chart.chartStyle === "line" || chart.chartStyle === "area")
       ) {
         const previous = s.points[j - 1];
-        parts.push(
-          line(x(previous.x), y(previous.y), x(p.x), y(p.y), color, 2.7),
+        const segment = line(
+          x(previous.x),
+          y(previous.y),
+          x(p.x),
+          y(p.y),
+          color,
+          2.7,
         );
+        parts.push({
+          ...segment,
+          markup: `<g data-series-segment="${
+            escapeXml(p.id)
+          }">${segment.markup}</g>`,
+        });
       }
     });
-    // Exact point markers preserve the data position despite the line wobble.
-    for (const p of s.points) {
+    // All point marks use the shared seeded, fully filled pen shape.
+    for (const [j, p] of s.points.entries()) {
       if (isBar) {
         const bx = x(p.x) - band * 0.36 + i * barWidth;
         const top = Math.min(y(0), y(p.y));
@@ -423,8 +461,8 @@ export function renderXyGraphDrawing(
             width: barWidth * 0.9,
             height: Math.abs(y(p.y) - y(0)),
           }, {
-            id: `${c.id}-bar-${i}-${s.points.indexOf(p)}`,
-            seed: c.seed + i + s.points.indexOf(p),
+            id: `${c.id}-bar-${i}-${j}`,
+            seed: c.seed + i + j,
             roughness: c.roughness,
             hatchGap: c.hatchGap,
             fill: color,
@@ -444,31 +482,52 @@ export function renderXyGraphDrawing(
         );
         continue;
       }
+      const dot = renderHandwrittenDot(x(p.x), y(p.y), 4.5, {
+        id: `${c.id}-pt-${i}-${p.id ?? j}`,
+        seed: c.seed + i * 31 + j,
+        roughness: c.roughness,
+        fill: color,
+      });
       parts.push(
         scene.add({
           id: p.id ? `${namespace}.${p.id}.mark` : undefined,
           drawing: {
-            markup: `<circle cx="${x(p.x)}" cy="${
-              y(p.y)
-            }" r="4.5" fill="${color}"><title>${
+            ...dot,
+            markup: `<g data-series-point="${escapeXml(p.id)}"><title>${
               escapeXml(`${s.name}: ${p.x}, ${p.y.toLocaleString("en-US")}`)
-            }</title></circle>`,
-            bounds: { x: x(p.x) - 4.5, y: y(p.y) - 4.5, width: 9, height: 9 },
+            }</title>${dot.markup}</g>`,
           },
           kind: "mark",
         }),
       );
     }
+    if (chart.chartStyle === "line") {
+      // Identify plotted data without prescribing any animation behavior.
+      // Keep paint order: all segments behind the point markers. Semantic endpoint
+      // IDs let animation follow connected points without rearranging artwork.
+      const data = parts.splice(seriesStart);
+      const seriesPart: ScenePart = {
+        markup: `<g data-figure-part="series" data-series-id="${
+          escapeXml(s.id)
+        }">${data.map((part) => part.markup).join("\n")}</g>`,
+        bounds: unionBounds(data.map((part) => part.bounds)),
+        obstacles: data.flatMap((part) => part.obstacles ?? []),
+      };
+      parts.push(seriesPart);
+      seriesParts.add(seriesPart);
+    }
     const lx = 92 + legendEntries[i].x;
     const ly = c.height - 24 -
       (legendRows - 1 - legendEntries[i].row) * legendRowHeight;
     if (chart.chartStyle === "scatter") {
-      parts.push({
-        markup: `<circle cx="${lx + 12}" cy="${
-          ly - 5
-        }" r="4.5" fill="${color}"/>`,
-        bounds: { x: lx + 7.5, y: ly - 9.5, width: 9, height: 9 },
-      });
+      parts.push(
+        renderHandwrittenDot(lx + 12, ly - 5, 4.5, {
+          id: `${c.id}-legend-dot-${i}`,
+          seed: c.seed + i,
+          roughness: c.roughness,
+          fill: color,
+        }),
+      );
     } else if (isBar || chart.chartStyle === "area") {
       parts.push(
         renderHandwritten({
@@ -503,7 +562,15 @@ export function renderXyGraphDrawing(
       }),
     );
   });
-  return group(chart.title, parts, c.width, namespace, targets, {
+  const identifiedParts = chart.chartStyle === "line"
+    ? parts.map((part) =>
+      seriesParts.has(part) ? part : {
+        ...part,
+        markup: `<g data-figure-part="framework">${part.markup}</g>`,
+      }
+    )
+    : parts;
+  return group(chart.title, identifiedParts, c.width, namespace, targets, {
     x: plot.left,
     y: plot.top,
     width: plot.right - plot.left,
@@ -556,7 +623,11 @@ export function renderCircularGraphDrawing(
   if (entries.length * 48 > c.height - 130) {
     throw renderError(
       "CONTENT_DOES_NOT_FIT",
-      "Increase graph height to fit the slice legend.",
+      "Too many slices for the legend; combine the smallest slices.",
+      {
+        path: ["slices"],
+        required: { height: entries.length * 48 + 130 },
+      },
     );
   }
   const cx = c.width * 0.3;

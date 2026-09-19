@@ -10,6 +10,7 @@ import { renderWhiteboardSvg } from "./index.ts";
 import { renderCircularGraphDrawing, renderXyGraphDrawing } from "./graphs.ts";
 import { renderGeometryDrawing } from "./geometry.ts";
 import { renderCoordinatePlotDrawing } from "./coordinate-plot.ts";
+import { renderDistributionDrawing } from "./distribution.ts";
 import { renderMathExpressionsDrawing } from "./math-expressions.ts";
 import { renderTextFigureDrawing } from "./text.ts";
 import { LINE_HEIGHT, SPACING, TYPE_SCALE } from "./theme.ts";
@@ -28,6 +29,8 @@ function draw(figure: WhiteboardFigureContent) {
       return renderGeometryDrawing(figure, options);
     case "coordinate_plot":
       return renderCoordinatePlotDrawing(figure, options);
+    case "distribution":
+      return renderDistributionDrawing(figure, options);
     case "math_expressions":
       return renderMathExpressionsDrawing(figure, options);
     case "text":

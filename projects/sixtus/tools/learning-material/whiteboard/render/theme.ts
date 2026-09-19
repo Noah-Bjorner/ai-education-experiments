@@ -1,3 +1,8 @@
+/** Shared hand steadiness. 0 = clean, 0.7 = steady, 1.5 = natural, 3 = loose.
+ * Override with renderWhiteboardSvg(spec, { roughness }) for a single board.
+ */
+export const HAND_DRAWING = { roughness: 2.75 };
+
 /** Semantic sizes in SVG units. Font family/weight live in font.ts. */
 export const TYPE_SCALE = {
   boardTitle: 32,
@@ -57,14 +62,13 @@ export const SERIES_COLORS = [
 
 /** Text cards share sizing; roles only change border and text colors. */
 export const TEXT_FIGURE_STYLE = {
-  fontSize: TYPE_SCALE.body,
-  lineHeight: LINE_HEIGHT.body,
-  padding: SPACING.cardPadding,
+  fontSize: TYPE_SCALE.label,
+  lineHeight: LINE_HEIGHT.label,
+  padding: SPACING.titleBoxPadding * 2,
   strokeWidth: 2,
-  dashArray: [8, 6],
   roles: {
-    note: { border: SERIES_COLORS[5], text: COLORS.ink },
-    question: { border: SERIES_COLORS[1], text: COLORS.ink },
+    note: { border: SERIES_COLORS[5], text: SERIES_COLORS[5] },
+    question: { border: SERIES_COLORS[0], text: SERIES_COLORS[0] },
     takeaway: { border: SERIES_COLORS[3], text: SERIES_COLORS[3] },
   },
 } as const;

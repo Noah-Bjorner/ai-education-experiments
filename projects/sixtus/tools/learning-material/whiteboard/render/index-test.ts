@@ -83,6 +83,9 @@ Deno.test("base and emphasis are retained before callout placement", () => {
   assertEquals(JSON.stringify(bookSpec), before);
   assertEquals(renderWhiteboardSvg(bookSpec), result);
   assert(!result.stages.base.svg.includes("data-annotation-type"));
+  assert(result.stages.base.svg.includes('data-figure-type="pie_chart"'));
+  assert(result.stages.base.svg.includes('data-layer="base"'));
+  assert(result.svg.includes('data-annotation-index="0"'));
   assertEquals(count(result.stages.emphasis.svg, /data-annotation-type=/g), 2);
   assertEquals(count(result.svg, /data-annotation-type=/g), 4);
   assertEquals(result.svg, result.stages.callouts.svg);
@@ -198,9 +201,9 @@ Deno.test("anchored figures translate complete content and share font definition
       for (const [i, id] of ["books", "trend"].entries()) {
         const { x, y } = result.figurePlacements[i];
         assert(
-          stage.svg.includes(
-            `data-figure-id="${id}" transform="translate(${x} ${y})"`,
-          ),
+          new RegExp(
+            `data-figure-id="${id}" data-figure-type="[^"]+" transform="translate\\(${x} ${y}\\)"`,
+          ).test(stage.svg),
         );
       }
     }
@@ -292,10 +295,16 @@ Deno.test("invalid references and duplicate IDs fail clearly; striking out a mar
   ) {
     assertThrows(() => renderTarget(target), Error, "Unknown or unavailable");
   }
+  assertThrows(
+    () => renderTarget("fiction", "strikeout"),
+    Error,
+    "cannot target",
+  );
   assert(
-    renderTarget("fiction", "strikeout").svg.includes(
-      'data-annotation-mark="cross"',
-    ),
+    renderWhiteboardSvg(boardExample([{
+      ...trend,
+      annotations: [{ type: "strikeout", targetIds: ["peak"], text: null }],
+    }])).svg.includes('data-annotation-mark="cross"'),
   );
   assert(
     renderTarget("fiction.legend-label", "strikeout").svg.includes(
@@ -379,6 +388,7 @@ Deno.test("board title is uppercase, boxed, centered on the base figures, and sh
   });
   assertEquals(titled.figurePlacements, untitled.figurePlacements);
   assertEquals(count(titled.svg, /data-board-title(?!-)/g), 1);
+  assert(titled.svg.includes('data-drawing="static"'));
   assertEquals(count(titled.svg, /data-board-title-box/g), 1);
   assert(!untitled.svg.includes("data-board-title"));
   assert(titled.svg.includes(">COMPARE THE CHARTS<"));

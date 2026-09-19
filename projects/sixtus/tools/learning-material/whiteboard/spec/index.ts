@@ -8,11 +8,13 @@ import {
   type GeneratedBoard,
 } from "./schema.ts";
 import {
+  renderSpecIssues,
   type SpecIssue,
   validateGeneratedBoard,
   validateWhiteboardInput,
   WhiteboardSpecError,
 } from "./validation.ts";
+import type { FigurePreparationResult } from "../render/prepare.ts";
 
 export type SpecRepair = { previous: unknown; issues: SpecIssue[] };
 export type SpecGenerationRequest = {
@@ -35,7 +37,46 @@ export type SpecGenerationEvent = {
 export type SpecDependencies = {
   generate: (request: SpecGenerationRequest) => Promise<SpecGenerationResult>;
   report?: (event: SpecGenerationEvent) => void;
+  /**
+   * Deterministic rendering check with the board's production options.
+   * Defaults to the shared renderer; tests may inject a stub.
+   */
+  prepare?: (
+    spec: WhiteboardSpec,
+    input: WhiteboardInput,
+  ) => Promise<FigurePreparationResult[]>;
 };
+
+/** The same allocation and packing the execution stage will render with. */
+async function prepareWithRenderer(
+  spec: WhiteboardSpec,
+  input: WhiteboardInput,
+): Promise<FigurePreparationResult[]> {
+  const { prepareWhiteboardFigures } = await import("../render/index.ts");
+  return prepareWhiteboardFigures(spec, {
+    orientation: input.orientation ?? "portrait",
+  });
+}
+
+/**
+ * Content that cannot be drawn is a spec defect when the renderer classifies
+ * it as repairable (glyphs, LaTeX, fit past the growth ceiling, targets).
+ * Operational failures propagate unchanged and never trigger a correction.
+ */
+async function assertRenderable(
+  spec: WhiteboardSpec,
+  input: WhiteboardInput,
+  prepare: NonNullable<SpecDependencies["prepare"]>,
+): Promise<void> {
+  const results = await prepare(spec, input);
+  const issues: SpecIssue[] = [];
+  results.forEach((result, i) => {
+    if (result.ok) return;
+    if (!result.error.repairable) throw result.error;
+    issues.push(...renderSpecIssues(result.issues, i, spec.figures[i].id));
+  });
+  if (issues.length) throw new WhiteboardSpecError(issues);
+}
 
 /** Explicit adapter signal: only structured-output failures are eligible for correction. */
 export class InvalidSpecOutput extends Error {
@@ -107,6 +148,11 @@ export async function generateWhiteboardSpec(
         }]);
       }
       if (repair) assertRepairPreservesContent(repair, content);
+      await assertRenderable(
+        spec,
+        input,
+        dependencies.prepare ?? prepareWithRenderer,
+      );
       dependencies.report?.({
         stage: "generation",
         outcome: "success",

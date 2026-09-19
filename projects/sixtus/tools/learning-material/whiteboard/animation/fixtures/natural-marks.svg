@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="210" viewBox="0 0 600 210">
+  <defs><clipPath id="hatch-clip"><rect x="420" y="40" width="85" height="85" rx="8"/></clipPath></defs>
+  <g fill="none" stroke="#252525" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M85 40C141 43 144 121 88 125C32 126 31 39 85 40Z"/>
+    <path d="M86 42C143 41 142 123 87 126C34 124 30 42 86 42Z" opacity="0.3"/>
+    <path d="M160 110C190 105 187 49 255 45 M240 34L255 45L244 61"/>
+    <path d="M305 125L305 40L390 40L390 125Z" stroke-dasharray="7 5"/>
+    <rect x="420" y="40" width="85" height="85" rx="8"/>
+    <path clip-path="url(#hatch-clip)" stroke="#407b69" d="M410 60l40 -40 M410 78l58 -58 M410 96l76 -76 M410 114l94 -94 M410 132l112 -112 M428 132l94 -94 M446 132l76 -76 M464 132l58 -58 M482 132l40 -40"/>
+    <path transform="translate(530 60) rotate(12)" d="M0 20L15 35L42 0" stroke="#407b69"/>
+  </g>
+  <path fill="#ceded8" d="M50 155h155v25H50z"/>
+  <path fill="#252525" fill-rule="evenodd" d="M285 145h70v45h-70z M290 150h60v35h-60z"/>
+</svg>

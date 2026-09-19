@@ -34,11 +34,11 @@
       ],
       "annotations": [
         {
-          "type": "arrow",
+          "type": "callout",
           "targetIds": [
-            "annotated.root.mark"
+            "root"
           ],
-          "content": "Here, y = 0"
+          "text": "Here, y = 0"
         }
       ],
       "anchor": null,

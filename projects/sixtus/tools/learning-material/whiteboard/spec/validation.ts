@@ -8,6 +8,7 @@ import {
 import {
   type AnnotationTargetPart,
   collectElementIds,
+  disallowedAnnotationTargets,
   resolveTargetRef,
   shortTargetRefs,
 } from "../figures/shared.ts";
@@ -18,6 +19,7 @@ import {
   generatedFigureSchema,
   generatedTitleSchema,
 } from "./schema.ts";
+import type { RenderIssue } from "../render/issues.ts";
 
 export type SpecIssue = {
   code:
@@ -28,7 +30,13 @@ export type SpecIssue = {
     | "UNKNOWN_TARGET"
     | "INVALID_ANNOTATION"
     | "CONTENT_REMOVED"
-    | "UNRELATED_CHANGE";
+    | "UNRELATED_CHANGE"
+    // Deterministic rendering checks that the generator can correct in the spec.
+    | "CONTENT_DOES_NOT_FIT"
+    | "UNSUPPORTED_GLYPH"
+    | "INVALID_LATEX"
+    | "INVALID_GEOMETRY"
+    | "CALLOUT_UNPLACEABLE";
   path: (string | number)[];
   message: string;
   figureId?: string;
@@ -161,8 +169,12 @@ function figureIssues(
     }
     seen.add(id);
   }
-  const targets = semanticTargets(figure, definition);
-  const canonicalIds = new Set(targets.keys());
+  const parts = (definition.annotationTargetParts as (
+    figure: GeneratedFigure,
+  ) => AnnotationTargetPart[])(figure);
+  const canonicalIds = new Set(
+    parts.map((part) => `${figure.id}.${part.part}`),
+  );
   const availableTargetIds = shortTargetRefs(figure.id, canonicalIds);
   figure.annotations.forEach((annotation, a) => {
     annotation.targetIds.forEach((ref, t) => {
@@ -175,6 +187,23 @@ function figureIssues(
       }
     });
   });
+  for (
+    const issue of disallowedAnnotationTargets(
+      figure.annotations,
+      figure.id,
+      parts,
+    )
+  ) {
+    add(
+      ["annotations", issue.annotationIndex, "targetIds", issue.targetIndex],
+      `'${issue.type}' cannot target '${issue.ref}' in this figure.`,
+      {
+        code: "INVALID_ANNOTATION",
+        annotationIndex: issue.annotationIndex,
+        availableTargetIds: issue.availableTargetIds,
+      },
+    );
+  }
   return issues;
 }
 
@@ -239,6 +268,40 @@ export function validateGeneratedBoard(
   if (issues.length) throw new WhiteboardSpecError(issues);
   if (!parsed.success) throw new Error("Unreachable board validation state.");
   return { content, spec: parsed.data };
+}
+
+const RENDER_SPEC_CODES = new Set<SpecIssue["code"]>([
+  "CONTENT_DOES_NOT_FIT",
+  "UNSUPPORTED_GLYPH",
+  "INVALID_LATEX",
+  "INVALID_GEOMETRY",
+  "CALLOUT_UNPLACEABLE",
+  "UNKNOWN_TARGET",
+  "INVALID_ANNOTATION",
+]);
+
+/**
+ * Board-level spec issues from a figure's rendering diagnostics. Render paths
+ * are figure-relative; the figure index prefixes them so corrections stay
+ * scoped to that figure. Only repairable render issues belong here; internal
+ * and option failures are operational and never become correction requests.
+ */
+export function renderSpecIssues(
+  issues: readonly RenderIssue[],
+  figureIndex: number,
+  figureId: string,
+): SpecIssue[] {
+  return issues.map((issue) => ({
+    code: RENDER_SPEC_CODES.has(issue.code as SpecIssue["code"])
+      ? issue.code as SpecIssue["code"]
+      : "INVALID_SPEC",
+    path: ["figures", figureIndex, ...issue.path],
+    message: issue.message,
+    figureId,
+    elementId: issue.elementId,
+    annotationIndex: issue.annotationIndex,
+    availableTargetIds: issue.availableTargetIds,
+  }));
 }
 
 /** Validate before any classification request, and when the spec stage is called directly. */

@@ -36,19 +36,26 @@ export function renderMathExpressionsDrawing(
     }
   });
   const rowGap = SPACING.mathRowGap;
-  const naturalWidth = Math.max(
-    ...rows.map((row) =>
-      Math.max(row.width, (row.bounds?.x ?? 0) + (row.bounds?.width ?? 0)) -
-      Math.min(0, row.bounds?.x ?? 0)
-    ),
+  const rowWidths = rows.map((row) =>
+    Math.max(row.width, (row.bounds?.x ?? 0) + (row.bounds?.width ?? 0)) -
+    Math.min(0, row.bounds?.x ?? 0)
   );
-  if (
-    !Number.isFinite(naturalWidth) ||
-    naturalWidth > width - SPACING.sectionGap * 2
-  ) {
+  const naturalWidth = Math.max(...rowWidths);
+  const limit = width - SPACING.sectionGap * 2;
+  if (!Number.isFinite(naturalWidth) || naturalWidth > limit) {
+    const widest = figure.expressions[rowWidths.indexOf(naturalWidth)];
+    // The board keeps one display size, so a long row asks for a wider
+    // allocation; past the ceiling the author must split it.
     throw renderError(
       "CONTENT_DOES_NOT_FIT",
-      "Math expressions do not fit legibly at the shared size; increase the width or split the expression into shorter rows.",
+      `Expression '${widest.id}' is too long for one row at the shared display size; split it at a relation (such as =) into shorter rows.`,
+      {
+        elementId: widest.id,
+        path: ["expressions"],
+        required: Number.isFinite(naturalWidth)
+          ? { width: naturalWidth + SPACING.sectionGap * 2 }
+          : "grow",
+      },
     );
   }
   const expressions = scene.parts;

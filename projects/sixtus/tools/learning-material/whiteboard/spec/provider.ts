@@ -1,7 +1,7 @@
 import { generateText, NoObjectGeneratedError, Output } from "@ai";
 import {
-  _TEST_WHITEBOARD_SPEC_SYSTEM_PROMPT,
-  _TEST_WHITEBOARD_SPEC_USER_PROMPT,
+  WHITEBOARD_SPEC_SYSTEM_PROMPT_V2,
+  WHITEBOARD_SPEC_USER_PROMPT_V2,
 } from "./prompt.ts";
 import {
   InvalidSpecOutput,
@@ -42,10 +42,10 @@ export async function generateSpecOutput(
   request: SpecGenerationRequest,
 ): Promise<SpecGenerationResult> {
   const { input, availableFigures, showTitle, schema, repair } = request;
-  const system = _TEST_WHITEBOARD_SPEC_SYSTEM_PROMPT({ availableFigures });
+  const system = WHITEBOARD_SPEC_SYSTEM_PROMPT_V2({ availableFigures });
   console.log("system ->\n", system);
   const prompt = [
-    _TEST_WHITEBOARD_SPEC_USER_PROMPT({
+    WHITEBOARD_SPEC_USER_PROMPT_V2({
       goal: input.goal,
       showTitle,
       availableFigures,

@@ -8,7 +8,7 @@ import { GRAPH_FONT_STYLE, graphTextBounds } from "./font.ts";
 import { renderHandwritten } from "./handwritten.ts";
 import type { Shape } from "./shapes.ts";
 import type { RenderObstacle } from "./targets.ts";
-import { COLORS, SPACING, TYPE_SCALE } from "./theme.ts";
+import { COLORS, HAND_DRAWING, SPACING, TYPE_SCALE } from "./theme.ts";
 
 /** Draw fixed emphasis and retain each target's effective connector boundary. */
 export function renderEmphasis(
@@ -34,7 +34,7 @@ export function renderEmphasis(
     const pen = {
       id,
       seed: (options.seed ?? 10) + annotationIndex + (sequence ?? 0) * 101,
-      roughness: options.roughness ?? 1.5,
+      roughness: options.roughness ?? HAND_DRAWING.roughness,
       stroke: color,
       strokeWidth: 2,
     };
@@ -45,17 +45,27 @@ export function renderEmphasis(
       const y = b.y - SPACING.labelGap;
       drawing = {
         markup:
-          `<text x="${x}" y="${y}" font-size="${TYPE_SCALE.annotation}" fill="${
+          `<g data-annotation-part="text"><text x="${x}" y="${y}" font-size="${TYPE_SCALE.annotation}" fill="${
             escapeXml(color)
-          }">${escapeXml(value)}</text>`,
+          }">${escapeXml(value)}</text></g>`,
         bounds: graphTextBounds(value, TYPE_SCALE.annotation, x, y),
       };
     } else if (annotation.type === "cross") {
       // Two diagonal strokes across the target; used to strike out non-text marks.
       const pad = 4;
       const strokes = [
-        { x1: b.x - pad, y1: b.y - pad, x2: b.x + b.width + pad, y2: b.y + b.height + pad },
-        { x1: b.x - pad, y1: b.y + b.height + pad, x2: b.x + b.width + pad, y2: b.y - pad },
+        {
+          x1: b.x - pad,
+          y1: b.y - pad,
+          x2: b.x + b.width + pad,
+          y2: b.y + b.height + pad,
+        },
+        {
+          x1: b.x - pad,
+          y1: b.y + b.height + pad,
+          x2: b.x + b.width + pad,
+          y2: b.y - pad,
+        },
       ].map((line, i) =>
         renderHandwritten({ type: "line", ...line }, {
           ...pen,
@@ -109,7 +119,11 @@ export function renderEmphasis(
     parts.push({
       ...drawing,
       markup:
-        `<g id="${id}" data-annotation-type="${annotation.intent}" data-annotation-mark="${annotation.type}" data-target-id="${
+        `<g id="${id}" data-annotation-type="${annotation.intent}" data-annotation-mark="${annotation.type}" data-annotation-index="${annotationIndex}"${
+          sequence === undefined
+            ? ""
+            : ` data-annotation-sequence="${sequence}"`
+        } data-target-id="${
           escapeXml(annotation.targetIds[0])
         }">${drawing.markup}</g>`,
     });

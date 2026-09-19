@@ -46,11 +46,11 @@
       "title": null,
       "annotations": [
         {
-          "type": "arrow",
+          "type": "callout",
           "targetIds": [
-            "note.text"
+            "text"
           ],
-          "content": "Both bars start at zero."
+          "text": "Both bars start at zero."
         }
       ],
       "role": "note",
@@ -64,11 +64,11 @@
       "title": null,
       "annotations": [
         {
-          "type": "box",
+          "type": "highlight",
           "targetIds": [
-            "takeaway.text"
+            "text"
           ],
-          "content": null
+          "text": null
         }
       ],
       "role": "takeaway",

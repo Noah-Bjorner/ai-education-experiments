@@ -6,7 +6,7 @@ import {
 } from "./index.ts";
 import { whiteboardFigures } from "./figures/index.ts";
 import type { WhiteboardGoalClassification } from "./classifier.ts";
-import { applyDrawingAnimation } from "../whiteboard-video/drawing/index.ts";
+import { applyDrawingAnimation } from "./animation/index.ts";
 import { renderWhiteboardSvg } from "./render/index.ts";
 import { whiteboardRoutes } from "./route.ts";
 import { whiteboardHttpError } from "./render/http-error.ts";
@@ -258,7 +258,7 @@ Deno.test("font delivery switches for generated and saved specs, defaulting to e
 Deno.test("drawing animation is applied as the last step when requested", async () => {
   const staticSvg = renderWhiteboardSvg(spec, { orientation: "portrait" }).svg;
   assert(!staticSvg.includes("data-drawing-animation"));
-  const animatedSvg = applyDrawingAnimation(staticSvg, { speed: 1.5 });
+  const animatedSvg = applyDrawingAnimation(staticSvg, { speed: 1.25 });
   assert(animatedSvg.includes('data-drawing-animation="strokes-v1"'));
   for (const animation of [undefined, "static", "animated"] as const) {
     for (const input of [{ goal: "Show x = 8" }, spec]) {
@@ -294,4 +294,35 @@ Deno.test("drawing animation is applied as the last step when requested", async 
     body: JSON.stringify({ ...spec, animation: "wipe" }),
   });
   assertEquals(invalid.status, 400);
+});
+
+Deno.test("animated boards pop chart bases and hide annotations until afterwards", () => {
+  const board = renderWhiteboardSvg({
+    title: "Book collection",
+    figures: [{
+      type: "pie_chart",
+      id: "books",
+      title: null,
+      annotations: [{
+        type: "callout",
+        targetIds: ["fiction"],
+        text: "More than half",
+      }],
+      slices: [
+        { id: "fiction", label: "Fiction", value: 12 },
+        { id: "rest", label: "Rest", value: 8 },
+      ],
+      anchor: null,
+      side: null,
+    }],
+  });
+  assert(board.svg.includes('data-figure-type="pie_chart"'));
+  assert(board.svg.includes('data-layer="base"'));
+  assert(board.svg.includes('data-drawing="static"'));
+  const animated = applyDrawingAnimation(board.svg, { speed: 1.25 });
+  assert(animated.includes('data-drawing-method="instant"'));
+  assert(animated.includes('visibility="hidden"'));
+  const instantAt = animated.indexOf('data-drawing-method="instant"');
+  const annotationAt = animated.indexOf('data-annotation-type="callout"');
+  assert(instantAt >= 0 && annotationAt > instantAt);
 });

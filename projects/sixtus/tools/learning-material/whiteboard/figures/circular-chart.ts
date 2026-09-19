@@ -37,17 +37,22 @@ export const circularChart = {
 - Use the supplied amounts directly; counts do not need conversion to percentages.
 - If values describe a complete percentage breakdown, they should total approximately 100, allowing for rounding.
 - Omit zero-value categories because slice values must be positive.
-- Do not silently invent an "Other" slice to complete missing data.`,
+- Do not silently invent an "Other" slice to complete missing data.
+- Point at a slice with a callout (arrow and message). Never highlight, group, number, or strike out the wedge; those marks enclose the slice's bounding box and look like they circle the whole pie. Use the legend label or percentage for those.`,
   annotationTargetParts: (figure) => [
     ...titleTargetParts(figure),
     ...figure.slices.flatMap((s) => [
-      { part: `${s.id}.mark`, kind: "mark" as const },
+      {
+        part: `${s.id}.mark`,
+        kind: "mark" as const,
+        intents: ["callout"] as const,
+      },
       { part: `${s.id}.legend-label`, kind: "text" as const },
       { part: `${s.id}.percentage`, kind: "text" as const },
     ]),
   ],
   annotationTargets: [
-    "<sliceId> — the wedge",
+    "<sliceId> — the wedge; callout only",
     "<sliceId>.legend-label — the slice name in the legend",
     "<sliceId>.percentage — the slice's percentage figure",
     "title — only when title is not null",

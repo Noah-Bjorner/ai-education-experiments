@@ -17,10 +17,13 @@ system-font defaults into new whiteboard types.
 - `titles.ts`: shared wrapped figure headings, underline/box decoration, and
   measured heading-to-content spacing.
 - `font.ts`: Shantell Sans Math, embedded font definitions, and text measurement.
-- `handwritten.ts`: reusable pen outlines and hatch fills.
+- `handwritten.ts`: reusable pen outlines, hatch fills, and `renderHandwrittenDot()`.
 - `hatching.ts`: stroke intersections, sector geometry, and fill variation.
 - `bounds.ts`: shared painted bounds, curve extrema, and export sizing.
+- `drawing.ts`: shared drawing builder, target registration, and obstacle retention.
 - `graphs.ts`: XY and circular chart renderers, not a universal layout engine.
+- `distribution.ts`: histogram, dot plot, box plot, and density-curve family.
+- `prepare.ts`: per-figure validation, base dispatch, elastic allocation, and annotation color.
 - `index.ts`: shared staged board renderer with base, emphasis, and callout snapshots.
 - `figure-placement.ts`: measured figure placement by anchor ID and side.
 - `targets.ts`: semantic SVG IDs and measured figure-local annotation targets.
@@ -85,7 +88,7 @@ not an extra gap below the glyphs.
 | --- | ---: | ---: | --- |
 | `boardTitle` | 32 | 42 | Uppercase, boxed board heading |
 | `figureTitle` | 25 | 34 | Every figure's underlined heading |
-| `body` | 22 | 30 | Text cards |
+| `body` | 22 | 30 | Body text |
 | `label` | 16 | 22 | Axes, legends, coordinate/geometry labels |
 | `supporting` | 13 | 18 | Tick values |
 | `detail` | 12 | 16 | Secondary values below pie legend labels |
@@ -166,8 +169,8 @@ and a contrasting second pen for teaching annotations.
 
 ### Annotation color
 
-Emphasis and callouts use one color per figure, chosen by the board compositor
-in `index.ts`. The spec and the model do not pick it.
+Emphasis and callouts use one color per figure, chosen in `prepare.ts`. The spec
+and the model do not pick it.
 
 The rule is contrast with the base drawing, not a fixed annotation hue:
 
@@ -175,18 +178,19 @@ The rule is contrast with the base drawing, not a fixed annotation hue:
   `SERIES_COLORS[0]` (blue). Circles,
   underlines, numbers, brackets, and message arrows then read as a second pen
   on top of the black work.
-- When the figure already spends the accent palette on data or categories — XY
-  charts, pie and donut charts, coordinate plots, geometry with filled regions
-  — annotations use `COLORS.ink`. Blue would collide with the first series or
-  slice and look like another category rather than a teaching mark.
+- When the figure already spends the accent palette on data, categories, or
+  role colors — XY charts, pie and donut charts, distributions, coordinate
+  plots, geometry with filled regions, text cards — annotations use
+  `COLORS.ink`. Blue would collide with the first series or slice and look like
+  another category rather than a teaching mark.
 
 Do not color an annotation from its target's stroke, and do not mix annotation
 colors within one figure. A multi-figure board may mix the two modes because
 each figure is decided independently.
 
 When adding a type, pick the side that matches its base drawing: ink-only
-content gets blue annotations; anything that already uses `SERIES_COLORS` for
-marks or fills gets ink annotations.
+content gets blue annotations; anything that already uses `SERIES_COLORS` or
+role colors for marks, fills, or borders gets ink annotations.
 
 Example:
 
@@ -274,6 +278,36 @@ Board placement:
   three visualizations in a row, then wraps. Text figures always occupy their
   own row.
 
+### Elastic allocation
+
+Type scale is fixed and content is never shrunk or clipped, so the allocation is
+a preference, not a canvas. Exports trim to painted bounds and placement uses
+measured bounds; nothing downstream depends on a figure staying inside its
+allocation. `prepareFigure` therefore treats `CONTENT_DOES_NOT_FIT` from a base
+render as a request for more room:
+
+- Each fit check attaches `required` to its issue: exact `{ width, height }`
+  when the renderer can compute the need (math row width, legend rows, bar
+  width, slice legend), or `"grow"` when it can only tell that more room is
+  needed (tick-label overlap, geometry label search, marking size).
+- Preparation re-renders with the larger allocation: the maximum of all stated
+  requirements, or `ALLOCATION_GROWTH.step` (25%) per axis for `"grow"`. At most
+  `maxAttempts` (4) retries. Growth is a pure function of content and requested
+  options, so results stay deterministic and `composeWhiteboard` keys on the
+  requested options.
+- The ceiling is `maxWidth`/`maxHeight`, default `maxScale` (2×) of the request.
+  `figureOptions` caps landscape width at 1.5× because figures share a row;
+  portrait stacks one column and may grow to 2×. Past the ceiling the original
+  error propagates: it is now a content problem, and its message names a change
+  the author or generator can make (split a row, fewer series, shorter labels),
+  never a larger board.
+- Content that fits at the requested size renders exactly as before; existing
+  boards are unchanged. `PreparedFigure.allocation` records what was used.
+
+Only the base stage grows. Annotation and callout placement already extend
+beyond the base bounds and do not depend on the allocation. Messages must not
+ask for a larger allocation; the renderer has already tried that.
+
 Each renderer receives its own allocation (`width` and `height` options now apply
 per figure, default 800 × 520). Render base content, emphasis, and callouts locally
 before measuring their complete union. Place each complete figure against its
@@ -349,21 +383,52 @@ wobble for every new visualization type.
 
 | Setting                  | Starting value | Meaning                        |
 | ------------------------ | -------------: | ------------------------------ |
-| `roughness`              |            1.5 | Small coordinate perturbations |
+| `roughness`              |            1.5 | Smooth hand drift and width variation |
 | `hatchGap`               |              9 | Distance between fill strokes  |
 | Outline width            |              2 | General shape boundary         |
 | Axis / connector width   |            1.6 | Supporting structure           |
 | Data line width          |            2.7 | Main plotted line              |
-| Secondary border opacity |           0.45 | Faint retraced pen pass        |
 
-- Keep the effect subtle. Roughness 4 is a loose-sketch experiment, not the
-  default for data charts. Roughness 0 removes outline wobble.
+- The shared default is `HAND_DRAWING.roughness` in `theme.ts`. Override it with
+  `renderWhiteboardSvg(spec, { roughness: 0.7 })` or a figure/annotation option.
+  Use 0 for clean, 0.7 for steady, 1.5 for natural, and 3 for loose. Keep seeds
+  fixed while comparing settings. Geometry drift and width variation scale with
+  this one control; short segments and small shapes cap displacement to stay
+  legible. Zero restores constant-width native SVG strokes.
+- Every handwritten outline is one pen pass. Solid outlines use a filled marker
+  silhouette with gentle width variation and rounded ends; no faint retracing,
+  shadow outline, filters, or animated texture. Long edges have a broad bow and
+  a smaller smooth correction. Circle arcs share tangents to avoid kinks.
+- `marker-outline.ts` builds ink around that gesture and measures its painted
+  bounds. `data-marker-centerline` retains the original path and
+  `data-marker-width` retains its reveal-brush coverage. The animation engine
+  uses those attributes to reveal the silhouette in one movement, without
+  skeletonizing its inner and outer boundaries. They describe geometry, never
+  beat timing. Dashed borders retain native strokes for exact gaps and rounded
+  dash ends. The deprecated `singlePass` option is accepted but has no effect.
 - Use deterministic seeds derived from stable elements. Rerendering unchanged
   content must not make the image jump or flicker.
-- `fill` in `handwritten()` supplies the accent for both layers: a solid color
-  wash at **5% opacity**, then hatch strokes at **50% opacity**. `"none"` skips
-  both. These values live in `FILL_STYLE` in `theme.ts`. Apply opacity to each
-  layer separately so outlines and text retain their existing strength.
+- `fill` in `handwritten()` supplies the accent. `fillStyle` defaults to
+  `"hatch"`: a solid color wash at **5% opacity**, then hatch strokes at **50%
+  opacity**. `"solid"` fills the wobble outline completely, for marks smaller
+  than a hatch gap. `"none"` skips both. Hatch opacities live in `FILL_STYLE`
+  in `theme.ts`. Apply opacity to each layer separately so outlines and text
+  retain their existing strength. Do not use a solid fill on region-sized
+  shapes.
+- Circles follow the same pen as other shapes. Do not emit a perfect SVG
+  `<circle>` for a data mark. Choose the treatment from the role:
+  - **Small filled dots** (line/area vertices, scatter points, legend marks,
+    geometry/coordinate points, dot-plot stacks, box-plot outliers): `renderHandwrittenDot()`. It keeps the data
+    center exact, wobbles a four-curve outline with a per-dot seed, and
+    `fillStyle: "solid"` paints that outline completely. Hatch gaps are larger
+    than these marks, so a hatch fill would look empty. Stacked or repeated
+    dots each need their own seed so they are not copies of one blob.
+  - **Large filled disks** (pie, donut hole, other region-sized circles):
+    `handwritten({ type: "circle" })` with the default hatch fill.
+  - **Circle outlines and open points** use `renderHandwritten()` with seeded
+    variation. Mathematical centers, radii, intersections, and attachment
+    geometry stay exact; only visible ink varies. Invisible masks and clip
+    paths remain exact. Seeds must be stable and differ between marks.
 - Hatches run approximately 45 degrees, clipped to the shape. Each filled region
   gets its own seeded angle, starting offset, spacing variation, and
   individually bent strokes. At the default roughness of 1.5, angle varies by
@@ -431,14 +496,27 @@ wobble for every new visualization type.
 
 ## Adding a new visualization type
 
+The figure plugin lives in `../figures/`. This section is the renderer half;
+the classifier, spec prompt, and `WhiteboardFigureDefinition` contract are in
+the add-whiteboard-figure skill.
+
 1. Read this guide and the existing figure schemas. Define the content contract
-   and validation independently of appearance.
-2. Implement the renderer in the appropriate family module. Return a local SVG
-   group; leave board placement, root font embedding, and uploading to their
-   respective owners.
+   and validation independently of appearance. Register targets with
+   `annotationTargetParts` so they match what this renderer will expose.
+2. Implement the renderer in the appropriate family module (`graphs.ts` for a
+   new XY or circular style; a new `render/<file>.ts` for a new family). Return
+   a local SVG group; leave board placement, root font embedding, and uploading
+   to their respective owners. Wire `renderBaseFigure` in `prepare.ts` and the
+   `draw()` switch in `design-system-test.ts`.
 3. Import shared colors and font helpers. Reuse the handwritten primitives or
-   extend them once if the type needs a new shape.
+   extend them once if the type needs a new shape. For circles, follow the
+   Handwritten shapes rule: `renderHandwrittenDot()` for small data dots,
+   hatched `handwritten()` circles for large disks, exact geometry only when
+   the math must stay precise. Do not add a one-off wobble or a perfect
+   `<circle>` for a chart mark.
 4. Calculate the content bounds and reserve space for labels before drawing.
+   Report `CONTENT_DOES_NOT_FIT` with a `required` allocation rather than
+   shrinking type scale or clipping content (see Elastic allocation).
 5. Escape user text before inserting it into SVG. Include a descriptive title
    and accessible name, and retain full text when shortening visual labels. The
    client should provide useful `alt` text when displaying the SVG as an image.
@@ -449,15 +527,36 @@ wobble for every new visualization type.
 7. Add focused behavior checks for data transformations and important edge
    cases. Verify deterministic output and unique definition IDs when composing
    graphs.
+8. Choose the animation policy explicitly in
+   `../animation/policy.ts` (`FIGURE_ANIMATION_POLICIES`). Prefer appearing
+   scaffolding together and drawing only the parts whose progression explains
+   the idea; a simple figure may draw as one whole base. Add optional semantic
+   `<g data-figure-part="...">` groups only when a split helps. Keep step order
+   and treatment in the policy, not in this renderer or the generated spec.
+   Follow the [animation contract](../animation/README.md#figure-animation-policy)
+   for complete coverage, non-overlapping groups, title handling, and tests.
+
+Animation is a final rewrite in `executeWhiteboard`, after static rendering.
+Board and figure titles, including their box/underline, remain visible from
+time zero. Figure-title groups explicitly override inherited visibility so a
+delayed base cannot hide them; exclude them from animation recipes.
+Part tags must preserve the static artwork, bounds, target IDs, transforms, and
+paint order. Validate a new figure through both `renderWhiteboardSvg()` and
+`applyDrawingAnimation()`; shared annotations follow all of its base beats.
+Callouts and groups identify separate `data-annotation-part="indicator"` and
+`data-annotation-part="text"` groups. Their central annotation policy draws the
+indicator first, then writes the text. Number annotations also identify their
+text for writing. Static renderers retain live text; animation temporarily
+uses bundled glyph outlines and restores the original text at completion.
 
 ## Current scope and intentional gaps
 
-- Implemented: XY line, grouped bar, scatter, and overlapping area charts; pie,
-  and donut charts; transparent graph exports, embedded
-  Shantell Sans, character-width-based label fitting, pen primitives, and shared
-  tight export bounds for the current graph geometry. No browser is required to
-  calculate those bounds. Future primitives must supply their own painted
-  bounds.
+- Implemented: XY line, grouped bar, scatter, and overlapping area charts; pie
+  and donut charts; histogram, dot plot, box plot, and normal density curves;
+  transparent graph exports, embedded Shantell Sans, character-width-based
+  label fitting, pen primitives, and shared tight export bounds for the current
+  graph geometry. No browser is required to calculate those bounds. Future
+  primitives must supply their own painted bounds.
 - Implemented board processing: `renderWhiteboardSvg(spec, options)` first
   renders base figure groups with target geometry, then appends emphasis groups,
   places callouts, and exports the complete SVG. It returns `svg`, dimensions,
@@ -487,7 +586,10 @@ wobble for every new visualization type.
   renderer. Geometry remains local to the figure; base and emphasis share its
   board translation. XY point IDs survive sorting. Pie `<slice>.percentage`
   always resolves: slices below 8% register it on the legend detail line instead
-  of an interior label. Unknown targets and duplicate content IDs fail explicitly.
+  of an interior label. Pie wedges accept callout only; highlight, group, number,
+  and strikeout on the wedge fail as `INVALID_ANNOTATION` because a circle or
+  cross around the sector box encloses the whole disk. Highlight the percentage
+  or legend label instead. Unknown targets and duplicate content IDs fail explicitly.
 - Every target has measured bounds, a text/mark kind, and one explicit attachment:
   bounds, visible segments, or a fixed anchor with outward direction. Text targets
   also carry underline and strikethrough segments. Primitive geometry supplies
@@ -509,8 +611,9 @@ wobble for every new visualization type.
   long words are preserved. There is no truncation or opaque text backing.
 - All visible base text and shapes, data strokes, and emphasis reserve space.
   Grid lines and hatching do not. Pie disks reserve their circular area for
-  labels; wedge arrows attach to their outer arc. An interior percentage can
-  receive a connector through its own filled region while avoiding other text.
+  labels; wedge arrows attach to their outer arc. Wedge targets are callout-only.
+  An interior percentage can receive a connector through its own filled region
+  while avoiding other text.
 - Callouts try eight directions at increasing distances, biased toward the
   target's position within the plot. Messages with fewer available positions
   are placed first, then larger messages, then original annotation order. Each
@@ -580,6 +683,9 @@ endpoint still returns its existing fixed demo URL; this gallery and
   first-appearance order, including numeric categories. Multiple series use
   grouped bars with stable slots for missing categories. Duplicate categories
   within one bar series are rejected; zero bars show a baseline stroke.
+  All point dots use `renderHandwrittenDot()` with exact data centers.
+  Line animation reveals each dot whole when its incoming segment completes;
+  the first dot appears as its series begins. Dots remain above lines in paint order.
 - Areas fill to zero, including negative values. Multiple series overlap;
   stacking and interpolation are not implemented. Flat zero areas and single
   points retain their line/markers without manufacturing a filled region.
@@ -590,10 +696,52 @@ endpoint still returns its existing fixed demo URL; this gallery and
   `chartStyle` selects `pie` (default) or `donut`. A single positive
   slice is supported, including a complete ring. Holes use annular clipping,
   never opaque cover shapes.
-- Increase the height if the slice legend does not fit. Slices below 8% omit
+- A slice legend that does not fit reports the exact height it needs and the
+  allocation grows. Slices below 8% omit
   their interior percentage target. Richer label collision handling is future work.
 
 Run `deno test --allow-read *test.ts` for chart and annotation behavior checks.
+
+## Distribution
+
+`distribution.ts` renders the `distribution` figure from
+`../figures/distribution.ts`. It is a chart family for how values spread, not
+for category comparison (`xy_chart`) or algebra functions (`coordinate_plot`).
+
+- `histogram`: contiguous numeric bins as adjacent bars. Counts may be zero.
+  The y-axis starts at zero. Bin geometry uses the handwritten bar treatment.
+- `dot_plot`: stacked handwritten dots on a number line. `yLabel` is null. A
+  stack is one mark; individual dots are not targets. Each dot is a solid fill
+  of a seeded wobble circle (`renderHandwrittenDot`), not a perfect SVG circle.
+- `box`: one five-number summary per group. Whiskers are min/max of non-outlier
+  values; outliers are `renderHandwrittenDot()` marks. Box fills use the series
+  hatch; whiskers and the median stay exact.
+- `density`: named probability curves. The current family is `normal` with mean
+  and positive sd. The renderer samples the exact pdf, fills under the curve
+  with a clipped hatch, and strokes the curve without jitter. Optional `guides`
+  replace numeric x ticks (μ, ±σ, …). Optional `regions` shade an interval
+  under a named curve; unbounded sides use null. A legend appears only with two
+  or more curves. `yLabel` is usually null.
+
+Histogram and box share the XY chart axis furniture. Density windows cover
+about ±3.6σ and expand to include supplied guides and finite region bounds.
+Unsupported leftover style fields, non-contiguous bins, and invalid five-number
+order fail at schema parse. Bars or stacks that cannot fit report
+`CONTENT_DOES_NOT_FIT`. Other families (t, uniform, stacked histograms) are
+planned.
+
+Targets: bin/stack/group/curve/region/guide marks, group and guide labels,
+curve legend labels when a legend is shown, axis labels, and title when present.
+
+To run focused tests and regenerate the gallery from this directory:
+
+```sh
+deno test --allow-read distribution-test.ts
+deno run --allow-read --allow-write=output-ex distribution-gallery.ts
+```
+
+Open `output-ex/distribution/index.html` for the histogram, dot plot, box, and
+density examples.
 
 ## Math expressions
 
@@ -618,8 +766,10 @@ IDs, so equations compose without collisions. The parser resets between rows.
 Each expression is one centered row at `TYPE_SCALE.mathDisplay`. Lay out fractions
 and scripts relative to a baseline and reserve row bounds as annotation obstacles.
 Use `SPACING.mathRowGap` between measured row extents, without scaling the gap or
-font. More rows grow the export vertically; expressions wider than the allocation
-minus two section gaps fail explicitly. The optional title uses `withFigureTitle()`.
+font. More rows grow the export vertically; an expression wider than the allocation
+minus two section gaps reports the exact width it needs and the allocation grows
+(see Elastic allocation). Past the ceiling the row must be split at a relation.
+The optional title uses `withFigureTitle()`.
  Expose `<figureId>.<expressionId>.expression` as a target for
 the whole row and `<figureId>.title` for the title (only when title is not null). Individual terms are not
 addressable yet. The original LaTeX remains in the spec for subsequent editing.
@@ -641,12 +791,17 @@ the resulting SVG through the shared whiteboard execution path.
 validates its points, objects, and mathematical markings. Geometry is registered
 in the parent schema, generation prompt, and staged renderer.
 
+- Animation tags identify construction objects, point dots, labels, and property
+  markings. The central policy draws them in that order, then annotations.
+  Keep SVG paint order and label placement independent of the timeline.
 - Mathematical coordinates use positive Y upward. One uniform scale preserves
   lengths, angles, and circles. All declared points appear as dots; names and
   measurements appear only through explicit labels.
-- Outlines use exact paths with rounded pen caps. Unlike decorative sketch
+- Straight outlines use exact paths with rounded pen caps. Unlike decorative sketch
   outlines, these paths do not perturb intersections, tangencies, or right
-  angles. Filled circles and polygons use the shared seeded hatch treatment.
+  angles. Circle outlines use the shared handwritten pen and declared points
+  use `renderHandwrittenDot()`, while their mathematical coordinates and
+  attachment geometry stay exact. Filled disks and polygons use seeded hatching.
 - Lines extend in both directions and rays in one direction to the local drawing
   boundary. Arrowheads indicate continuation. Segments retain their endpoints.
 - Right angles use squares. Equal lengths use matching ticks, parallel groups
@@ -660,8 +815,10 @@ in the parent schema, generation prompt, and staged renderer.
 - Register all documented point, object, marking, label, and title target IDs.
   These feed the shared emphasis and callout stages. Internal clip IDs use the
   parent's unique renderer prefix so multi-figure boards remain independent.
-- Reject labels or markings that cannot fit legibly. Ask for a larger allocation,
-  shorter labels, or a simpler diagram rather than silently clipping content.
+- Labels or markings that cannot fit legibly report `CONTENT_DOES_NOT_FIT` with
+  `required: "grow"`, so preparation retries with a larger allocation. Past the
+  ceiling, ask for shorter labels or a simpler diagram rather than silently
+  clipping content.
 
 Generate the six example SVGs and their gallery with:
 
@@ -741,8 +898,9 @@ and a required `role`: `note`, `question`, or `takeaway`. It uses the shared
 figure ID, nullable title, annotations, and board-level anchor/side fields.
 `text.ts` renders it through the normal staged whiteboard pipeline.
 
-- All roles use the same maximum width (800 by default), 22-unit body text,
-  30-unit line spacing, 16-unit padding, and 2-unit dashed border. Text wraps at
+- All roles use the same maximum width (800 by default), 16-unit label-size text,
+  22-unit line spacing, 10-unit padding (twice board-title padding), and a
+  2-unit solid border. Text wraps at
   the maximum inner width, then the border hugs the longest measured line plus
   padding. Short messages do not stretch to fill the allocation. The card's
   height grows to retain all wrapped content, even beyond the initial height
@@ -750,12 +908,11 @@ figure ID, nullable title, annotations, and board-level anchor/side fields.
   the shared figure-title size and retain the shared handwritten underline.
   Titles center over the resulting card without widening its border.
 - Borders use the shared handwritten rectangle path with subtle seeded wobble,
-  rounded dash ends, and one outline pass. Dash lengths are 8 units with 6-unit
-  gaps. The faint retraced pass is disabled for text borders so it cannot fill
-  their gaps; existing annotations retain their two solid passes. Export and
+  rounded joins, and one solid outline pass. Animated text figures write the
+  complete body first (`writing`), then draw the box (`box`), then annotations. Export and
   obstacle bounds include the complete curved outline and stroke width.
-- `TEXT_FIGURE_STYLE` in `theme.ts` maps notes to gray borders and ink text,
-  questions to orange borders and ink text, and takeaways to green borders
+- `TEXT_FIGURE_STYLE` in `theme.ts` maps notes to gray borders and gray text,
+  questions to blue borders and blue text, and takeaways to green borders
   and green text. These are semantic text roles, using existing palette colors.
   Borders have no fill and the export stays transparent. Annotations use ink.
 - Coordinates start locally at `(0, 0)`; the optional title moves the card
@@ -823,8 +980,17 @@ annotations against visible targets, and renders emphasis/callouts. It returns a
 validated content object and a `PreparedFigure`, or structured `RenderIssue`s
 with a typed error preserving the original cause. Known content errors carry
 stable codes and locations. Unexpected exceptions are internal failures and
-must not trigger content regeneration. Layout remains fixed; there is no automatic
-shrinking, arbitrary LaTeX splitting, or change to chart data.
+must not trigger content regeneration. Type scale remains fixed; there is no
+automatic shrinking, arbitrary LaTeX splitting, or change to chart data. The
+allocation may grow to fit content (see Elastic allocation).
+
+The spec stage runs `prepareWhiteboardFigures` on every validated board with the
+production allocation and orientation. Repairable render issues (fit past the
+ceiling, glyphs, LaTeX, targets, unplaceable callouts) become `WhiteboardSpecError`
+issues scoped to `["figures", i, ...]` and receive the same single correction as
+schema failures; fit issues point at the containing array (`expressions`,
+`series`, `slices`, `axes`) so a correction may split or trim content there.
+Internal and option failures propagate unchanged.
 
 `composeWhiteboard` accepts drawings prepared for the same content, figure order,
 and rendering options. It places complete figures, adds the board title, and
@@ -859,3 +1025,16 @@ deno check index.ts route.ts
 Generation tests use injected model/upload functions and require no network calls
 or credentials. Valid examples should retain their typography, geometry, bounds,
 and placement when refactoring shared code.
+
+## Marker style preview
+
+Run `deno run --allow-read --allow-write render/marker-gallery.ts` from this
+directory's parent (`whiteboard/`). Open `render/output-ex/marker/index.html`
+to compare roughness 0, 0.7, 1.5, 3, and 5 with playback and seeking. All
+examples use the production renderer, including a complete annotated board.
+The ink is deterministic and the static and final animated artwork agree.
+
+Geometry corner dots reveal whole as their first construction stroke reaches them,
+using geometric progress (`data-geometry-points`) and the stroke's motion profile.
+Dots retain their paint order above the construction. Unconnected points retain
+an explicit point beat; labels and property markings still follow construction.

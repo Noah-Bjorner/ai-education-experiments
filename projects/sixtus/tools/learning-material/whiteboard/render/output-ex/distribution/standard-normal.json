@@ -1,0 +1,78 @@
+{
+  "title": null,
+  "figures": [
+    {
+      "type": "distribution",
+      "id": "standard-normal",
+      "title": "Standard normal",
+      "annotations": [
+        {
+          "type": "callout",
+          "targetIds": [
+            "within-one"
+          ],
+          "text": "About 68% of values"
+        }
+      ],
+      "chartStyle": "density",
+      "xLabel": "z",
+      "yLabel": null,
+      "curves": [
+        {
+          "id": "z",
+          "name": "N(0, 1)",
+          "family": "normal",
+          "mean": 0,
+          "sd": 1
+        }
+      ],
+      "regions": [
+        {
+          "id": "within-one",
+          "curveId": "z",
+          "from": -1,
+          "to": 1
+        }
+      ],
+      "guides": [
+        {
+          "id": "m3",
+          "at": -3,
+          "label": "−3σ"
+        },
+        {
+          "id": "m2",
+          "at": -2,
+          "label": "−2σ"
+        },
+        {
+          "id": "m1",
+          "at": -1,
+          "label": "−1σ"
+        },
+        {
+          "id": "mu",
+          "at": 0,
+          "label": "μ"
+        },
+        {
+          "id": "p1",
+          "at": 1,
+          "label": "+1σ"
+        },
+        {
+          "id": "p2",
+          "at": 2,
+          "label": "+2σ"
+        },
+        {
+          "id": "p3",
+          "at": 3,
+          "label": "+3σ"
+        }
+      ],
+      "anchor": null,
+      "side": null
+    }
+  ]
+}

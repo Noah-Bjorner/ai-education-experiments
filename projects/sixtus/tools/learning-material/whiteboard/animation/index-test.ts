@@ -3,6 +3,7 @@ import { strict as assert } from "node:assert";
 import { createSVGWindow } from "npm:svgdom@0.1.23";
 import { applyDrawingAnimation } from "./index.ts";
 import { flatten } from "./geometry.ts";
+import { planDrawingBeats } from "./policy.ts";
 
 function parse(svg: string): SVGSVGElement {
   const document = createSVGWindow().document as Document;
@@ -98,7 +99,7 @@ Deno.test("centerline masks write all equation glyphs, with separate bars and se
   );
 });
 
-Deno.test("shapes follow native geometry, compound paths lift the pen, and distance controls timing", () => {
+Deno.test("shapes follow native geometry, compound paths lift the pen, and long gestures move faster", () => {
   const input = svg(
     `<g stroke="black" stroke-width="2" fill="none" transform="translate(10 15) rotate(10)">
     <line id="short" x1="0" y1="0" x2="10" y2="0"/>
@@ -112,12 +113,19 @@ Deno.test("shapes follow native geometry, compound paths lift the pen, and dista
   assert(groups.every((g) => g.getAttribute("data-drawing-method") === "path"));
   const short = groups.find((g) => g.querySelector("#short"))!;
   const long = groups.find((g) => g.querySelector("#long"))!;
-  assert(
-    Math.abs(
-      Number(long.getAttribute("data-drawing-duration")) /
-          Number(short.getAttribute("data-drawing-duration")) - 4,
-    ) < 1e-9,
+  const ratio = Number(long.getAttribute("data-drawing-duration")) /
+    Number(short.getAttribute("data-drawing-duration"));
+  assert(ratio > 1 && ratio < 4, "long strokes take longer, but travel faster");
+  const linear = parse(
+    applyDrawingAnimation(input, { duration: 5, markMotion: "linear" }),
   );
+  const duration = (id: string) =>
+    Number(
+      linear.querySelector(id)!.closest("[data-drawing-index]")!.getAttribute(
+        "data-drawing-duration",
+      ),
+    );
+  assert(Math.abs(duration("#long") / duration("#short") - 4) < 1e-9);
   const arrow = groups.find((g) => g.querySelector("#arrow"))!;
   const maskId = arrow.getAttribute("mask")!.slice(5, -1);
   assert.equal(
@@ -291,4 +299,143 @@ Deno.test("animates the supplied outlined equation as nine sequential glyph path
       "30",
     ],
   );
+});
+
+Deno.test("tagged whiteboards follow teaching beats instead of global reading order", () => {
+  const input = svg(`
+    <g data-board-title="" data-drawing="static">
+      <rect id="title" x="150" y="0" width="40" height="8"/>
+    </g>
+    <g data-figure-id="chart" data-figure-type="xy_chart">
+      <g data-layer="base">
+        <rect id="axis" x="0" y="20" width="80" height="4"/>
+      </g>
+      <g data-layer="emphasis">
+        <g data-annotation-type="highlight" data-annotation-index="1">
+          <circle id="second" cx="70" cy="40" r="6" fill="none" stroke="black" stroke-width="2"/>
+        </g>
+        <g data-annotation-type="highlight" data-annotation-index="0">
+          <circle id="first" cx="20" cy="40" r="6" fill="none" stroke="black" stroke-width="2"/>
+        </g>
+      </g>
+    </g>
+    <g data-figure-id="eq" data-figure-type="math_expressions">
+      <g data-layer="base">
+        <path id="glyph" d="M0 80h100v8h-100z"/>
+      </g>
+      <g data-layer="emphasis">
+        <g data-annotation-type="number" data-annotation-index="0">
+          <text id="num" x="20" y="90">1</text>
+        </g>
+      </g>
+    </g>`);
+  const beats = planDrawingBeats(parse(input))!;
+  assert.deepEqual(beats.map((beat) => beat.treatment), [
+    "instant",
+    "stroke",
+    "stroke",
+    "stroke",
+    "stroke",
+  ]);
+  const output = parse(applyDrawingAnimation(input));
+  assert.equal(
+    output.querySelector("#title")!.closest("[data-drawing-index]"),
+    null,
+  );
+  const axis = output.querySelector("#axis")!.closest("[data-layer='base']")!;
+  assert.equal(axis.getAttribute("data-drawing-method"), "instant");
+  assert.equal(axis.getAttribute("visibility"), "hidden");
+  const first = output.querySelector("#first")!.closest(
+    "[data-drawing-index]",
+  )!;
+  const second = output.querySelector("#second")!.closest(
+    "[data-drawing-index]",
+  )!;
+  const glyph = output.querySelector("#glyph")!.closest(
+    "[data-drawing-index]",
+  )!;
+  const number = output.querySelector("#num")!.closest(
+    "[data-drawing-method='instant']",
+  )!;
+  assert.equal(first.getAttribute("data-drawing-method"), "path");
+  assert.equal(second.getAttribute("data-drawing-method"), "path");
+  assert.equal(glyph.getAttribute("data-drawing-method"), "skeleton");
+  const starts = [axis, first, second, glyph, number].map((node) =>
+    Number(node.getAttribute("data-drawing-start"))
+  );
+  for (let i = 1; i < starts.length; i++) {
+    assert(starts[i] > starts[i - 1], "beats must follow teaching order");
+  }
+  assert.equal(
+    output.querySelector("#glyph")!.closest("[data-layer='base']")!
+      .getAttribute("visibility"),
+    "hidden",
+  );
+});
+
+Deno.test("figure speed overrides replace defaults, inherit by category, and include annotations", () => {
+  const input = svg(`
+    <g data-figure-id="text" data-figure-type="text">
+      <g data-layer="base">
+        <g data-figure-part="writing" data-drawing-text=""><path id="words" d="M0 0h50" fill="none" stroke="black"/></g>
+        <g data-figure-part="box"><path id="box" d="M0 10h50" fill="none" stroke="black"/></g>
+      </g>
+      <g data-annotation-type="highlight" data-annotation-index="0"><path id="highlight" d="M0 20h50" fill="none" stroke="black"/></g>
+    </g>
+    <g data-figure-id="math" data-figure-type="math_expressions"><g data-layer="base"><path id="math" d="M0 30h50" fill="none" stroke="black"/></g></g>
+    <g data-figure-id="shape" data-figure-type="geometry"><g data-layer="base"><path id="shape" d="M0 40h50" fill="none" stroke="black"/></g></g>`);
+  const defaults = { speed: 1.25, textSpeed: 1.25, markSpeed: 1.25 };
+  const baseline = parse(applyDrawingAnimation(input, defaults));
+  const overrides = {
+    text: { textSpeed: 1.5, markSpeed: 2 },
+    math_expressions: { textSpeed: 1 },
+  };
+  const output = parse(
+    applyDrawingAnimation(input, { ...defaults, figureSpeeds: overrides }),
+  );
+  const duration = (root: SVGSVGElement, id: string) =>
+    Number(
+      (root.querySelector(`#${id}`)!.parentNode as Element).getAttribute(
+        "data-drawing-duration",
+      ),
+    );
+  for (
+    const [id, rate] of [["words", 1.5], ["box", 2], ["highlight", 2], [
+      "math",
+      1,
+    ], ["shape", 1.25]] as const
+  ) {
+    assert(
+      Math.abs(duration(output, id) - duration(baseline, id) * 1.25 / rate) <
+        1e-6,
+      id,
+    );
+  }
+  const textOnly = parse(
+    applyDrawingAnimation(input, {
+      ...defaults,
+      figureSpeeds: { text: { textSpeed: 1.5 } },
+    }),
+  );
+  assert(
+    Math.abs(duration(textOnly, "box") - duration(baseline, "box")) < 1e-6,
+  );
+  assert.equal(
+    applyDrawingAnimation(input, defaults),
+    applyDrawingAnimation(input, { ...defaults, figureSpeeds: {} }),
+  );
+  const indices = Array.from(output.querySelectorAll("[data-drawing-index]"))
+    .map((n) => Number(n.getAttribute("data-drawing-start")));
+  assert.deepEqual(indices, [...indices].sort((a, b) => a - b));
+  for (const value of [0, -1, NaN, Infinity]) {
+    for (const key of ["textSpeed", "markSpeed"] as const) {
+      assert.throws(
+        () =>
+          applyDrawingAnimation(input, {
+            figureSpeeds: { text: { [key]: value } },
+          }),
+        /finite number greater than 0/,
+      );
+    }
+  }
 });

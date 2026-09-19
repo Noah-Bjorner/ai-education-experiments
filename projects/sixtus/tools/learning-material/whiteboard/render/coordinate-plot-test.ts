@@ -163,7 +163,7 @@ Deno.test("endpoint limits accept removable holes but reject divergent poles", (
   };
   const result = draw(p);
   assert(result.markup.includes('fill="none" stroke='));
-  assertEquals((result.markup.match(/r="4"/g) ?? []).length, 3); // Two marks and the transparent hole mask.
+  assertEquals((result.markup.match(/r="4"/g) ?? []).length, 1); // Only the invisible hole mask stays a perfect circle.
   const noMarkers = draw({
     ...p,
     elements: [{ type: "function", id: "f", expression: "x" }],
@@ -207,8 +207,15 @@ Deno.test("equal scale preserves circles and independent scale preserves supplie
   };
   const a = draw(p),
     b = draw({ ...p, axes: { ...p.axes, scale: "independent" } });
-  const circle = a.targets.get("slope.c.mark")!.bounds;
-  assertAlmostEquals(circle.width, circle.height, 0.5);
+  const circle = a.targets.get("slope.c.mark")!.attachment;
+  assert(circle.type === "segments");
+  const nominal = circle.segments.flatMap((s) => [s.a, s.b]);
+  const xs = nominal.map((p) => p.x), ys = nominal.map((p) => p.y);
+  assertAlmostEquals(
+    Math.max(...xs) - Math.min(...xs),
+    Math.max(...ys) - Math.min(...ys),
+    0.5,
+  );
   assertAlmostEquals(a.focusBounds.width / a.focusBounds.height, 2);
   assertAlmostEquals(b.focusBounds.width, 640);
   assertAlmostEquals(b.focusBounds.height, 360);

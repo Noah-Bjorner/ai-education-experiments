@@ -322,7 +322,7 @@ Deno.test("math rejects unreadable content and unsupported glyphs and escapes te
   assertThrows(
     () => render("x+".repeat(200) + "x"),
     Error,
-    "do not fit legibly",
+    "too long for one row",
   );
   assertThrows(() => render(String.raw`\text{😀}`), Error, "has no glyph");
   const result = render(String.raw`\text{<script>\&}`);

@@ -19,7 +19,7 @@ import type {
   RenderTarget,
   TargetedDrawing,
 } from "./targets.ts";
-import { COLORS, LINE_HEIGHT, TYPE_SCALE } from "./theme.ts";
+import { COLORS, HAND_DRAWING, LINE_HEIGHT, TYPE_SCALE } from "./theme.ts";
 import {
   center,
   clearRoute,
@@ -87,7 +87,7 @@ function measureLabel(content: string): Label {
 
 function labelDrawing(label: Label, box: Bounds, color: string): Drawing {
   return {
-    markup: `<g data-callout-label="true" color="${
+    markup: `<g data-callout-label="true" data-annotation-part="text" color="${
       escapeXml(color)
     }" transform="translate(${box.x - label.bounds.x} ${
       box.y - label.bounds.y
@@ -399,6 +399,10 @@ function evaluateCandidate(
     paths = [candidate.path];
   } else {
     const label = candidate.label!;
+    // Leave visible shaft behind the head, even for the nearest label or fallback.
+    const minimumLeg =
+      LAYOUT.arrowHalfWidth * 2 * LAYOUT.visibleShaftWidthRatio +
+      (type === "arrow" ? LAYOUT.arrowLength : 0);
     const target = job.targets[0];
     const emphasized = context.attachmentBounds.get(job.request.targetIds[0]);
     const attachment = emphasized
@@ -440,9 +444,10 @@ function evaluateCandidate(
           1);
       if (alignment < LAYOUT.approachAlignment) {
         const length = Math.hypot(toward.x, toward.y) || 1;
+        const approachLength = Math.max(LAYOUT.approachLength, minimumLeg);
         const approach = {
-          x: end.x - toward.x / length * LAYOUT.approachLength,
-          y: end.y - toward.y / length * LAYOUT.approachLength,
+          x: end.x - toward.x / length * approachLength,
+          y: end.y - toward.y / length * approachLength,
         };
         if (!relaxed && !clearRoute([approach, end], barriers, clearance)) {
           continue;
@@ -457,6 +462,7 @@ function evaluateCandidate(
         if (!relaxed && !leading) continue;
         if (leading) route = [...leading, end];
       }
+      if (distance(route.at(-2)!, end) + 1e-6 < minimumLeg) continue;
       const proposal = [route, ...(type === "arrow" ? arrowHead(route) : [])];
       if (
         !validPaths(proposal) ||
@@ -625,6 +631,9 @@ function drawCallout(
       });
     }
   }
+  const indicator = `<g data-annotation-part="indicator">${
+    strokes.map((s) => s.markup).join("\n")
+  }</g>`;
   if (job.label && chosen.label) {
     strokes.push(labelDrawing(job.label, chosen.label, color));
     obstacles.push({ bounds: chosen.label, kind: "text" });
@@ -632,9 +641,11 @@ function drawCallout(
   const bounds = unionBounds(strokes.map((s) => s.bounds))!;
   const drawing: Drawing = {
     markup:
-      `<g id="${id}" data-annotation-type="${request.intent}" data-annotation-mark="${type}" data-target-ids="${
+      `<g id="${id}" data-annotation-type="${request.intent}" data-annotation-mark="${type}" data-annotation-index="${request.annotationIndex}" data-target-ids="${
         escapeXml(request.targetIds.join(" "))
-      }">${strokes.map((s) => s.markup).join("\n")}</g>`,
+      }">${indicator}${
+        job.label && chosen.label ? strokes.at(-1)!.markup : ""
+      }</g>`,
     bounds,
   };
   const placement: CalloutPlacement = {
@@ -666,7 +677,10 @@ export function renderCallouts(
   obstacles: RenderObstacle[];
   diagnostics: AnnotationDiagnostic[];
 } {
-  const roughness = Math.min(options.roughness ?? 1.5, LAYOUT.maxRoughness);
+  const roughness = Math.min(
+    options.roughness ?? HAND_DRAWING.roughness,
+    LAYOUT.maxRoughness,
+  );
   const context: Context = {
     obstacles: [...scene.obstacles, ...emphasis.obstacles],
     attachmentBounds: emphasis.attachmentBounds,

@@ -29,7 +29,15 @@ export type RenderIssue = {
   message: string;
   availableTargetIds?: string[];
   severity: "error" | "warning";
+  /**
+   * For CONTENT_DOES_NOT_FIT: the allocation that would let this content fit
+   * at the shared type scale. Exact dimensions when the renderer can compute
+   * them; "grow" when it can only tell that more room is needed. Preparation
+   * retries with a larger allocation up to the ceiling before failing.
+   */
+  required?: RequiredAllocation;
 };
+export type RequiredAllocation = { width?: number; height?: number } | "grow";
 export type IssueContext = Partial<
   Pick<
     RenderIssue,
@@ -39,6 +47,7 @@ export type IssueContext = Partial<
     | "annotationIndex"
     | "path"
     | "availableTargetIds"
+    | "required"
   >
 >;
 

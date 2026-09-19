@@ -31,6 +31,7 @@ export const ANNOTATION_LAYOUT = {
   aimClearance: 1.5,
   arrowLength: 9,
   arrowHalfWidth: 4,
+  visibleShaftWidthRatio: 1.5,
   maxRoughness: 0.65,
   strokeWidth: 1.6,
   clearance: 6,
